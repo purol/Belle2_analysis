@@ -18,11 +18,13 @@ class Cut : public Module {
 private:
     std::string cut_string;
 public:
-    Cut() : Module(const char* cut_string_) : cut_string(cut_string_) {}
+    Cut(const char* cut_string_) : Module(), cut_string(cut_string_) {}
     ~Cut() {}
 
     std::vector<Data>* Process() override {
         printf("cut\n");
+        std::vector<Data> temp;
+        return temp;
     }
 
     void Print() override {}

@@ -18,7 +18,7 @@
 #include "TCanvas.h"
 #include "TObjArray.h"
 
-#include "bash.h"
+#include "base.h"
 #include "data.h"
 #include "module.h"
 
@@ -54,7 +54,7 @@ private:
     std::vector<Data> TotalData;
 
 public:
-    Loader(const char* path);
+    Loader(const char* filepath_, const char* including_string_);
     void SetName(const char* loader_name_);
     void Cut(const char* cut_string_);
     void end();
@@ -78,7 +78,7 @@ void Loader::end() {
 
     // load ROOT files
     for (unsigned int i = 0; i < filename.size(); i++) {
-        TFile* input_file = new TFile((path + std::string("/") + filename.at(i)).c_str(), "read");
+        TFile* input_file = new TFile((filepath + std::string("/") + filename.at(i)).c_str(), "read");
         if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
         printf("%s (%d/%zu)\n", ("Read " + filename.at(i) + "... ").c_str(), i, filename.size());
 
