@@ -49,6 +49,7 @@ public:
     Loader(const char* filepath_, const char* including_string_);
     void SetName(const char* loader_name_);
     void Cut(const char* cut_string_);
+    void PrintInformation(const char* print_string_);
     void end();
 };
 
@@ -60,6 +61,11 @@ void Loader::SetName(const char* loader_name_) {
 
 void Loader::Cut(const char* cut_string_) {
     Module::Module* temp_module = new Module::Cut(cut_string_);
+    Modules.push_back(temp_module);
+}
+
+void Loader::PrintInformation(const char* print_string_) {
+    Module::Module* temp_module = new Module::PrintInformation(print_string_);
     Modules.push_back(temp_module);
 }
 

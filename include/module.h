@@ -30,6 +30,24 @@ namespace Module {
         void Print() override {}
     };
 
+    class PrintInformation : public Module {
+    private:
+        std::string print_string;
+        double Ncandidate;
+    public:
+        PrintInformation(const char* print_string_) : Module(), print_string(print_string_), Nevt(0){}
+        ~PrintInformation() {}
+
+        void Process(std::vector<Data>* data) override {
+            Ncandidate = Ncandidate + 1.0;
+        }
+
+        void Print() override {
+            printf("%s", print_string.c_str());
+            printf("Number of candidate: %lf\n", Ncandidate);
+        }
+    };
+
 }
 
 #endif 
