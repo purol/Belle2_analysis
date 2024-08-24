@@ -124,7 +124,7 @@ namespace Module {
 
                 }
                 else if (token == '(') {
-                    ops.push(std::string(token));
+                    ops.push(std::string(1, token));
                 }
                 else if (token == ')') {
                     while (!ops.empty() && ops.top() != '(') {
@@ -149,18 +149,18 @@ namespace Module {
                     case '*':
                     case '/':
                     case '^':
-                        temp_operator = std::string(token);
+                        temp_operator = std::string(1, token);
                         break;
                     case '<':
                     case '>':
                         char next_token;
                         iss >> next_token;
                         if (next_token != '=') {
-                            temp_operator = std::string(token);
+                            temp_operator = std::string(1, token);
                             iss.putback(next_token);
                         }
                         else {
-                            temp_operator = std::string(token) + std::string(next_token);
+                            temp_operator = std::string(1, token) + std::string(1, next_token);
                         }
                         break;
                     case '=':
@@ -172,7 +172,7 @@ namespace Module {
                             exit(1);
                         }
                         else {
-                            temp_operator = std::string(token) + std::string(next_token);
+                            temp_operator = std::string(1, token) + std::string(1, next_token);
                         }
                         break;
                     case '&':
@@ -184,7 +184,7 @@ namespace Module {
                             exit(1);
                         }
                         else {
-                            temp_operator = std::string(token) + std::string(next_token);
+                            temp_operator = std::string(1, token) + std::string(1, next_token);
                         }
                         break;
                     }
