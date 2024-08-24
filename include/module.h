@@ -15,7 +15,7 @@ namespace Module {
         Module() {}
         virtual ~Module() {}
         /*
-        * `Start` function is called after the data structure is determined. It is called only one time
+        * `Start` function is called just after the data structure is determined. It is called only one time
         */
         virtual void Start() = 0;
         /*
