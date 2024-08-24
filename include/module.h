@@ -43,7 +43,7 @@ namespace Module {
         }
 
         void Print() override {
-            printf("%s", print_string.c_str());
+            printf("%s\n", print_string.c_str());
             printf("Number of candidate: %lf\n", Ncandidate);
         }
     };
