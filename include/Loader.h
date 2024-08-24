@@ -82,11 +82,10 @@ void Loader::end() {
 
         // read/check name of branches and their type
         std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
-        for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-            const char* temp_branch_name = temp_branchList->At(j)->GetName();
-            const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
-
-            if (DataStructureDefined == false) {
+        if (DataStructureDefined == false) {
+            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                const char* temp_branch_name = temp_branchList->At(j)->GetName();
+                const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
 
                 if (strcmp(TypeName, "Double_t") == 0) {
                     temp_variable.push_back(static_cast<double>(0.0));
@@ -107,10 +106,11 @@ void Loader::end() {
 
                 variable_names.push_back(temp_branch_name);
                 VariableTypes.push_back(std::string(TypeName));
-
-                DataStructureDefined = true;
             }
-            else {
+            DataStructureDefined = true;
+        }
+        else {
+            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
                 if (variable_names.at(j) != std::string(temp_branch_name)) {
                     if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
                     printf("variable name is different: %s %s\n", variable_names.at(j).c_str(), temp_branch_name);
@@ -122,27 +122,28 @@ void Loader::end() {
                     exit(1);
                 }
             }
+        }
 
-            // set branch addresses
-            if (strcmp(TypeName, "Double_t") == 0) {
-                temp_tree->SetBranchAddress(temp_branch_name, &std::get<double>(temp_variable.at(j)));
+        // set branch addresses
+        for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+            if (strcmp(VariableTypes.at(j), "Double_t") == 0) {
+                temp_tree->SetBranchAddress(variable_names.at(j), &std::get<double>(temp_variable.at(j)));
             }
-            else if (strcmp(TypeName, "Int_t") == 0) {
-                temp_tree->SetBranchAddress(temp_branch_name, &std::get<int>(temp_variable.at(j)));
+            else if (strcmp(VariableTypes.at(j), "Int_t") == 0) {
+                temp_tree->SetBranchAddress(variable_names.at(j), &std::get<int>(temp_variable.at(j)));
             }
-            else if (strcmp(TypeName, "UInt_t") == 0) {
-                temp_tree->SetBranchAddress(temp_branch_name, &std::get<unsigned int>(temp_variable.at(j)));
+            else if (strcmp(VariableTypes.at(j), "UInt_t") == 0) {
+                temp_tree->SetBranchAddress(variable_names.at(j), &std::get<unsigned int>(temp_variable.at(j)));
             }
-            else if (strcmp(TypeName, "Float_t") == 0) {
-                temp_tree->SetBranchAddress(temp_branch_name, &std::get<float>(temp_variable.at(j)));
+            else if (strcmp(VariableTypes.at(j), "Float_t") == 0) {
+                temp_tree->SetBranchAddress(variable_names.at(j), &std::get<float>(temp_variable.at(j)));
             }
-
         }
 
         // fill Data vector
         for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
             temp_tree->GetEntry(j);
-            
+
             Data temp = { temp_variable };
             TotalData.push_back(temp);
         }
