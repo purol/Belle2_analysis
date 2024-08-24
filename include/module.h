@@ -39,7 +39,10 @@ namespace Module {
         ~PrintInformation() {}
 
         void Process(std::vector<Data>* data) override {
-            Ncandidate = Ncandidate + 1.0;
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                Ncandidate = Ncandidate + 1.0;
+                ++iter;
+            }
         }
 
         void Print() override {
