@@ -80,6 +80,16 @@ namespace Module {
             }
         }
 
+        double applyOp(double a, const std::string& op) {
+            if (op == "\x03") return -a;
+            else if (op == "\x04") return a;
+            else {
+                printf("unknown operator: %s\n", op.c_str());
+                exit(1);
+                return 1;
+            }
+        }
+
         int precedence(const std::string& op) {
             if (op == "||") return 1;
             if (op == "&&") return 2;
@@ -88,6 +98,8 @@ namespace Module {
             if (op == "+" || op == "-") return 5;
             if (op == "*" || op == "/") return 6;
             if (op == "^") return 7;
+            if (op == "\x03") return 8; // minus unary operator
+            if (op == "\x04") return 9; // plus unary operator
             return 0;
         }
 
@@ -96,8 +108,20 @@ namespace Module {
             std::stack<double> values;
             std::stack<std::string> ops;
 
+            // previous token is needed to check unary operator
+            char previous_token;
             char token;
             while (iss >> token) {
+                // check it is unary operator or not
+                if (token == '-') {
+                    if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is subtraction
+                    else token = '\x03'; // it is unary
+                }
+                else if (token == '+') {
+                    if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is addition
+                    else token = '\x04'; // it is unary
+                }
+
                 if (std::isdigit(token) || (token == '.')) { // it is number
                     if (token == '.') {
                         char next_token;
@@ -165,7 +189,7 @@ namespace Module {
                     }
                     ops.pop();
                 }
-                else if (std::string("+-*/^<>=!&|").find(token) != std::string::npos) {
+                else if ((std::string("+-*/^<>=!&|") + std::string("\x03") + std::string("\x04")).find(token) != std::string::npos) {
                     std::string temp_operator;
 
                     switch (token) {
@@ -174,8 +198,10 @@ namespace Module {
                     case '*':
                     case '/':
                     case '^':
+                    {
                         temp_operator = std::string(1, token);
                         break;
+                    }
                     case '<':
                     case '>':
                     {
@@ -218,13 +244,26 @@ namespace Module {
                         }
                         break;
                     }
+                    case '\x03':
+                    case '\x04':
+                    {
+                        temp_operator = std::string(1, token);
+                        break;
+                    }
                     }
 
                     while (!ops.empty() && (precedence(ops.top()) >= precedence(temp_operator))) {
-                        double b = values.top(); values.pop();
-                        double a = values.top(); values.pop();
-                        std::string op = ops.top(); ops.pop();
-                        values.push(applyOp(a, b, op));
+                        if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
+                            double b = values.top(); values.pop();
+                            double a = values.top(); values.pop();
+                            std::string op = ops.top(); ops.pop();
+                            values.push(applyOp(a, b, op));
+                        }
+                        else {
+                            double a = values.top(); values.pop();
+                            std::string op = ops.top(); ops.pop();
+                            values.push(applyOp(a, op));
+                        }
                     }
                     ops.push(temp_operator);
                 }
@@ -232,22 +271,36 @@ namespace Module {
                     printf("unknown token: %c\n", token);
                     exit(1);
                 }
+
+                previous_token = token;
             }
 
             while (!ops.empty()) {
-                if (values.size() < 2) {
-                    printf("equation expression is wrong\n");
-                    exit(1);
-                }
+                if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
+                    if (values.size() < 2) {
+                        printf("equation expression is wrong. Even though there is operator, the remaining number is not enough.\n");
+                        exit(1);
+                    }
 
-                double b = values.top(); values.pop();
-                double a = values.top(); values.pop();
-                std::string op = ops.top(); ops.pop();
-                values.push(applyOp(a, b, op));
+                    double b = values.top(); values.pop();
+                    double a = values.top(); values.pop();
+                    std::string op = ops.top(); ops.pop();
+                    values.push(applyOp(a, b, op));
+                }
+                else {
+                    if (values.size() < 1) {
+                        printf("equation expression is wrong. Even though there is operator, the remaining number is not enough.\n");
+                        exit(1);
+                    }
+
+                    double a = values.top(); values.pop();
+                    std::string op = ops.top(); ops.pop();
+                    values.push(applyOp(a, op));
+                }
             }
 
             if (values.size() != 1) {
-                printf("equation expression is wrong\n");
+                printf("equation expression is wrong. The number of remaining number is not equal to 1.\n");
                 exit(1);
             }
 
@@ -258,8 +311,9 @@ namespace Module {
 
             // placeholder is "\x01" and "\x02", which is hard to be typed by user... but maybe user can type...
             // therefore, I want to check the equation beforehand
-            if ((expression.find(std::string("\x01")) != std::string::npos) || (expression.find(std::string("\x02")) != std::string::npos)){
-                printf("In the equation expression, Ascii 01 or 02 are included. It is not feasible\n");
+            // also, "\x03" and "\x04" are used for unary operator
+            if ((expression.find(std::string("\x01")) != std::string::npos) || (expression.find(std::string("\x02")) != std::string::npos) || (expression.find(std::string("\x03")) != std::string::npos) || (expression.find(std::string("\x04")) != std::string::npos)){
+                printf("In the equation expression, Ascii 01, 02, 03, 04 are included. It is not feasible\n");
                 exit(1);
             }
 
@@ -323,3 +377,4 @@ namespace Module {
 }
 
 #endif 
+
