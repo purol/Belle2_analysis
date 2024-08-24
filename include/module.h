@@ -15,7 +15,7 @@ namespace Module {
         Module() {}
         virtual ~Module() {}
         /*
-        * `Start` function is called just after the data structure is determined. It is called only one time
+        * `Start` function is called just after the data structure is determined. It is called only one time.
         */
         virtual void Start() = 0;
         /*
@@ -112,6 +112,13 @@ namespace Module {
                     }
 
                     iss.putback(token);
+                    double value;
+                    iss >> index;
+                    values.push(value);
+
+                }
+                else if (token == '\x01') { // it is placeholder
+
                     int index;
                     iss >> index;
 
@@ -129,6 +136,14 @@ namespace Module {
                     }
                     else {
                         printf("unexpected data type\n");
+                        exit(1);
+                    }
+
+                    char next_token;
+                    iss >> next_token;
+
+                    if (next_token != '\x02') {
+                        printf("placeholder is wrong\n");
                         exit(1);
                     }
 
@@ -241,14 +256,22 @@ namespace Module {
 
         std::string replaceVariables(const std::string& expression, const std::vector<std::string>* var_name) {
 
+            // placeholder is "\x01" and "\x02", which is hard to be typed by user... but maybe user can type...
+            // therefore, I want to check the equation beforehand
+            if ((expression.find(std::string("\x01")) != std::string::npos) || (expression.find(std::string("\x02")) != std::string::npos)){
+                printf("In the equation expression, Ascii 01 or 02 are included. It is not feasible\n");
+                exit(1);
+            }
+
             std::string replaced_expr = expression;
 
             // change string variables to int index. We do not replace them as variable value to save computing time
             for (int i = 0; i < var_name->size(); i++) {
                 std::string::size_type pos = 0;
                 while ((pos = replaced_expr.find(var_name->at(i), pos)) != std::string::npos) {
-                    replaced_expr.replace(pos, var_name->at(i).length(), std::to_string(i));
-                    pos += std::to_string(i).length();
+                    // placeholder is "\x01" and "\x02"
+                    replaced_expr.replace(pos, var_name->at(i).length(), "\x01" + std::to_string(i) + "\x02");
+                    pos += ("\x01" + std::to_string(i) + "\x02").length();
                 }
             }
 
