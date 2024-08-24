@@ -204,7 +204,7 @@ namespace Module {
                     ops.push(temp_operator);
                 }
                 else {
-                    printf("unknown token: %c", token);
+                    printf("unknown token: %c\n", token);
                     exit(1);
                 }
             }
@@ -246,7 +246,7 @@ namespace Module {
         }
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string> variable_names_, std::vector<std::string> VariableTypes_) : Module(), cut_string(cut_string_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             replaced_expr = replaceVariables(cut_string, variable_names);
         }
         ~Cut() {}

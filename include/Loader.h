@@ -60,7 +60,7 @@ void Loader::SetName(const char* loader_name_) {
 }
 
 void Loader::Cut(const char* cut_string_) {
-    Module::Module* temp_module = new Module::Cut(cut_string_, variable_names, VariableTypes);
+    Module::Module* temp_module = new Module::Cut(cut_string_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
