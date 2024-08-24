@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <queue>
+#include <variant>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -35,22 +35,14 @@ private:
     // set loader name, not necessary
     std::string loader_name;
 
-    // flat to denote weather the ROOT structure is defined or not
+    // data structure variables
     bool DataStructureDefined;
+    std::vector<std::string> variable_names;
+    std::vector<std::string> VariableTypes;
 
     // vector of modules
     std::vector<Module::Module*> Modules;
 
-    enum VariableType
-    {
-        int_ = 0,
-        unsigned_int_,
-        float_,
-        double_
-    };
-
-    std::vector<std::string> variable_names;
-    std::vector<Loader::VariableType> VariableTypes;
     std::vector<Data> TotalData;
 
 public:
@@ -87,16 +79,75 @@ void Loader::end() {
 
         // read list of branches
         TObjArray* temp_branchList = temp_tree->GetListOfBranches();
-        int nBranch = temp_tree->GetNbranches();
 
-        // read name of branches and their type
-        for (int i = 0; i < nBranch; i++) {
-            const char* temp_branch_name = temp_branchList->At(i)->GetName();
+        // read/check name of branches and their type
+        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+        for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+            const char* temp_branch_name = temp_branchList->At(j)->GetName();
             const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
-            printf("%s %s\n", temp_branch_name, TypeName);
+
+            if (DataStructureDefined == false) {
+
+                if (strcmp(TypeName, "Double_t") == 0) {
+                    temp_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(TypeName, "Int_t") == 0) {
+                    temp_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(TypeName, "UInt_t") == 0) {
+                    temp_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(TypeName, "Float_t") == 0) {
+                    temp_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
+                    printf("unexpected data type: %s\n", TypeName);
+                }
+
+                variable_names.push_back(temp_branch_name);
+                VariableTypes.push_back(std::string(TypeName));
+
+                DataStructureDefined = true;
+            }
+            else {
+                if (variable_names.at(j) != std::string(temp_branch_name)) {
+                    if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
+                    printf("variable name is different: %s %s\n", variable_names.at(j).c_str(), temp_branch_name);
+                    exit(1);
+                }
+                else if (VariableTypes.at(j) != std::string(TypeName)) {
+                    if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
+                    printf("type is different: %s %s\n", VariableTypes.at(j).c_str(), TypeName);
+                    exit(1);
+                }
+            }
+
+            // set branch addresses
+            if (strcmp(TypeName, "Double_t") == 0) {
+                temp_tree->SetBranchAddress(temp_branch_name, &std::get<double>(temp_variable.at(j)));
+            }
+            else if (strcmp(TypeName, "Int_t") == 0) {
+                temp_tree->SetBranchAddress(temp_branch_name, &std::get<int>(temp_variable.at(j)));
+            }
+            else if (strcmp(TypeName, "UInt_t") == 0) {
+                temp_tree->SetBranchAddress(temp_branch_name, &std::get<unsigned int>(temp_variable.at(j)));
+            }
+            else if (strcmp(TypeName, "Float_t") == 0) {
+                temp_tree->SetBranchAddress(temp_branch_name, &std::get<float>(temp_variable.at(j)));
+            }
+
         }
 
-        for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Process();
+        // fill Data vector
+        for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
+            temp_tree->GetEntry(j);
+            
+            Data temp = { temp_variable };
+            TotalData.push_back(temp);
+        }
+
+        for (int j = 0; j < Modules.size(); j++) Modules.at(j)->Process(&TotalData);
 
         input_file->Close();
     }
