@@ -39,7 +39,7 @@ private:
     bool DataStructureDefined;
 
     // vector of modules
-    std::vector<Module*> Modules;
+    std::vector<Module::Module*> Modules;
 
     enum VariableType
     {
@@ -67,7 +67,7 @@ void Loader::SetName(const char* loader_name_) {
 }
 
 void Loader::Cut(const char* cut_string_) {
-    Module* temp_module = new Cut(cut_string_);
+    Module* temp_module = new Module::Cut(cut_string_);
     Modules.push_back(temp_module);
 }
 
