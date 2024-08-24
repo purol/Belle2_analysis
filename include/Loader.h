@@ -115,6 +115,8 @@ void Loader::end() {
                 VariableTypes.push_back(std::string(TypeName));
             }
             DataStructureDefined = true;
+
+            for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Start();
         }
         else {
             for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -166,7 +168,7 @@ void Loader::end() {
         input_file->Close();
     }
 
-    for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Print();
+    for (int i = 0; i < Modules.size(); i++) Modules.at(i)->End();
     for (int i = 0; i < Modules.size(); i++) delete Modules.at(i);
 }
 

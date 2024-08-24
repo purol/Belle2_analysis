@@ -14,8 +14,18 @@ namespace Module {
     public:
         Module() {}
         virtual ~Module() {}
+        /*
+        * `Start` function is called after the data structure is determined. It is called only one time
+        */
+        virtual void Start() = 0;
+        /*
+        * `Process` function is called every time for each ROOT file.
+        */
         virtual void Process(std::vector<Data>* data) = 0;
-        virtual void Print() = 0;
+        /*
+        * `End` function is called after all ROOT files are read. It is called only once.
+        */
+        virtual void End() = 0;
     };
 
     class Cut : public Module {
@@ -246,10 +256,12 @@ namespace Module {
         }
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        ~Cut() {}
+
+        void Start() {
             replaced_expr = replaceVariables(cut_string, variable_names);
         }
-        ~Cut() {}
 
         void Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
@@ -259,7 +271,7 @@ namespace Module {
             }
         }
 
-        void Print() override {}
+        void End() override {}
     };
 
     class PrintInformation : public Module {
@@ -270,6 +282,8 @@ namespace Module {
         PrintInformation(const char* print_string_) : Module(), print_string(print_string_), Ncandidate(0){}
         ~PrintInformation() {}
 
+        void Start() override {}
+
         void Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 Ncandidate = Ncandidate + 1.0;
@@ -277,7 +291,7 @@ namespace Module {
             }
         }
 
-        void Print() override {
+        void End() override {
             printf("%s\n", print_string.c_str());
             printf("Number of candidate: %lf\n", Ncandidate);
         }
