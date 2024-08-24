@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <string>
+#include <stack>
+#include <sstream>
 
 #include "data.h"
 
@@ -128,7 +130,7 @@ namespace Module {
                     while (!ops.empty() && ops.top() != '(') {
                         double b = values.top(); values.pop();
                         double a = values.top(); values.pop();
-                        char op = ops.top(); ops.pop();
+                        std::string op = ops.top(); ops.pop();
                         values.push(applyOp(a, b, op));
 
                         if (ops.empty()) {
@@ -209,7 +211,7 @@ namespace Module {
 
                 double b = values.top(); values.pop();
                 double a = values.top(); values.pop();
-                char op = ops.top(); ops.pop();
+                std::string op = ops.top(); ops.pop();
                 values.push(applyOp(a, b, op));
             }
 
@@ -222,10 +224,6 @@ namespace Module {
         }
 
         std::string replaceVariables(const std::string& expression, const std::vector<std::string> var_name) {
-            if (var_name.size() != variables.size()) {
-                printf("variable name list and variable have different size\n");
-                exit(1);
-            }
 
             std::string replaced_expr = expression;
 
