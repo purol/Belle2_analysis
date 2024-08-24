@@ -147,7 +147,10 @@ void Loader::end() {
             TotalData.push_back(temp);
         }
 
-        for (int j = 0; j < Modules.size(); j++) Modules.at(j)->Process(&TotalData);
+        // process
+        for (int j = 0; j < Modules.size(); j++) {
+            Modules.at(j)->Process(&TotalData);
+        }
 
         input_file->Close();
     }
