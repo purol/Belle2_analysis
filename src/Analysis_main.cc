@@ -38,6 +38,9 @@ int main(int argc, char* argv[]) {
     */
 
     Loader loader("./", ".root");
+    loader.PrintInformation("========== initial ==========");
+    loader.Cut("chiProb > 0.0");
+    loader.PrintInformation("========== chiProb > 0.0 ==========");
     loader.end();
 
     return 0;

@@ -60,7 +60,7 @@ void Loader::SetName(const char* loader_name_) {
 }
 
 void Loader::Cut(const char* cut_string_) {
-    Module::Module* temp_module = new Module::Cut(cut_string_);
+    Module::Module* temp_module = new Module::Cut(cut_string_, variable_names, VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -108,6 +108,7 @@ void Loader::end() {
                 else {
                     if (!loader_name.empty()) printf("[%s] ", loader_name.c_str());
                     printf("unexpected data type: %s\n", TypeName);
+                    exit(1);
                 }
 
                 variable_names.push_back(temp_branch_name);
