@@ -113,7 +113,7 @@ namespace Module {
 
                     iss.putback(token);
                     double value;
-                    iss >> index;
+                    iss >> value;
                     values.push(value);
 
                 }
