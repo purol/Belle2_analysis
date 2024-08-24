@@ -35,7 +35,7 @@ namespace Module {
         std::string print_string;
         double Ncandidate;
     public:
-        PrintInformation(const char* print_string_) : Module(), print_string(print_string_), Nevt(0){}
+        PrintInformation(const char* print_string_) : Module(), print_string(print_string_), Ncandidate(0){}
         ~PrintInformation() {}
 
         void Process(std::vector<Data>* data) override {
