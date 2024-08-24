@@ -153,6 +153,7 @@ namespace Module {
                         break;
                     case '<':
                     case '>':
+                    {
                         char next_token;
                         iss >> next_token;
                         if (next_token != '=') {
@@ -163,8 +164,10 @@ namespace Module {
                             temp_operator = std::string(1, token) + std::string(1, next_token);
                         }
                         break;
+                    }
                     case '=':
                     case '!':
+                    {
                         char next_token;
                         iss >> next_token;
                         if (next_token != '=') {
@@ -175,8 +178,10 @@ namespace Module {
                             temp_operator = std::string(1, token) + std::string(1, next_token);
                         }
                         break;
+                    }
                     case '&':
                     case '|':
+                    {
                         char next_token;
                         iss >> next_token;
                         if (next_token != token) {
@@ -188,14 +193,15 @@ namespace Module {
                         }
                         break;
                     }
+                    }
 
                     while (!ops.empty() && (precedence(ops.top()) >= precedence(temp_operator))) {
                         double b = values.top(); values.pop();
                         double a = values.top(); values.pop();
-                        char op = ops.top(); ops.pop();
+                        std::string op = ops.top(); ops.pop();
                         values.push(applyOp(a, b, op));
                     }
-                    ops.push(token);
+                    ops.push(temp_operator);
                 }
                 else {
                     printf("unknown token: %c", token);
