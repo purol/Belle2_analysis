@@ -22,8 +22,8 @@ namespace Module {
     private:
         std::string cut_string;
         std::string replaced_expr;
-        std::vector<std::string> variable_names;
-        std::vector<std::string> VariableTypes;
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
 
         double applyOp(double a, double b, const std::string& op) {
             if (op == "+") return (a + b);
@@ -81,7 +81,7 @@ namespace Module {
             return 0;
         }
 
-        double evaluateExpression(const std::string& replaced_expr_, const std::vector<std::variant<int, unsigned int, float, double>> variables_, const std::vector<std::string> VariableTypes_) {
+        double evaluateExpression(const std::string& replaced_expr_, const std::vector<std::variant<int, unsigned int, float, double>> variables_, const std::vector<std::string>* VariableTypes_) {
             std::istringstream iss(replaced_expr_);
             std::stack<double> values;
             std::stack<std::string> ops;
@@ -105,16 +105,16 @@ namespace Module {
                     int index;
                     iss >> index;
 
-                    if (VariableTypes_.at(index) == "Double_t") {
+                    if (VariableTypes_->at(index) == "Double_t") {
                         values.push((double)std::get<double>(variables_.at(index)));
                     }
-                    else if (VariableTypes_.at(index) == "Int_t") {
+                    else if (VariableTypes_->at(index) == "Int_t") {
                         values.push((double)std::get<int>(variables_.at(index)));
                     }
-                    else if (VariableTypes_.at(index) == "UInt_t") {
+                    else if (VariableTypes_->at(index) == "UInt_t") {
                         values.push((double)std::get<unsigned int>(variables_.at(index)));
                     }
-                    else if (VariableTypes_.at(index) == "Float_t") {
+                    else if (VariableTypes_->at(index) == "Float_t") {
                         values.push((double)std::get<float>(variables_.at(index)));
                     }
                     else {
@@ -229,15 +229,15 @@ namespace Module {
             return values.top();
         }
 
-        std::string replaceVariables(const std::string& expression, const std::vector<std::string> var_name) {
+        std::string replaceVariables(const std::string& expression, const std::vector<std::string>* var_name) {
 
             std::string replaced_expr = expression;
 
             // change string variables to int index. We do not replace them as variable value to save computing time
-            for (int i = 0; i < var_name.size(); i++) {
+            for (int i = 0; i < var_name->size(); i++) {
                 std::string::size_type pos = 0;
-                while ((pos = replaced_expr.find(var_name.at(i), pos)) != std::string::npos) {
-                    replaced_expr.replace(pos, var_name.at(i).length(), std::to_string(i));
+                while ((pos = replaced_expr.find(var_name->at(i), pos)) != std::string::npos) {
+                    replaced_expr.replace(pos, var_name->at(i).length(), std::to_string(i));
                     pos += std::to_string(i).length();
                 }
             }
@@ -246,7 +246,7 @@ namespace Module {
         }
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
             replaced_expr = replaceVariables(cut_string, variable_names);
         }
         ~Cut() {}
