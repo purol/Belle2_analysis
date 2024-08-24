@@ -15,33 +15,27 @@ LIBS = -lRooFit -lRooStats -lRooFitCore  -lMinuit -lFastBDT_static
 #LIBS += -lTMVA -lTMVAGui
 INCLUDES = -I$(INCDIR) -I$(BDTINC)
 
-MAINS = $(wildcard *.cc)
-TARGETS = $(MAINS:%.cc=$(BINDIR)/%)
-
 SRCS = $(wildcard $(SRCDIR)/*.cc)
-OBJS = $(MAINS:%.cc=$(TMPDIR)/%.o)
-#OBJS = $(SRCS:$(SRCDIR)/%.cc=$(TMPDIR)/%.o)
+OBJS = $(SRCS:$(SRCDIR)/%.cc=$(TMPDIR)/%.o)
+TARGETS = $(SRCS:$(SRCDIR)/%.cc=$(BINDIR)/%)
 
 .PHONY : all clean
 
-all: $(TARGETS)
+all: directories $(TARGETS)
 
-force:
-	@ $(RM) $(BINDIR)/* $(TMPDIR)/*
-	@ make all
+directories:
+	mkdir -p $(BINDIR) $(TMPDIR) $(LIBDIR)
 
 clean:
-	@ echo '<< cleaning directory >>'
-	@ $(RM) *~ */*~ \#*\#* */\#*\#*
-	@ $(RM) $(BINDIR)/* $(TMPDIR)/*
+	echo '<< cleaning directory >>'
+	$(RM) *~ */*~ \#*\#* */\#*\#*
+	$(RM) $(BINDIR)/* $(TMPDIR)/*
 
 $(TARGETS): $(BINDIR)/% : $(TMPDIR)/%.o
-	@ echo '<< creating executable $@ >>'
-	@ $(CXX) -o $@ $< $(LDFLAGS) $(LIBS) $(INCLUDES) -L$(LIBDIR)
-	@ $(RM) *~ */*~ \#*\#* */\#*\#*
-	@ echo '<< compiling succeded!! >>'
+	echo '<< creating executable $@ >>'
+	$(CXX) -o $@ $< $(LDFLAGS) $(LIBS) $(INCLUDES) -L$(LIBDIR)
+	echo '<< compilation succeeded! >>'
 
-$(OBJS): $(TMPDIR)/%.o : %.cc
-	@ echo '<< compiling $@ >>'
-	@ $(CXX) $(CFLAGS) $(INCLUDES) -L$(LIBDIR) -c $< -o $@
-
+$(OBJS): $(TMPDIR)/%.o : $(SRCDIR)/%.cc
+	echo '<< compiling $@ >>'
+	$(CXX) $(CFLAGS) $(INCLUDES) -L$(LIBDIR) -c $< -o $@
