@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     loader.PrintInformation("========== initial ==========");
     loader.Cut("chiProb > 0.2");
     loader.PrintInformation("========== chiProb > 0.2 ==========");
-    loader.DrawTH1D("chiProb_hist", ";chiProb;", "chiProb", 30, 0.2, 1.0, "chiProb.png");
+    loader.DrawTH1D("chiProb^2", ";chiProb square;", 30, 0.0, 1.0, "chiProb_square.png");
     loader.end();
 
     return 0;

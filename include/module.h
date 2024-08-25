@@ -7,6 +7,7 @@
 
 #include "data.h"
 #include "string_equation.h"
+#include "base.h"
 
 namespace Module {
 
@@ -91,9 +92,10 @@ namespace Module {
 
         std::string png_name;
     public:
-        DrawTH1D(const char* hist_name_, const char* hist_title_, const char* expression_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
         {
-            hist = new TH1D(hist_name_, hist_title_, nbins, x_low, x_high);
+            std::string hist_name = generateRandomString(12);
+            hist = new TH1D(hist_name.c_str(), hist_title_, nbins, x_low, x_high);
         }
         ~DrawTH1D() {
             delete hist;
