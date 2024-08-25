@@ -399,7 +399,7 @@ namespace Module {
 
         void Start() override {
             // get variable index
-            std::vector<std::string>::iterator iter = variable_names->find(variable_names->begin(), variable_names->end(), variable_name);
+            std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name);
 
             if (iter != variable_names->end()) {
                 variable_index = iter - variable_names->begin();
