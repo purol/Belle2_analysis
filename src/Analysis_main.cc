@@ -39,9 +39,10 @@ int main(int argc, char* argv[]) {
 
     Loader loader("./", ".root");
     loader.PrintInformation("========== initial ==========");
-    loader.Cut("chiProb > 0.2");
-    loader.PrintInformation("========== chiProb > 0.2 ==========");
-    loader.DrawTH1D("chiProb^2", ";chiProb square;", 30, 0.0, 1.0, "chiProb_square.png");
+    loader.Cut("Btag_chiProb > 0.2");
+    loader.PrintInformation("========== Btag_chiProb > 0.2 ==========");
+    loader.DrawTH1D("Btag_chiProb^2", ";Btag chiProb square;", 30, 0.0, 1.0, "Btag_chiProb_square.png");
+    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.2, 5.3, 30, -0.2, 0.2, "Mbc_deltaE.png");
     loader.end();
 
     return 0;
