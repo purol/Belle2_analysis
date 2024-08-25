@@ -50,7 +50,8 @@ public:
     void SetName(const char* loader_name_);
     void Cut(const char* cut_string_);
     void PrintInformation(const char* print_string_);
-    void DrawTH1D(const char* hist_name_, const char* hist_title_, const char* variable_name_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void end();
 };
 
