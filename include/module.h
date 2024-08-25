@@ -165,13 +165,13 @@ namespace Module {
         void Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
-                double x_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(x_replaced_expr, y_replaced_expr);
+                double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
+                hist->Fill(x_result, y_result);
                 ++iter;
             }
         }
 
-        TH1D* SaveTH1D() {
+        TH2D* SaveTH2D() {
             return hist;
         }
 
