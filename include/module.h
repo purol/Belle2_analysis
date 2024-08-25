@@ -374,6 +374,79 @@ namespace Module {
         }
     };
 
+    class DrawTH1D : public Module {
+    private:
+        TH1D* hist;
+        int nbins;
+        double x_low;
+        double x_high;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+        std::string variable_name;
+        int variable_index;
+
+        std::string png_name;
+    public:
+        DrawTH1D(const char* hist_name_, const char* hist_title_, const char* variable_name_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), variable_name(variable_name_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
+        {
+            hist = new TH1D(hist_name_, hist_title_, nbins, x_low, x_high);
+        }
+        ~DrawTH1D() {
+            delete hist;
+        }
+
+        void Start() override {
+            // get variable index
+            std::vector<std::string>::iterator iter = variable_names->find(variable_names->begin(), variable_names->end(), variable_name);
+
+            if (iter != variable_names->end()) {
+                variable_index = iter - variable_names->begin();
+            }
+            else {
+                printf("cannot find variable: %s\n", variable_name.c_str());
+                exit(1);
+            }
+        }
+
+        void Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                if (VariableTypes->at(variable_index) == "Double_t") {
+                    hist->Fill((double)std::get<double>(iter->variable.at(variable_index)));
+                }
+                else if (VariableTypes->at(variable_index) == "Int_t") {
+                    hist->Fill((double)std::get<int>(iter->variable.at(variable_index)));
+                }
+                else if (VariableTypes->at(variable_index) == "UInt_t") {
+                    hist->Fill((double)std::get<unsigned int>(iter->variable.at(variable_index)));
+                }
+                else if (VariableTypes->at(variable_index) == "Float_t") {
+                    hist->Fill((double)std::get<float>(iter->variable.at(variable_index)));
+                }
+                else {
+                    printf("unexpected data type\n");
+                    exit(1);
+                }
+
+                ++iter;
+
+            }
+        }
+
+        TH1D* SaveTH1D() {
+            return hist;
+        }
+
+        void End() override {
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+            hist->SetStats(false);
+            hist->Draw("Hist");
+            c_temp->SaveAs(png_name.c_str());
+            delete c_temp;
+        }
+
+    };
+
 }
 
 #endif 

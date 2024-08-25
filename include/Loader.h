@@ -69,6 +69,11 @@ void Loader::PrintInformation(const char* print_string_) {
     Modules.push_back(temp_module);
 }
 
+void Loader::DrawTH1D(const char* hist_name_, const char* hist_title_, const char* variable_name_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawTH1D(hist_name_, hist_title_, variable_name_, nbins_, x_low_, x_high_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 void Loader::end() {
 
     std::vector<std::string> filename;
