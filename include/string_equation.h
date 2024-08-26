@@ -133,15 +133,12 @@ double evaluateExpression(const std::string& replaced_expr_, const std::vector<s
                 exit(1);
             }
 
-            char next_token;
-            iss >> next_token;
+            iss >> token;
 
-            if (next_token != '\x02') {
+            if (token != '\x02') {
                 printf("placeholder is wrong\n");
                 exit(1);
             }
-
-            previous_token = next_token;
 
         }
         else if (token == '(') {
