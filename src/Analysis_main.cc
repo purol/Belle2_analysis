@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
     loader.DrawStack();
     */
 
-    Loader loader();
+    Loader loader;
     loader.Load("./", ".root", "MC");
     loader.PrintInformation("========== initial ==========");
     loader.Cut("Btag_chiProb > 0.2");
