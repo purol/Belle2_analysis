@@ -141,16 +141,25 @@ double evaluateExpression(const std::string& replaced_expr_, const std::vector<s
                 exit(1);
             }
 
+            previous_token = next_token;
+
         }
         else if (token == '(') {
             ops.push(std::string(1, token));
         }
         else if (token == ')') {
             while (!ops.empty() && ops.top() != '(') {
-                double b = values.top(); values.pop();
-                double a = values.top(); values.pop();
-                std::string op = ops.top(); ops.pop();
-                values.push(applyOp(a, b, op));
+                if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
+                    double b = values.top(); values.pop();
+                    double a = values.top(); values.pop();
+                    std::string op = ops.top(); ops.pop();
+                    values.push(applyOp(a, b, op));
+                }
+                else {
+                    double a = values.top(); values.pop();
+                    std::string op = ops.top(); ops.pop();
+                    values.push(applyOp(a, op));
+                }
 
                 if (ops.empty()) {
                     printf("cannot find `(`\n");
