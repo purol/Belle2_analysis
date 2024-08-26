@@ -18,12 +18,12 @@
 #include "TCanvas.h"
 #include "TObjArray.h"
 
+// the name of tree is "information". It is magic string
+# define TREE "information"
+
 #include "base.h"
 #include "data.h"
 #include "module.h"
-
-// the name of tree is "information". It is magic string
-# define TREE "information"
 
 class Loader {
 private:
@@ -46,8 +46,9 @@ private:
     std::vector<Data> TotalData;
 
 public:
-    Loader(const char* filepath_, const char* including_string_);
+    Loader();
     void SetName(const char* loader_name_);
+    void Load(const char* dirname_, const char* including_string_, const char* category_);
     void Cut(const char* cut_string_);
     void PrintInformation(const char* print_string_);
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
@@ -86,15 +87,17 @@ void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, cons
     Modules.push_back(temp_module);
 }
 
-void end() {
+void Loader::end() {
     // run Start
     for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Start();
 
     while (true) {
-        AreAllFilesRead = true;
+        bool AreAllFilesRead = true;
 
         // run Process
-        if (Modules.at(j)->Process(&TotalData) == 0) AreAllFilesRead = false;
+        for (int i = 0; i < Modules.size(); i++) {
+            if (Modules.at(i)->Process(&TotalData) == 0) AreAllFilesRead = false;
+        }
 
         // clear remaining data
         TotalData.clear();

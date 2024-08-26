@@ -132,16 +132,16 @@ namespace Module {
             // set branch addresses
             for (int j = 0; j < temp_tree->GetNbranches(); j++) {
                 if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<double>(temp_variable.at(j)));
                 }
                 else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<int>(temp_variable.at(j)));
                 }
                 else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
                 }
                 else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
                 }
             }
 
