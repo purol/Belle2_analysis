@@ -44,7 +44,7 @@ double applyOp(double a, double b, const std::string& op) {
         else return 0.0;
     }
     else {
-        printf("unknown operator: %s\n", op.c_str());
+        printf("[applyOp] unknown operator: %s\n", op.c_str());
         exit(1);
         return 1;
     }
@@ -54,7 +54,7 @@ double applyOp(double a, const std::string& op) {
     if (op == "\x03") return -a;
     else if (op == "\x04") return a;
     else {
-        printf("unknown operator: %s\n", op.c_str());
+        printf("[applyOp] unknown operator: %s\n", op.c_str());
         exit(1);
         return 1;
     }
@@ -192,7 +192,7 @@ double evaluateExpression(const std::string& replaced_expr_, const std::vector<s
                 char next_token;
                 iss >> next_token;
                 if (next_token != '=') {
-                    printf("unknown operator: %c\n", token);
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
                 else {
@@ -206,7 +206,7 @@ double evaluateExpression(const std::string& replaced_expr_, const std::vector<s
                 char next_token;
                 iss >> next_token;
                 if (next_token != token) {
-                    printf("unknown operator: %c\n", token);
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
                 else {
