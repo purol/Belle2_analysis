@@ -46,7 +46,7 @@ namespace Module {
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
     public:
-        void Load(const char* dirname_, const char* including_string_, const char* category_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), category(category_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        Load(const char* dirname_, const char* including_string_, const char* category_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), category(category_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
             // load file list and initialize entry counter
             load_files(dirname, &filename, including_string_);
             Nentry = filename.size();
