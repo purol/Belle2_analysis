@@ -16,17 +16,149 @@ namespace Module {
         Module() {}
         virtual ~Module() {}
         /*
-        * `Start` function is called just after the data structure is determined. It is called only one time.
+        * `Start` function is called after the data structure is determined. It is called only one time.
         */
         virtual void Start() = 0;
         /*
         * `Process` function is called every time for each ROOT file.
+        * return: For `Load` module, if it cannot read ROOT file, because there is no more file to read, it is 1. Otherwise, it is 0.
+        * For other all modules, it is always 1.
         */
-        virtual void Process(std::vector<Data>* data) = 0;
+        virtual int Process(std::vector<Data>* data) = 0;
         /*
         * `End` function is called after all ROOT files are read. It is called only once.
         */
         virtual void End() = 0;
+    };
+
+    class Load : public Module {
+    private:
+        std::vector<std::string> filename;
+        std::string dirname;
+        int Nentry;
+        int Currententry;
+        std::string category;
+
+        // temporary variable to extract data from branch
+        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+
+        bool* DataStructureDefined;
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+    public:
+        void Load(const char* dirname_, const char* including_string_, const char* category_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), category(category_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+            // load file list and initialize entry counter
+            load_files(dirname, &filename, including_string_);
+            Nentry = filename.size();
+            Currententry = 0;
+
+            // check data structure
+            for (int i = 0; i < Nentry; i++) {
+                TFile* input_file = new TFile((dirname + std::string("/") + filename.at(i)).c_str(), "read");
+
+                // read tree
+                TTree* temp_tree = (TTree*)input_file->Get(TREE);
+
+                // read list of branches
+                TObjArray* temp_branchList = temp_tree->GetListOfBranches();
+
+                // read/check name of branches and their type
+                if ((*DataStructureDefined) == false) {
+                    for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                        const char* temp_branch_name = temp_branchList->At(j)->GetName();
+                        const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
+
+                        variable_names->push_back(temp_branch_name);
+                        VariableTypes->push_back(std::string(TypeName));
+                    }
+                    (*DataStructureDefined) = true;
+                }
+                else {
+                    for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                        const char* temp_branch_name = temp_branchList->At(j)->GetName();
+                        const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
+
+                        if (variable_names->at(j) != std::string(temp_branch_name)) {
+                            printf("variable name is different: %s %s\n", variable_names->at(j).c_str(), temp_branch_name);
+                            exit(1);
+                        }
+                        else if (VariableTypes->at(j) != std::string(TypeName)) {
+                            printf("type is different: %s %s\n", VariableTypes->at(j).c_str(), TypeName);
+                            exit(1);
+                        }
+                    }
+                }
+
+                input_file->Close();
+            }
+        }
+        ~Load() {}
+
+        void Start() override {
+            // fill `temp_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < VariableTypes->size(); i++) {
+                if (strcmp(VariableTypes->at(i).c_str(), "Double_t") == 0) {
+                    temp_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "Int_t") == 0) {
+                    temp_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "UInt_t") == 0) {
+                    temp_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "Float_t") == 0) {
+                    temp_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            // read Currententry'th file. If there is not file to read, just return 1
+            if (Currententry == Nentry) return 1;
+
+            // if there is remaining data, do not extract additional one
+            if (data->empty() == false) return 0;
+
+            // read file
+            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
+
+            // read tree
+            TTree* temp_tree = (TTree*)input_file->Get(TREE);
+
+            // set branch addresses
+            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                }
+            }
+
+            // fill Data vector
+            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
+                temp_tree->GetEntry(j);
+
+                Data temp = { temp_variable, category };
+                data->push_back(temp);
+            }
+
+            input_file->Close();
+            Currententry++;
+            return 0;
+        }
+
+        void End() override {}
     };
 
     class Cut : public Module {
@@ -44,12 +176,14 @@ namespace Module {
             replaced_expr = replaceVariables(cut_string, variable_names);
         }
 
-        void Process(std::vector<Data>* data) override {
+        int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 if (result < 0.5) data->erase(iter);
                 else ++iter;
             }
+
+            return 1;
         }
 
         void End() override {}
@@ -65,11 +199,13 @@ namespace Module {
 
         void Start() override {}
 
-        void Process(std::vector<Data>* data) override {
+        int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 Ncandidate = Ncandidate + 1.0;
                 ++iter;
             }
+
+            return 1;
         }
 
         void End() override {
@@ -106,16 +242,14 @@ namespace Module {
             replaced_expr = replaceVariables(expression, variable_names);
         }
 
-        void Process(std::vector<Data>* data) override {
+        int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 hist->Fill(result);
                 ++iter;
             }
-        }
 
-        TH1D* SaveTH1D() {
-            return hist;
+            return 1;
         }
 
         void End() override {
@@ -162,17 +296,15 @@ namespace Module {
             y_replaced_expr = replaceVariables(y_expression, variable_names);
         }
 
-        void Process(std::vector<Data>* data) override {
+        int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
                 hist->Fill(x_result, y_result);
                 ++iter;
             }
-        }
 
-        TH2D* SaveTH2D() {
-            return hist;
+            return 1;
         }
 
         void End() override {
