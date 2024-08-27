@@ -556,7 +556,7 @@ namespace Module {
                 int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
 
                 if (event_variable_index == variable_names->size()) {
-                    printf("cannot find variable %s\n", Event_variable_list.at(i));
+                    printf("cannot find variable %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
