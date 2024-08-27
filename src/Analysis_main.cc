@@ -42,24 +42,41 @@ int main(int argc, char* argv[]) {
     loader.DrawStack();
     */
 
+    // start
     Loader loader;
+
+    // read root file
     loader.Load("./", ".root", "MC");
+
+    // print its information
     loader.PrintInformation("========== initial ==========");
+
+    // cut
     loader.Cut("Btag_chiProb > 0.2");
     loader.PrintInformation("========== Btag_chiProb > 0.2 ==========");
+
+    // draw histogram
     loader.DrawTH1D("Btag_chiProb^2", ";Btag chiProb square;", 30, 0.0, 1.0, "Btag_chiProb_square.png");
     loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png");
+
+    // complicated cut
     loader.Cut("Btag_deltaE > (-15) * Btag_Mbc + 79.15");
+    loader.PrintInformation("========== Btag_deltaE > (-15) * Btag_Mbc + 79.15 ==========");
     loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
+
+    // save into separate ROOT file
     loader.PrintSeparateRootFile("./", "after_", "_cut");
-    loader.PrintSeparateRootFile("./", "after_", "_cut");
+
+    // save into one ROOT file
+    loader.PrintRootFile("./OneLargeFile.root");
+
+    // end
     loader.end();
 
     /*
     * DrawStack
-    * PrintSeparateRootFile
     * BCS
-    * PrintRootFile
+    * loader.BCS("Btag_Mbc", "highest");
     */
 
     return 0;

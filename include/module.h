@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <float.h>
 
 #include "data.h"
 #include "string_equation.h"
@@ -509,6 +510,76 @@ namespace Module {
                 temp_file->Close();
             }
         }
+    };
+
+    class BCS : public Module {
+        /*
+        * In this module, we assume that candidates from the same event are consecutive
+        */
+    private:
+        std::string equation;
+        std::string criteria;
+        std::string replaced_expr;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+        char to_upper(char c) {
+            return std::toupper(static_cast<unsigned char>(c));
+        }
+    public:
+        BCS(const char* equation_, const char* criteria_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), criteria(criteria_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        ~BCS() {}
+        void Start() override {
+            // convert `criteria` into upper case
+            std::transform(criteria.begin(), criteria.end(), criteria.begin(), to_upper);
+
+            if ((criteria != "HIGHEST") || (criteria != "LOWEST")) {
+                printf("criteria for BCS should be `highest` or `lowest`\n");
+                exit(1);
+            }
+
+            replaced_expr = replaceVariables(equation, variable_names);
+        }
+        int Process(std::vector<Data>* data) override {
+
+            double extreme_value;
+            if (criteria == "HIGHEST") extreme_value = -DBL_MAX;
+            else if (criteria == "LOWEST") extreme_value = DBL_MAX;
+            else {
+                printf("criteria for BCS should be `highest` or `lowest`\n");
+                exit(1);
+            }
+            int selected_index = -1;
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                
+                if (criteria == "HIGHEST") {
+                    if (result > extreme_value) {
+                        extreme_value = result;
+                        selected_index = iter - data->begin();
+                    }
+                }
+                else if (criteria == "LOWEST") {
+                    if (result < extreme_value) {
+                        extreme_value = result;
+                        selected_index = iter - data->begin();
+                    }
+                }
+
+                ++iter;
+            }
+
+            if (selected_index != -1) {
+                Data temp = data->at(selected_index);
+                data->clear();
+                data->push_back(temp);
+            }
+
+            return 1;
+        }
+        void End() override {}
     };
 
 }

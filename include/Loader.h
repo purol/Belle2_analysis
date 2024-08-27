@@ -55,6 +55,7 @@ public:
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
+    void BCS(const char* expression_, const char* criteria);
     void end();
 };
 
@@ -96,6 +97,11 @@ void Loader::PrintSeparateRootFile(const char* path_, const char* prefix_, const
 
 void Loader::PrintRootFile(const char* output_name_) {
     Module::Module* temp_module = new Module::PrintRootFile(output_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::BCS(const char* expression_, const char* criteria_) {
+    Module::Module* temp_module = new Module::BCS(expression_, criteria_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
