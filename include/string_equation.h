@@ -299,6 +299,20 @@ std::string replaceVariables(const std::string& expression, const std::vector<st
     for (int i = 0; i < var_name->size(); i++) {
         std::string::size_type pos = 0;
         while ((pos = replaced_expr.find(var_name->at(i), pos)) != std::string::npos) {
+            // accidentally, variable names can be overlapped (ex. Btag_M and Btag_Mbc). If next and previous char is alphabet, just skip it.
+            if (pos != 0) {
+                if (std::isalpha(replaced_expr.at(pos - 1))) {
+                    pos = pos + var_name->at(i).length();
+                    continue;
+                }
+            }
+            if (pos != (replaced_expr.length() - 1)) {
+                if (std::isalpha(replaced_expr.at(pos + 1))) {
+                    pos = pos + var_name->at(i).length();
+                    continue;
+                }
+            }
+
             // placeholder is "\x01" and "\x02"
             replaced_expr.replace(pos, var_name->at(i).length(), "\x01" + std::to_string(i) + "\x02");
             pos += ("\x01" + std::to_string(i) + "\x02").length();
