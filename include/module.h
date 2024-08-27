@@ -444,7 +444,7 @@ namespace Module {
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
     public:
-        PrintRootFile(const char* output_name, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
         ~PrintRootFile() {}
 
