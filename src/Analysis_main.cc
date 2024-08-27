@@ -53,5 +53,12 @@ int main(int argc, char* argv[]) {
     loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
     loader.end();
 
+    /*
+    * DrawStack
+    * PrintSeparateRootFile
+    * BCS
+    * PrintRootFile
+    */
+
     return 0;
 }
