@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <float.h>
+#include <limits>
 
 #include "data.h"
 #include "string_equation.h"
@@ -514,11 +514,21 @@ namespace Module {
 
     class BCS : public Module {
         /*
-        * In this module, we assume that candidates from the same event are consecutive
+        * In this module, we assume that 
+        * 1. candidates from the same event are consecutive
+        * 2. candidates from the same event are in the same ROOT file
         */
     private:
         std::string equation;
         std::string criteria;
+        std::vector<std::string> Event_variable_list;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
         std::string replaced_expr;
 
         std::vector<std::string>* variable_names;
@@ -528,8 +538,10 @@ namespace Module {
             return std::toupper(static_cast<unsigned char>(c));
         }
     public:
-        BCS(const char* equation_, const char* criteria_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), criteria(criteria_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        
         ~BCS() {}
+
         void Start() override {
             // convert `criteria` into upper case
             std::transform(criteria.begin(), criteria.end(), criteria.begin(), to_upper);
@@ -539,46 +551,162 @@ namespace Module {
                 exit(1);
             }
 
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+
+                if (event_variable_index == variable_names->size()) {
+                    printf("cannot find variable %s\n", Event_variable_list.at(i));
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
             replaced_expr = replaceVariables(equation, variable_names);
         }
+
         int Process(std::vector<Data>* data) override {
 
+            // It is temporary data to save Data before BCS is done.
+            std::vector<Data> temp_data;
+
+            // initialize extreme value/index
             double extreme_value;
-            if (criteria == "HIGHEST") extreme_value = -DBL_MAX;
-            else if (criteria == "LOWEST") extreme_value = DBL_MAX;
+            if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+            else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
             else {
                 printf("criteria for BCS should be `highest` or `lowest`\n");
                 exit(1);
             }
             int selected_index = -1;
 
+            // initialize previous event variable
+            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable;
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = event_variable_index_list.at(i);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<double>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<int>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    previous_event_variable.at(i) = std::numeric_limits<unsigned int>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<float>::max();
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(data->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(data->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(data->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(data->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        exit(1);
+                    }
+                }
+
+                // if event variable changes, do BCS
+                if (previous_event_variable != temp_event_variable) {
+                    if (selected_index != -1) {
+                        Data temp = temp_data.at(selected_index);
+                        data->push_back(temp);
+                        temp_data.clear();
+
+                        // reset extreme value/index
+                        if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+                        else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
+                        else {
+                            printf("criteria for BCS should be `highest` or `lowest`\n");
+                            exit(1);
+                        }
+                        selected_index = -1;
+                    }
+                }
+
+                // get BCS variable
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 
+                // check the BCS criteria
                 if (criteria == "HIGHEST") {
                     if (result > extreme_value) {
                         extreme_value = result;
-                        selected_index = iter - data->begin();
+                        selected_index = temp_data.size();
                     }
                 }
                 else if (criteria == "LOWEST") {
                     if (result < extreme_value) {
                         extreme_value = result;
-                        selected_index = iter - data->begin();
+                        selected_index = temp_data.size();
                     }
                 }
+
+                // get Data
+                temp_data.push_back(*iter);
+                data->erase(iter);
+
+                previous_event_variable = temp_event_variable;
 
                 ++iter;
             }
 
+            // do BCS for the final dataset
             if (selected_index != -1) {
-                Data temp = data->at(selected_index);
-                data->clear();
+                Data temp = temp_data.at(selected_index);
                 data->push_back(temp);
+                temp_data.clear();
+
+                // reset extreme value/index
+                if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+                else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
+                else {
+                    printf("criteria for BCS should be `highest` or `lowest`\n");
+                    exit(1);
+                }
+                selected_index = -1;
             }
 
             return 1;
         }
+
         void End() override {}
     };
 

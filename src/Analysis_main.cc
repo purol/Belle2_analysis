@@ -64,8 +64,11 @@ int main(int argc, char* argv[]) {
     loader.PrintInformation("========== Btag_deltaE > (-15) * Btag_Mbc + 79.15 ==========");
     loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
 
+    // BCS
+    loader.BCS("Btag_chiProb", "highest");
+
     // save into separate ROOT file
-    loader.PrintSeparateRootFile("./", "after_", "_cut");
+    //loader.PrintSeparateRootFile("./", "after_", "_cut");
 
     // save into one ROOT file
     loader.PrintRootFile("./OneLargeFile.root");
@@ -75,8 +78,7 @@ int main(int argc, char* argv[]) {
 
     /*
     * DrawStack
-    * BCS
-    * loader.BCS("Btag_Mbc", "highest");
+    * IsBCSValid
     */
 
     return 0;
