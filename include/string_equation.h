@@ -306,8 +306,8 @@ std::string replaceVariables(const std::string& expression, const std::vector<st
                     continue;
                 }
             }
-            if (pos != (replaced_expr.length() - 1)) {
-                if (std::isalpha(replaced_expr.at(pos + 1))) {
+            if ((pos + var_name->at(i).length()) != replaced_expr.length()) {
+                if (std::isalpha(replaced_expr.at(pos + var_name->at(i).length()))) {
                     pos = pos + var_name->at(i).length();
                     continue;
                 }
