@@ -543,6 +543,12 @@ namespace Module {
         ~BCS() {}
 
         void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("event variable for BCS should exist.\n");
+                exit(1);
+            }
+
             // convert `criteria` into upper case
             std::transform(criteria.begin(), criteria.end(), criteria.begin(), to_upper);
 
@@ -556,7 +562,7 @@ namespace Module {
                 int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
 
                 if (event_variable_index == variable_names->size()) {
-                    printf("cannot find variable %s\n", Event_variable_list.at(i).c_str());
+                    printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
@@ -599,7 +605,7 @@ namespace Module {
             int selected_index = -1;
 
             // initialize previous event variable
-            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable;
+            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
             for (int i = 0; i < Event_variable_list.size(); i++) {
                 int event_variable_index = event_variable_index_list.at(i);
 
