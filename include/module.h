@@ -329,7 +329,7 @@ namespace Module {
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
     public:
-        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), path(path_), prefix(prefix_), suffix(suffix_) {}
+        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
         ~PrintSeparateRootFile() {}
 
