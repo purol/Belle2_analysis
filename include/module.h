@@ -546,7 +546,7 @@ namespace Module {
             // convert `criteria` into upper case
             std::transform(criteria.begin(), criteria.end(), criteria.begin(), to_upper);
 
-            if ((criteria != "HIGHEST") || (criteria != "LOWEST")) {
+            if ((criteria != "HIGHEST") && (criteria != "LOWEST")) {
                 printf("criteria for BCS should be `highest` or `lowest`\n");
                 exit(1);
             }
