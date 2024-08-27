@@ -93,6 +93,11 @@ void Loader::PrintSeparateRootFile(const char* path_, const char* prefix_, const
     Modules.push_back(temp_module);
 }
 
+void Loader::PrintRootFile(const char* output_name_) {
+    Module::Module* temp_module = new Module::PrintRootFile(output_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 void Loader::end() {
     // run Start
     for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Start();

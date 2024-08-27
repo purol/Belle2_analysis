@@ -432,6 +432,85 @@ namespace Module {
         void End() override {}
     };
 
+    class PrintRootFile : public Module {
+    private:
+        std::string output_name;
+        TFile* temp_file = nullptr;
+        TTree* temp_tree = nullptr;
+
+        // temporary variable to save data into branch
+        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+    public:
+        PrintRootFile(const char* output_name, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~PrintRootFile() {}
+
+        void Start() override {
+            // fill `temp_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < VariableTypes->size(); i++) {
+                if (strcmp(VariableTypes->at(i).c_str(), "Double_t") == 0) {
+                    temp_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "Int_t") == 0) {
+                    temp_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "UInt_t") == 0) {
+                    temp_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(i).c_str(), "Float_t") == 0) {
+                    temp_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
+            temp_file = new TFile(output_name.c_str(), "recreate");
+            temp_file->cd();
+            temp_tree = new TTree(TREE, "");
+
+            // set Branch
+            for (int j = 0; j < VariableTypes->size(); j++) {
+                if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
+                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
+                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
+                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
+                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                }
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                temp_file->cd();
+                temp_variable = iter->variable;
+                temp_tree->Fill();
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {
+            // save branches and file
+            if (temp_file != nullptr) {
+                temp_file->cd();
+                temp_tree->Write();
+                temp_file->Close();
+            }
+        }
+    };
+
 }
 
 #endif 
