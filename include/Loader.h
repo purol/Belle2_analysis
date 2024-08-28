@@ -56,6 +56,7 @@ public:
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
+    void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
     void end();
 };
 
@@ -102,6 +103,11 @@ void Loader::PrintRootFile(const char* output_name_) {
 
 void Loader::BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::BCS(expression_, criteria_, Event_variable_list_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
+    Module::Module* temp_module = new Module::IsBCSValid(Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

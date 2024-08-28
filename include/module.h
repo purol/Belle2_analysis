@@ -719,6 +719,105 @@ namespace Module {
         void End() override {}
     };
 
+    class IsBCSValid : public Module {
+    private:
+        std::vector<std::string> Event_variable_list;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
+        // event variable history
+        std::vector<std::vector<std::variant<int, unsigned int, float, double>>> history_event_variable;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+    public:
+        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~IsBCSValid() {}
+
+        void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("event variable for IsBCSValid should exist.\n");
+                exit(1);
+            }
+
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+
+                if (event_variable_index == variable_names->size()) {
+                    printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        exit(1);
+                    }
+                }
+
+                if (std::find(history_event_variable.begin(), history_event_variable.end(), temp_event_variable) == history_event_variable.end()) {
+                    history_event_variable.push_back(temp_event_variable);
+                }
+                else {
+                    printf("BCS is not valid\n");
+                    exit(1);
+                }
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
 }
 
 #endif 
