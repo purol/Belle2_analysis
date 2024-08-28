@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
 
     // BCS
     loader.BCS("Btag_chiProb", "highest");
+    loader.IsBCSValid();
 
     // save into separate ROOT file
     //loader.PrintSeparateRootFile("./", "after_", "_cut");
