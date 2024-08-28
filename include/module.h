@@ -10,6 +10,8 @@
 #include "string_equation.h"
 #include "base.h"
 
+#include <TGraph.h>
+
 double reserve_function() {
     return 1.0;
 }
@@ -922,16 +924,20 @@ namespace Module {
             }
 
             double MaximumFOM = -std::numeric_limits<double>::max();
+            int MaximumIndex = -1;
             for (int i = 0; i < NBin; i++) {
-                if (MaximumFOM < FOMs[i]) MaximumFOM = FOMs[i];
+                if (MaximumFOM < FOMs[i]) {
+                    MaximumFOM = FOMs[i];
+                    MaximumIndex = i;
+                }
             }
 
             // print result
             printf("FOM scan result for %s:\n", equation.c_str());
             printf("Maximum FOM value: %lf\n", MaximumFOM);
-            printf("Cut value: %lf\n", Cuts[i]);
-            printf("NSIG: %lf\n", NSIGs[i]);
-            printf("NBKG: %lf\n", NBKGs[i]);
+            printf("Cut value: %lf\n", Cuts[MaximumIndex]);
+            printf("NSIG: %lf\n", NSIGs[MaximumIndex]);
+            printf("NBKG: %lf\n", NBKGs[MaximumIndex]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
@@ -942,7 +948,7 @@ namespace Module {
             gr3->SetMinimum(MinimumFOM);
             gr3->Draw("");
 
-            c3->SaveAs(png_name.c_str());
+            c_temp->SaveAs(png_name.c_str());
 
             free(Cuts);
             free(NSIGs);
