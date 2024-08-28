@@ -692,7 +692,6 @@ namespace Module {
 
                 previous_event_variable = temp_event_variable;
 
-                ++iter;
             }
 
             // do BCS for the final dataset
