@@ -591,8 +591,9 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
 
-            // It is temporary data to save Data before BCS is done.
+            // It is temporary data to save Data before/after BCS is done.
             std::vector<Data> temp_data;
+            std::vector<Data> temp_data_after_BCS;
 
             // initialize extreme value/index
             double extreme_value;
@@ -654,7 +655,7 @@ namespace Module {
                 if (previous_event_variable != temp_event_variable) {
                     if (selected_index != -1) {
                         Data temp = temp_data.at(selected_index);
-                        data->push_back(temp);
+                        temp_data_after_BCS.push_back(temp);
                         temp_data.clear();
 
                         // reset extreme value/index
@@ -697,7 +698,7 @@ namespace Module {
             // do BCS for the final dataset
             if (selected_index != -1) {
                 Data temp = temp_data.at(selected_index);
-                data->push_back(temp);
+                temp_data_after_BCS.push_back(temp);
                 temp_data.clear();
 
                 // reset extreme value/index
@@ -709,6 +710,9 @@ namespace Module {
                 }
                 selected_index = -1;
             }
+
+            // use swap instead of copy to save computing resource
+            data->swap(temp_data_after_BCS);
 
             return 1;
         }
