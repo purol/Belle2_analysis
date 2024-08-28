@@ -37,16 +37,29 @@ int main(int argc, char* argv[]) {
     loader_other.end();
 
     Loader loader();
+    loader.Load("./", "data.root", "data");
     loader.Load("./", "CHG.root", "CHG");
     loader.Load("./", "MIX.root", "MIX");
     loader.DrawStack();
+
+    loader.SetData("data");
+    loader.SetMC("CHG");
+    loader.SetMC("MIX");
+    loader.DrawFOM("Btag_Mbc");
+
+
     */
 
     // start
     Loader loader;
 
     // read root file
-    loader.Load("./", ".root", "MC");
+    loader.Load("./SIGNAL", ".root", "SIGNAL");
+    loader.Load("./CHG", ".root", "CHG");
+
+    // set label
+    loader.SetSignal("SIGNAL");
+    loader.SetBackground("CHG");
 
     // print its information
     loader.PrintInformation("========== initial ==========");
@@ -71,6 +84,9 @@ int main(int argc, char* argv[]) {
     // save into separate ROOT file
     //loader.PrintSeparateRootFile("./", "after_", "_cut");
 
+    // scan FOM
+    loader.DrawFOM("Btag_Mbc", 5.27, 5.29, "Btag_Mbc_FOM.png");
+
     // save into one ROOT file
     loader.PrintRootFile("./OneLargeFile.root");
 
@@ -79,8 +95,6 @@ int main(int argc, char* argv[]) {
 
     /*
     * DrawStack
-    * IsBCSValid
-    * DrawFOM
     */
 
     return 0;

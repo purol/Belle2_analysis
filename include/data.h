@@ -6,7 +6,7 @@
 
 typedef struct data {
     std::vector<std::variant<int, unsigned int, float, double>> variable;
-    std::string category;
+    std::string label;
     std::string filename;
 } Data;
 

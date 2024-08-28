@@ -10,6 +10,10 @@
 #include "string_equation.h"
 #include "base.h"
 
+double reserve_function() {
+    return 1.0;
+}
+
 namespace Module {
 
     class Module {
@@ -38,7 +42,7 @@ namespace Module {
         std::string dirname;
         int Nentry;
         int Currententry;
-        std::string category;
+        std::string label;
 
         // temporary variable to extract data from branch
         std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
@@ -47,7 +51,7 @@ namespace Module {
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* category_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), category(category_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -150,7 +154,7 @@ namespace Module {
             for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
                 temp_tree->GetEntry(j);
 
-                Data temp = { temp_variable, category, filename.at(Currententry) };
+                Data temp = { temp_variable, label, filename.at(Currententry) };
                 data->push_back(temp);
             }
 
@@ -202,7 +206,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                Ncandidate = Ncandidate + 1.0;
+                Ncandidate = Ncandidate + reserve_function();
                 ++iter;
             }
 
@@ -246,7 +250,7 @@ namespace Module {
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(result);
+                hist->Fill(result, reserve_function());
                 ++iter;
             }
 
@@ -301,7 +305,7 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(x_result, y_result);
+                hist->Fill(x_result, y_result, reserve_function());
                 ++iter;
             }
 
@@ -816,6 +820,135 @@ namespace Module {
         }
 
         void End() override {}
+    };
+
+    class DrawFOM : public Module {
+    private:
+        std::string equation;
+        std::string replaced_expr;
+
+        std::vector<std::string> Signal_label_list;
+        std::vector<std::string> Background_label_list;
+
+        // FOM range/bin
+        int NBin;
+        double MIN;
+        double MAX;
+
+        double* Cuts;
+        double* NSIGs;
+        double* NBKGs;
+        double* FOMs;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+        std::string png_name;
+
+        double MyEPSILON;
+    public:
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+            // just 50
+            NBin = 50;
+
+            // just 0.000001
+            MyEPSILON = 0.000001;
+        }
+
+        ~DrawFOM() {}
+
+        void Start() {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(equation, variable_names);
+
+            if (Signal_label_list.size() == 0) {
+                printf("signal should be defined. Use `SetSignal`\n");
+                exit(1);
+            }
+            else if (Background_label_list.size() == 0) {
+                printf("background should be defined. Use `SetBackground`\n");
+                exit(1);
+            }
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            // malloc history
+            Cuts = (double*)malloc(sizeof(double) * NBin);
+            NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs = (double*)malloc(sizeof(double) * NBin);
+            for (int i = 0; i < NBin; i++) {
+                NSIGs[i] = 0.0;
+                NBKGs[i] = 0.0;
+            }
+
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+
+                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                    bool DoesItPassCriteria = false;
+                    double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                    if (result > variable_value) DoesItPassCriteria = true;
+                    else DoesItPassCriteria = false;
+
+                    if (DoesItPassCriteria) {
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + reserve_function();
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + reserve_function();
+                    }
+
+                    ++iter;
+                }
+
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+            FOMs = (double*)malloc(sizeof(double) * NBin);
+            for (int i = 0; i < NBin; i++) {
+                if ((NSIGs[i] + NBKGs[i]) < MyEPSILON) FOMs[i] = 0.0;
+                else {
+                    FOMs[i] = NSIGs[i] / std::sqrt(NSIGs[i] + NBKGs[i]);
+                }
+            }
+
+            double MinimumFOM = std::numeric_limits<double>::max();
+            for (int i = 0; i < NBin; i++) {
+                if (MinimumFOM > FOMs[i]) MinimumFOM = FOMs[i];
+            }
+
+            double MaximumFOM = -std::numeric_limits<double>::max();
+            for (int i = 0; i < NBin; i++) {
+                if (MaximumFOM < FOMs[i]) MaximumFOM = FOMs[i];
+            }
+
+            // print result
+            printf("FOM scan result for %s:\n", equation.c_str());
+            printf("Maximum FOM value: %lf\n", MaximumFOM);
+            printf("Cut value: %lf\n", Cuts[i]);
+
+            // draw FOM plot
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+
+            TGraph* gr3 = new TGraph(NBin, Cuts, FOMs);
+            gr3->SetTitle((";" + equation + " cut; #frac{S}{#sqrt{S + B}}").c_str());
+            gr3->SetMarkerStyle(0);
+            gr3->SetMinimum(MinimumFOM);
+            gr3->Draw("");
+
+            c3->SaveAs(png_name.c_str());
+
+            free(Cuts);
+            free(NSIGs);
+            free(NBKGs);
+            free(FOMs);
+
+            delete c_temp;
+        }
     };
 
 }

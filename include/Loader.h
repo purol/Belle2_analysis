@@ -43,12 +43,30 @@ private:
     // vector of modules
     std::vector<Module::Module*> Modules;
 
+    // label list to assign which one is signal/background
+    std::vector<std::string> Signal_label_list;
+    std::vector<std::string> Background_label_list;
+
+    // label list to assign which one is MC/data
+    std::vector<std::string> MC_label_list;
+    std::vector<std::string> Data_label_list;
+
     std::vector<Data> TotalData;
 
 public:
     Loader();
     void SetName(const char* loader_name_);
-    void Load(const char* dirname_, const char* including_string_, const char* category_);
+    void SetMC(const char* label_);
+    void SetData(const char* label_);
+
+    /*
+    * set signal and background sample by label.
+    * This classification is used for `DrawFOM`
+    */
+    void SetSignal(const char* label_);
+    void SetBackground(const char* label_);
+
+    void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
     void PrintInformation(const char* print_string_);
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
@@ -57,6 +75,7 @@ public:
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
+    void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void end();
 };
 
@@ -66,8 +85,24 @@ void Loader::SetName(const char* loader_name_) {
     loader_name = std::string(loader_name_);
 }
 
-void Loader::Load(const char* dirname_, const char* including_string_, const char* category_) {
-    Module::Module* temp_module = new Module::Load(dirname_, including_string_, category_, &DataStructureDefined, &variable_names, &VariableTypes);
+void Loader::SetMC(const char* label_) {
+    MC_label_list.push_back(label_);
+}
+
+void Loader::SetData(const char* label_) {
+    Data_label_list.push_back(label_);
+}
+
+void Loader::SetSignal(const char* label_) {
+    Signal_label_list.push_back(label_);
+}
+
+void Loader::SetBackground(const char* label_) {
+    Background_label_list.push_back(label_);
+}
+
+void Loader::Load(const char* dirname_, const char* including_string_, const char* label_) {
+    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -108,6 +143,11 @@ void Loader::BCS(const char* expression_, const char* criteria_, const std::vect
 
 void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::IsBCSValid(Event_variable_list_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
