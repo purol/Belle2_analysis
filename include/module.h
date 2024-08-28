@@ -930,6 +930,8 @@ namespace Module {
             printf("FOM scan result for %s:\n", equation.c_str());
             printf("Maximum FOM value: %lf\n", MaximumFOM);
             printf("Cut value: %lf\n", Cuts[i]);
+            printf("NSIG: %lf\n", NSIGs[i]);
+            printf("NBKG: %lf\n", NBKGs[i]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
