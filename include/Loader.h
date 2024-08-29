@@ -56,12 +56,17 @@ private:
 public:
     Loader(const char* TTree_name_);
     void SetName(const char* loader_name_);
+
+    /*
+     * set MC and data sample by label.
+     * This classification is used for `DrawStack`
+     */
     void SetMC(std::vector<std::string> labels_);
     void SetData(std::vector<std::string> labels_);
 
     /*
      * set signal and background sample by label.
-     * This classification is used for `DrawFOM`
+     * This classification is used for `DrawFOM` and `DrawStack`
      */
     void SetSignal(std::vector<std::string> labels_);
     void SetBackground(std::vector<std::string> labels_);
