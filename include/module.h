@@ -132,6 +132,7 @@ namespace Module {
 
             // read file
             TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
+            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
 
             // read tree
             TTree* temp_tree = (TTree*)input_file->Get(TREE);
