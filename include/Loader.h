@@ -78,8 +78,8 @@ public:
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
-    void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> selected_label_, const char* png_name_);
-    void DrawStack(const char* expression_, const char* stack_title_, std::vector<std::string> selected_label_, const char* png_name_);
+    void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
