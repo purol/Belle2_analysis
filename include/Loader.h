@@ -35,6 +35,9 @@ private:
     // set loader name, not necessary
     std::string loader_name;
 
+    // tree name
+    std::string TTree_name;
+
     // data structure variables
     bool DataStructureDefined;
     std::vector<std::string> variable_names;
@@ -54,7 +57,7 @@ private:
     std::vector<Data> TotalData;
 
 public:
-    Loader();
+    Loader(const char* TTree_name_);
     void SetName(const char* loader_name_);
     void SetMC(const char* label_);
     void SetData(const char* label_);
@@ -83,7 +86,7 @@ public:
     void end();
 };
 
-Loader::Loader() : DataStructureDefined(false) {}
+Loader::Loader(const char* TTree_name_) : TTree_name(TTree_name_), DataStructureDefined(false) {}
 
 void Loader::SetName(const char* loader_name_) {
     loader_name = std::string(loader_name_);
@@ -106,7 +109,7 @@ void Loader::SetBackground(const char* label_) {
 }
 
 void Loader::Load(const char* dirname_, const char* including_string_, const char* label_) {
-    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes, TTree_name.c_str());
     Modules.push_back(temp_module);
 }
 
@@ -151,12 +154,12 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, std::v
 }
 
 void Loader::PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_) {
-    Module::Module* temp_module = new Module::PrintSeparateRootFile(path_, prefix_, suffix_, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::PrintSeparateRootFile(path_, prefix_, suffix_, &variable_names, &VariableTypes, TTree_name.c_str());
     Modules.push_back(temp_module);
 }
 
 void Loader::PrintRootFile(const char* output_name_) {
-    Module::Module* temp_module = new Module::PrintRootFile(output_name_, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::PrintRootFile(output_name_, &variable_names, &VariableTypes, TTree_name.c_str());
     Modules.push_back(temp_module);
 }
 

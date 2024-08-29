@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     */
 
     // start
-    Loader loader;
+    Loader loader("Btag");
 
     // read root file
     loader.Load("./SIGNAL", ".root", "SIGNAL");

@@ -52,8 +52,9 @@ namespace Module {
         bool* DataStructureDefined;
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
+        std::string TTree_name;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_){
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -64,7 +65,7 @@ namespace Module {
                 TFile* input_file = new TFile((dirname + std::string("/") + filename.at(i)).c_str(), "read");
 
                 // read tree
-                TTree* temp_tree = (TTree*)input_file->Get(TREE);
+                TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
 
                 // read list of branches
                 TObjArray* temp_branchList = temp_tree->GetListOfBranches();
@@ -135,7 +136,7 @@ namespace Module {
             printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
 
             // read tree
-            TTree* temp_tree = (TTree*)input_file->Get(TREE);
+            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
 
             // set branch addresses
             for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -395,8 +396,9 @@ namespace Module {
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
+        std::string TTree_name;
     public:
-        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_){}
 
         ~PrintSeparateRootFile() {}
 
@@ -461,7 +463,7 @@ namespace Module {
                     // make ROOT file
                     temp_file = new TFile((path + "/" + prefix + basename + suffix + "." + extension).c_str(), "recreate");
                     temp_file->cd();
-                    temp_tree = new TTree(TREE, "");
+                    temp_tree = new TTree(TTree_name.c_str(), "");
 
                     // set Branch
                     for (int j = 0; j < VariableTypes->size(); j++) {
@@ -510,8 +512,9 @@ namespace Module {
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
+        std::string TTree_name;
     public:
-        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_) {}
 
         ~PrintRootFile() {}
 
@@ -538,7 +541,7 @@ namespace Module {
 
             temp_file = new TFile(output_name.c_str(), "recreate");
             temp_file->cd();
-            temp_tree = new TTree(TREE, "");
+            temp_tree = new TTree(TTree_name.c_str(), "");
 
             // set Branch
             for (int j = 0; j < VariableTypes->size(); j++) {
