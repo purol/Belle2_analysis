@@ -60,6 +60,8 @@ public:
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> selected_label_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, std::vector<std::string> selected_label_, const char* png_name_);
+    void DrawStackandTH1D(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_);
+    void DrawStackandTH1D(const char* expression_, const char* stack_title_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
@@ -116,6 +118,16 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, int nb
 
 void Loader::DrawStack(const char* expression_, const char* stack_title_, std::vector<std::string> selected_label_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, selected_label_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DrawStackandTH1D(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawStackandTH1D(expression_, stack_title_, nbins_, x_low_, x_high_, stack_label_, hist_label_, hist_legend_name_, hist_draw_option_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DrawStackandTH1D(const char* expression_, const char* stack_title_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawStackandTH1D(expression_, stack_title_, stack_label_, hist_label_, hist_legend_name_, hist_draw_option_, png_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

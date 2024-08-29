@@ -56,11 +56,12 @@ int main(int argc, char* argv[]) {
     // read root file
     loader.Load("./SIGNAL", ".root", "SIGNAL");
     loader.Load("./CHG", ".root", "CHG");
+    loader.Load("./MIX", ".root", "MIX");
 
     // category of label
     std::vector<std::string> signal_label_list = { "SIGNAL" };
-    std::vector<std::string> background_label_list = { "CHG" };
-    std::vector<std::string> MC_label_list = { "SIGNAL", "CHG" };
+    std::vector<std::string> background_label_list = { "CHG", "MIX" };
+    std::vector<std::string> MC_label_list = { "SIGNAL", "CHG", "MIX" };
 
     // print its information
     loader.PrintInformation("========== initial ==========");
@@ -71,13 +72,14 @@ int main(int argc, char* argv[]) {
 
     // draw histogram
     loader.DrawTH1D("Btag_chiProb^2", ";Btag chiProb square;", 30, 0.0, 1.0, "Btag_chiProb_square.png");
-    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png");
-    loader.DrawStack("Btag_Mbc", ";Mbc;", 50, 5.28, 5.29, MC_label_list, "Btag_Mbc_stack.png");
+    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png");
+    loader.DrawStack("Btag_Mbc", ";Mbc [GeV];", 50, 5.28, 5.29, MC_label_list, "Btag_Mbc_stack.png");
+    loader.DrawStackandTH1D("Btag_Mbc", ";Mbc [GeV];", 50, 5.28, 5.29, background_label_list, signal_label_list, "SIGNAL", true, "Mbc_background_VS_signal.png");
 
     // complicated cut
     loader.Cut("Btag_deltaE > (-15) * Btag_Mbc + 79.15");
     loader.PrintInformation("========== Btag_deltaE > (-15) * Btag_Mbc + 79.15 ==========");
-    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
+    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
 
     // BCS
     loader.BCS("Btag_chiProb", "highest");

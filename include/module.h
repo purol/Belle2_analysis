@@ -1125,10 +1125,155 @@ namespace Module {
             stack->Draw("pfc Hist");
 
             // set legend
-            TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - selected_label.size() * 0.15);
+            TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - selected_label.size() * 0.05);
             for (int i = 0; i < selected_label.size(); i++) {
                 legend->AddEntry(temp_hist[i], selected_label.at(i).c_str(), "f");
             }
+            legend->SetFillStyle(0); legend->SetLineWidth(0);
+            legend->Draw();
+
+            c_temp->SaveAs(png_name.c_str());
+            delete c_temp;
+
+            delete[] temp_hist;
+        }
+    };
+
+    class DrawStackandTH1D : public Module {
+    private:
+        THStack* stack;
+        TH1D* hist;
+        std::string stack_title;
+        int nbins;
+        double x_low;
+        double x_high;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+        std::string expression;
+        std::string replaced_expr;
+
+        std::string png_name;
+
+        std::vector<double> x_variable;
+        std::vector<double> weight;
+        std::vector<std::string> label;
+
+        std::vector<std::string> stack_label;
+        std::vector<std::string> hist_label;
+        std::string hist_legend_name;
+
+        /*
+        * histogram draw option:
+        * true: red line option (good for signalMC vs backgroundMC)
+        * false: black point option (good for data vs MC)
+        */
+        bool hist_draw_option;
+
+    public:
+        DrawStackandTH1D(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), stack_label(stack_label_), hist_label(hist_label_), hist_legend_name(hist_legend_name_), hist_draw_option(hist_draw_option_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStackandTH1D(const char* expression_, const char* stack_title_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), stack_label(stack_label_), hist_label(hist_label_), hist_legend_name(hist_legend_name_), hist_draw_option(hist_draw_option_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~DrawStack() {
+            delete stack;
+            delete hist;
+        }
+
+        void Start() override {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(expression, variable_names);
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                if ( (std::find(stack_label.begin(), stack_label.end(), iter->label) != stack_label.end()) || (std::find(hist_label.begin(), hist_label.end(), iter->label) != hist_label.end())) {
+                    x_variable.push_back(result);
+                    weight.push_back(reserve_function());
+                    label.push_back(iter->label);
+                }
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {
+            // if range is not determined, determined from this side
+            if ((x_low == std::numeric_limits<double>::max()) && (x_high == std::numeric_limits<double>::max())) {
+                std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                x_low = *min_it;
+                x_high = *max_it;
+            }
+
+            // create stack
+            std::string stack_name = generateRandomString(12);
+            stack = new THStack(stack_name.c_str(), stack_title.c_str());
+
+            // create histogram
+            std::string hist_name = generateRandomString(12);
+            hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+            // create histogram for stack
+            TH1D** temp_hist;
+            temp_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label.size());
+            for (int i = 0; i < stack_label.size(); i++) {
+                std::string hist_name = generateRandomString(12);
+                temp_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+            }
+
+            // fill histogram
+            for (int i = 0; i < weight.size(); i++) {
+                if (std::find(hist_label.begin(), hist_label.end(), label.at(i)) != hist_label.end()) {
+                    hist->Fill(x_variable.at(i), weight.at(i));
+                }
+            }
+
+            // fill histogram for stack
+            for (int i = 0; i < weight.size(); i++) {
+                if (std::find(stack_label.begin(), stack_label.end(), label.at(i)) != stack_label.end()) {
+                    int label_index = std::find(stack_label.begin(), stack_label.end(), label.at(i)) - stack_label.begin();
+                    temp_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
+                }
+            }
+
+            // clear vector. Maybe not needed but to save memory...
+            x_variable.clear();
+            weight.clear();
+            label.clear();
+
+            // stack histogram
+            for (int i = 0; i < stack_label.size(); i++) {
+                stack->Add(temp_hist[i]);
+            }
+
+            // set palette
+            gStyle->SetPalette(kPastel);
+
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+            stack->Draw("pfc Hist");
+            if (hist_draw_option) {
+                hist->SetLineWidth(2);
+                hist->SetLineColor(kBlack);
+                hist->SetMarkerStyle(8);
+                hist->Draw("SAME eP EX0");
+            }
+            else {
+                hist->SetLineWidth(3);
+                hist->SetLineColor(2);
+                hist->SetFillStyle(0);
+                hist->Draw("Hist SAME")
+            }
+
+            // set legend
+            TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label.size() * 0.05);
+            for (int i = 0; i < stack_label.size(); i++) {
+                legend->AddEntry(temp_hist[i], stack_label.at(i).c_str(), "f");
+            }
+            legend->AddEntry(hist, hist_legend_name.c_str(), "f");
             legend->SetFillStyle(0); legend->SetLineWidth(0);
             legend->Draw();
 
