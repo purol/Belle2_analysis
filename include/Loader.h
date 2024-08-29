@@ -18,9 +18,6 @@
 #include "TCanvas.h"
 #include "TObjArray.h"
 
-// the name of tree is "information". It is magic string
-# define TREE "information"
-
 #include "base.h"
 #include "data.h"
 #include "module.h"
@@ -53,13 +50,6 @@ public:
     void SetName(const char* loader_name_);
     void SetMC(const char* label_);
     void SetData(const char* label_);
-
-    /*
-    * set signal and background sample by label.
-    * This classification is used for `DrawFOM`
-    */
-    void SetSignal(const char* label_);
-    void SetBackground(const char* label_);
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
