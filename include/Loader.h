@@ -145,13 +145,13 @@ void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, cons
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> selected_label_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, selected_label_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawStack(const char* expression_, const char* stack_title_, std::vector<std::string> selected_label_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, selected_label_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+void Loader::DrawStack(const char* expression_, const char* stack_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
