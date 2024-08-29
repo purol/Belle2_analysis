@@ -150,7 +150,7 @@ void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
 }
 
 void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, Signal_label_list_, Background_label_list_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, Signal_label_list_, Background_label_list_, png_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

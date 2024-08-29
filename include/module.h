@@ -1126,9 +1126,8 @@ namespace Module {
 
             // set legend
             TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - selected_label.size() * 0.15);
-            legend->AddEntry(h1, "Histogram filled with random numbers", "f");
             for (int i = 0; i < selected_label.size(); i++) {
-                legend->AddEntry(temp_hist[i], selected_label.c_str(), "f");
+                legend->AddEntry(temp_hist[i], selected_label.at(i).c_str(), "f");
             }
             legend->SetFillStyle(0); legend->SetLineWidth(0);
             legend->Draw();
