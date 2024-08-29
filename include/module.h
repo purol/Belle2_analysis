@@ -921,7 +921,7 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
             // just 50
             NBin = 50;
 

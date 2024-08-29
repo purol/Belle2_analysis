@@ -59,9 +59,10 @@ int main(int argc, char* argv[]) {
     loader.Load("./MIX", ".root", "MIX");
 
     // category of label
-    std::vector<std::string> signal_label_list = { "SIGNAL" };
-    std::vector<std::string> background_label_list = { "CHG", "MIX" };
-    std::vector<std::string> MC_label_list = { "SIGNAL", "CHG", "MIX" };
+    loader.SetMC({"SIGNAL", "CHG", "MIX"});
+    loader.SetData({});
+    loader.SetSignal({ "SIGNAL" });
+    loader.SetBackground({ "CHG", "MIX" });
 
     // print its information
     loader.PrintInformation("========== initial ==========");
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]) {
     //loader.PrintSeparateRootFile("./", "after_", "_cut");
 
     // scan FOM
-    loader.DrawFOM("Btag_Mbc", 5.27, 5.29, signal_label_list, background_label_list, "Btag_Mbc_FOM.png");
+    loader.DrawFOM("Btag_Mbc", 5.27, 5.29, "Btag_Mbc_FOM.png");
 
     // save into one ROOT file
     loader.PrintRootFile("./OneLargeFile.root");
