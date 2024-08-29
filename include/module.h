@@ -938,18 +938,19 @@ namespace Module {
                 printf("background should be defined. Use `SetBackground`\n");
                 exit(1);
             }
-        }
-
-        int Process(std::vector<Data>* data) {
 
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
             NBKGs = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
+                Cuts[i] = 0.0;
                 NSIGs[i] = 0.0;
                 NBKGs[i] = 0.0;
             }
+        }
+
+        int Process(std::vector<Data>* data) {
 
             for (int i = 0; i < NBin; i++) {
                 double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
