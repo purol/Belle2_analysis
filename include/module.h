@@ -1174,7 +1174,7 @@ namespace Module {
         DrawStackandTH1D(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), stack_label(stack_label_), hist_label(hist_label_), hist_legend_name(hist_legend_name_), hist_draw_option(hist_draw_option_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
         DrawStackandTH1D(const char* expression_, const char* stack_title_, std::vector<std::string> stack_label_, std::vector<std::string> hist_label_, const char* hist_legend_name_, bool hist_draw_option_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), stack_label(stack_label_), hist_label(hist_label_), hist_legend_name(hist_legend_name_), hist_draw_option(hist_draw_option_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
-        ~DrawStack() {
+        ~DrawStackandTH1D() {
             delete stack;
             delete hist;
         }
@@ -1265,7 +1265,7 @@ namespace Module {
                 hist->SetLineWidth(3);
                 hist->SetLineColor(2);
                 hist->SetFillStyle(0);
-                hist->Draw("Hist SAME")
+                hist->Draw("Hist SAME");
             }
 
             // set legend
