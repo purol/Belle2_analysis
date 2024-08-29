@@ -1125,7 +1125,6 @@ namespace Module {
             stack->Draw("pfc Hist");
 
             // set legend
-            TPad* pad1 = new TPad("pad1", "pad1", 0.0, 0.35, 1.0, 1.0);
             TLegend* legend = pad1->BuildLegend(0.95, 0.9, 0.75, 0.6);
             legend->SetFillStyle(0); legend->SetLineWidth(0);
 
