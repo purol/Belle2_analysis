@@ -727,6 +727,10 @@ namespace Module {
     };
 
     class IsBCSValid : public Module {
+        /*
+        * In this module, we assume that
+        * 1. candidates from the same event are in the same ROOT file
+        */
     private:
         std::vector<std::string> Event_variable_list;
 
@@ -818,6 +822,9 @@ namespace Module {
 
                 ++iter;
             }
+
+            // clear the vector under the assumption
+            history_event_variable.clear();
 
             return 1;
         }
