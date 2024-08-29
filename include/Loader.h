@@ -70,7 +70,9 @@ public:
     void Cut(const char* cut_string_);
     void PrintInformation(const char* print_string_);
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
+    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
@@ -121,8 +123,18 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbin
     Modules.push_back(temp_module);
 }
 
+void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, png_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

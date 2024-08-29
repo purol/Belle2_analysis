@@ -225,6 +225,7 @@ namespace Module {
     class DrawTH1D : public Module {
     private:
         TH1D* hist;
+        std::string hist_title;
         int nbins;
         double x_low;
         double x_high;
@@ -235,12 +236,13 @@ namespace Module {
         std::string replaced_expr;
 
         std::string png_name;
+
+        std::vector<double> x_variable;
+        std::vector<double> weight;
     public:
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
-        {
-            std::string hist_name = generateRandomString(12);
-            hist = new TH1D(hist_name.c_str(), hist_title_, nbins, x_low, x_high);
-        }
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
         ~DrawTH1D() {
             delete hist;
         }
@@ -253,7 +255,9 @@ namespace Module {
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(result, reserve_function());
+                x_variable.push_back(result);
+                weight.push_back(reserve_function());
+
                 ++iter;
             }
 
@@ -261,6 +265,28 @@ namespace Module {
         }
 
         void End() override {
+            // if range is not determined, determined from this side
+            if ((x_low == std::numeric_limits<double>::max()) && (x_high == std::numeric_limits<double>::max())) {
+                std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                x_low = *min_it;
+                x_high = *max_it;
+            }
+
+            // create histogram
+            std::string hist_name = generateRandomString(12);
+            hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+
+            // fill histogram
+            for (int i = 0; i < weight.size(); i++) {
+                hist->Fill(x_variable.at(i), weight.at(i));
+            }
+
+            // clear vector. Maybe not needed but to save memory...
+            x_variable.clear();
+            weight.clear();
+
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
             hist->Draw("Hist");
@@ -273,6 +299,7 @@ namespace Module {
     class DrawTH2D : public Module {
     private:
         TH2D* hist;
+        std::string hist_title;
         int x_nbins;
         double x_low;
         double x_high;
@@ -288,12 +315,14 @@ namespace Module {
         std::string y_replaced_expr;
 
         std::string png_name;
+
+        std::vector<double> x_variable;
+        std::vector<double> y_variable;
+        std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
-        {
-            std::string hist_name = generateRandomString(12);
-            hist = new TH2D(hist_name.c_str(), hist_title_, x_nbins, x_low, x_high, y_nbins, y_low, y_high);
-        }
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
         ~DrawTH2D() {
             delete hist;
         }
@@ -308,7 +337,10 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(x_result, y_result, reserve_function());
+                x_variable.push_back(x_result);
+                y_variable.push_back(y_result);
+                weight.push_back(reserve_function());
+
                 ++iter;
             }
 
@@ -316,6 +348,33 @@ namespace Module {
         }
 
         void End() override {
+            // if range is not determined, determined from this side
+            if ((x_low == std::numeric_limits<double>::max()) && (x_high == std::numeric_limits<double>::max()) && (y_low == std::numeric_limits<double>::max()) && (y_high == std::numeric_limits<double>::max())) {
+                std::vector<double>::iterator x_min_it = std::min_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator x_max_it = std::max_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator y_min_it = std::min_element(y_variable.begin(), y_variable.end());
+                std::vector<double>::iterator y_max_it = std::max_element(y_variable.begin(), y_variable.end());
+
+                x_low = *x_min_it;
+                x_high = *x_max_it;
+                y_low = *y_min_it;
+                y_high = *y_max_it;
+            }
+
+            // create histogram
+            std::string hist_name = generateRandomString(12);
+            hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+
+            // fill histogram
+            for (int i = 0; i < weight.size(); i++) {
+                hist->Fill(x_variable.at(i), y_variable.at(i), weight.at(i));
+            }
+
+            // clear vector. Maybe not needed but to save memory...
+            x_variable.clear();
+            y_variable.clear();
+            weight.clear();
+
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
             hist->Draw("COLZ");
@@ -963,6 +1022,53 @@ namespace Module {
             free(NBKGs);
             free(FOMs);
 
+            delete c_temp;
+        }
+    };
+
+    class DrawStack : public Module {
+    private:
+        THStack* hist;
+        int nbins;
+        double x_low;
+        double x_high;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+        std::string expression;
+        std::string replaced_expr;
+
+        std::string png_name;
+    public:
+        DrawStack(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
+        {
+            std::string hist_name = generateRandomString(12);
+            hist = new TH1D(hist_name.c_str(), hist_title_, nbins, x_low, x_high);
+        }
+        ~DrawStack() {
+            delete hist;
+        }
+
+        void Start() override {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(expression, variable_names);
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                hist->Fill(result, reserve_function());
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+            hist->SetStats(false);
+            hist->Draw("Hist");
+            c_temp->SaveAs(png_name.c_str());
             delete c_temp;
         }
     };
