@@ -46,14 +46,6 @@ private:
     // vector of modules
     std::vector<Module::Module*> Modules;
 
-    // label list to assign which one is signal/background
-    std::vector<std::string> Signal_label_list;
-    std::vector<std::string> Background_label_list;
-
-    // label list to assign which one is MC/data
-    std::vector<std::string> MC_label_list;
-    std::vector<std::string> Data_label_list;
-
     std::vector<Data> TotalData;
 
 public:
@@ -82,7 +74,7 @@ public:
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
-    void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
+    void DrawFOM(const char* variable_name_, double MIN_, double MAX_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, const char* png_name_);
     void end();
 };
 
@@ -90,22 +82,6 @@ Loader::Loader(const char* TTree_name_) : TTree_name(TTree_name_), DataStructure
 
 void Loader::SetName(const char* loader_name_) {
     loader_name = std::string(loader_name_);
-}
-
-void Loader::SetMC(const char* label_) {
-    MC_label_list.push_back(label_);
-}
-
-void Loader::SetData(const char* label_) {
-    Data_label_list.push_back(label_);
-}
-
-void Loader::SetSignal(const char* label_) {
-    Signal_label_list.push_back(label_);
-}
-
-void Loader::SetBackground(const char* label_) {
-    Background_label_list.push_back(label_);
 }
 
 void Loader::Load(const char* dirname_, const char* including_string_, const char* label_) {
@@ -173,8 +149,8 @@ void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, Signal_label_list_, Background_label_list_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

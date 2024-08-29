@@ -57,9 +57,10 @@ int main(int argc, char* argv[]) {
     loader.Load("./SIGNAL", ".root", "SIGNAL");
     loader.Load("./CHG", ".root", "CHG");
 
-    // set label
-    loader.SetSignal("SIGNAL");
-    loader.SetBackground("CHG");
+    // category of label
+    std::vector<std::string> signal_label_list = { "SIGNAL" };
+    std::vector<std::string> background_label_list = { "CHG" };
+    std::vector<std::string> MC_label_list = { "SIGNAL", "CHG" };
 
     // print its information
     loader.PrintInformation("========== initial ==========");
@@ -71,6 +72,7 @@ int main(int argc, char* argv[]) {
     // draw histogram
     loader.DrawTH1D("Btag_chiProb^2", ";Btag chiProb square;", 30, 0.0, 1.0, "Btag_chiProb_square.png");
     loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc;deltaE;", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png");
+    loader.DrawStack("Btag_Mbc", ";Mbc;", 50, 5.28, 5.29, MC_label_list, "Btag_Mbc_stack.png");
 
     // complicated cut
     loader.Cut("Btag_deltaE > (-15) * Btag_Mbc + 79.15");
@@ -85,7 +87,7 @@ int main(int argc, char* argv[]) {
     //loader.PrintSeparateRootFile("./", "after_", "_cut");
 
     // scan FOM
-    loader.DrawFOM("Btag_Mbc", 5.27, 5.29, "Btag_Mbc_FOM.png");
+    loader.DrawFOM("Btag_Mbc", 5.27, 5.29, signal_label_list, background_label_list, "Btag_Mbc_FOM.png");
 
     // save into one ROOT file
     loader.PrintRootFile("./OneLargeFile.root");
@@ -104,8 +106,6 @@ int main(int argc, char* argv[]) {
     *     show pull
     *     show ratio
     *     show nothing
-    * 
-    * loader.DrawFOM("Btag_Mbc", 5.27, 5.29, { "SIGNAL" }, { "CHG", "MIX", "UUBAR", "DDBAR", "SSBAR", "CHARM" }, "Btag_Mbc_FOM.png")
     * 
     */
 
