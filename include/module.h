@@ -11,6 +11,8 @@
 #include "base.h"
 
 #include <TGraph.h>
+#include <TPad.h>
+#include <TLegend.h>
 
 double reserve_function() {
     return 1.0;
@@ -1120,6 +1122,7 @@ namespace Module {
             gStyle->SetPalette(kPastel);
 
             // set legend
+            TPad* pad1 = new TPad("pad1", "pad1", 0.0, 0.35, 1.0, 1.0);
             TLegend* legend = pad1->BuildLegend(0.95, 0.9, 0.75, 0.6);
             legend->SetFillStyle(0); legend->SetLineWidth(0);
 
