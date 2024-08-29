@@ -1094,7 +1094,7 @@ namespace Module {
             temp_hist = (TH1D**)malloc(sizeof(TH1D*) * selected_label.size());
             for (int i = 0; i < selected_label.size(); i++) {
                 std::string hist_name = generateRandomString(12);
-                temp_hist[i] = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+                temp_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
             }
 
             // fill histogram
