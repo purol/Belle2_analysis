@@ -1093,7 +1093,7 @@ namespace Module {
             TH1D** temp_hist;
             temp_hist = (TH1D**)malloc(sizeof(TH1D*) * selected_label.size());
             for (int i = 0; i < selected_label.size(); i++) {
-                hist_name = generateRandomString(12);
+                std::string hist_name = generateRandomString(12);
                 temp_hist[i] = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
             }
 
@@ -1119,13 +1119,12 @@ namespace Module {
             // set maximum
             double ymax = -std::numeric_limits<double>::max();
             for (int i = 0; i < selected_label.size(); i++) {
-                if (ymax < temp_hist->GetMaximum()) ymax = temp_hist->GetMaximum();
+                if (ymax < temp_hist[i]->GetMaximum()) ymax = temp_hist[i]->GetMaximum();
             }
             stack->SetMaximum(ymax * 1.1);
 
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
-            stack->SetStats(false);
-            stack->Draw("Hist");
+            stack->Draw("pfc Hist");
             c_temp->SaveAs(png_name.c_str());
             delete c_temp;
 
