@@ -105,6 +105,8 @@ int main(int argc, char* argv[]) {
     *     show ratio
     *     show nothing
     * 
+    * loader.DrawFOM("Btag_Mbc", 5.27, 5.29, { "SIGNAL" }, { "CHG", "MIX", "UUBAR", "DDBAR", "SSBAR", "CHARM" }, "Btag_Mbc_FOM.png")
+    * 
     */
 
     return 0;
