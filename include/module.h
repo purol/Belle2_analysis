@@ -952,7 +952,7 @@ namespace Module {
             }
 
             for (int i = 0; i < NBin; i++) {
-                double variable_value = ((double)i) * (MAX - MIN) / NBin;
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
                 Cuts[i] = variable_value;
 
                 for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
@@ -1028,7 +1028,8 @@ namespace Module {
 
     class DrawStack : public Module {
     private:
-        THStack* hist;
+        THStack* stack;
+        std::string stack_title;
         int nbins;
         double x_low;
         double x_high;
@@ -1039,14 +1040,18 @@ namespace Module {
         std::string replaced_expr;
 
         std::string png_name;
+
+        std::vector<double> x_variable;
+        std::vector<double> weight;
+        std::vector<std::string> label;
+
+        std::vector<std::string> selected_label;
     public:
-        DrawStack(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_)
-        {
-            std::string hist_name = generateRandomString(12);
-            hist = new TH1D(hist_name.c_str(), hist_title_, nbins, x_low, x_high);
-        }
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, std::vector<std::string> selected_label_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), selected_label(selected_label_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, std::vector<std::string> selected_label_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), selected_label(selected_label_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
         ~DrawStack() {
-            delete hist;
+            delete stack;
         }
 
         void Start() override {
@@ -1057,7 +1062,12 @@ namespace Module {
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
-                hist->Fill(result, reserve_function());
+                if (std::find(selected_label.begin(), selected_label.end(), iter->label) != selected_label.end()) {
+                    x_variable.push_back(result);
+                    weight.push_back(reserve_function());
+                    label.push_back(iter->label);
+                }
+
                 ++iter;
             }
 
@@ -1065,11 +1075,60 @@ namespace Module {
         }
 
         void End() override {
+            // if range is not determined, determined from this side
+            if ((x_low == std::numeric_limits<double>::max()) && (x_high == std::numeric_limits<double>::max())) {
+                std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                x_low = *min_it;
+                x_high = *max_it;
+            }
+
+            // create stack
+            std::string stack_name = generateRandomString(12);
+            stack = new THStack(stack_name.c_str(), stack_title.c_str());
+
+            // create histogram
+            TH1D** temp_hist;
+            temp_hist = (TH1D**)malloc(sizeof(TH1D*) * selected_label.size());
+            for (int i = 0; i < selected_label.size(); i++) {
+                hist_name = generateRandomString(12);
+                temp_hist[i] = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+            }
+
+            // fill histogram
+            for (int i = 0; i < weight.size(); i++) {
+                int label_index = std::find(selected_label.begin(), selected_label.end(), label.at(i)) - selected_label.begin();
+                temp_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
+            }
+
+            // clear vector. Maybe not needed but to save memory...
+            x_variable.clear();
+            weight.clear();
+            label.clear();
+
+            // stack histogram
+            for (int i = 0; i < selected_label.size(); i++) {
+                stack->Add(temp_hist[i]);
+            }
+
+            // set palette
+            gStyle->SetPalette(kPastel);
+
+            // set maximum
+            double ymax = -std::numeric_limits<double>::max();
+            for (int i = 0; i < selected_label.size(); i++) {
+                if (ymax < temp_hist->GetMaximum()) ymax = temp_hist->GetMaximum();
+            }
+            stack->SetMaximum(ymax * 1.1);
+
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
-            hist->SetStats(false);
-            hist->Draw("Hist");
+            stack->SetStats(false);
+            stack->Draw("Hist");
             c_temp->SaveAs(png_name.c_str());
             delete c_temp;
+
+            delete[] temp_hist;
         }
     };
 
