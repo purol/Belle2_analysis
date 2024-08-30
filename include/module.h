@@ -1099,7 +1099,7 @@ namespace Module {
                 stack_label_list = MC_label_list;
                 hist_draw_option = 0;
             }
-            if ((Signal_label_list.size() != 0) && (Background_label_list.size() != 0)) {
+            else if ((Signal_label_list.size() != 0) && (Background_label_list.size() != 0)) {
                 hist_label_list = Signal_label_list;
                 stack_label_list = Background_label_list;
                 hist_draw_option = 1;
