@@ -1201,11 +1201,11 @@ namespace Module {
             if (hist_draw_option == 0) {
                 // define Canvas and pad
                 TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
-                TPad* pad1 = new TPad("pad1", "pad1", 0.0, 0.35, 1.0, 1.0);
-                pad1->SetBottomMargin(0.0); pad1->SetLeftMargin(0.15);
+                TPad* pad1 = new TPad("pad1", "pad1", 0.0, 0.3, 1.0, 1.0);
+                pad1->SetBottomMargin(0.02); pad1->SetLeftMargin(0.15);
                 pad1->SetGridx(); pad1->Draw(); pad1->cd();
 
-                stack->Draw("pfc Hist");
+                stack->Draw("pfc Hist"); stack->GetXaxis()->SetLabelSize(0.0); stack->GetXaxis()->SetTitleSize(0.0);
 
                 stack_error->SetFillColor(12);
                 stack_error->SetLineWidth(0);
@@ -1230,10 +1230,17 @@ namespace Module {
 
                 // draw ratio/pull
                 c_temp->cd();
-                TPad* pad2 = new TPad("pad2", "pad2", 0.0, 0.0, 1, 0.35); pad2->SetTopMargin(0.0);  pad2->SetBottomMargin(0.15); pad2->SetLeftMargin(0.15); pad2->SetGridx(); pad2->Draw(); pad2->cd();
+                TPad* pad2 = new TPad("pad2", "pad2", 0.0, 0.0, 1, 0.3);
+                pad2->SetTopMargin(0.05);
+                pad2->SetBottomMargin(0.2);
+                pad2->SetLeftMargin(0.15);
+                pad2->SetGridx();
+                pad2->Draw();
+                pad2->cd();
+
                 RatioorPull->SetMinimum(0.5); RatioorPull->SetMaximum(1.5); RatioorPull->SetLineWidth(2);
-                RatioorPull->GetYaxis()->SetTitleSize(0.08); RatioorPull->GetYaxis()->SetTitleOffset(0.5);
-                RatioorPull->GetXaxis()->SetLabelSize(0.08); RatioorPull->GetYaxis()->SetLabelSize(0.08);
+                RatioorPull->GetYaxis()->SetTitleSize(0.08); RatioorPull->GetYaxis()->SetTitleOffset(0.5); RatioorPull->GetYaxis()->SetLabelSize(0.08);
+                RatioorPull->GetXaxis()->SetLabelSize(0.08); RatioorPull->GetXaxis()->SetTitleSize(0.08);
                 RatioorPull->Draw("e0p EX0");
                 TLine* line = new TLine(RatioorPull->GetXaxis()->GetXmin(), 1.0, RatioorPull->GetXaxis()->GetXmax(), 1.0);
                 line->SetLineColor(kRed);
