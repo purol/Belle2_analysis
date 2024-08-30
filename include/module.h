@@ -1228,7 +1228,7 @@ namespace Module {
                 hist->Draw("SAME eP EX0");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.08);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1257,7 +1257,7 @@ namespace Module {
                 RatioorPull->SetMinimum(0.5); RatioorPull->SetMaximum(1.5); RatioorPull->SetLineWidth(2);
                 RatioorPull->GetYaxis()->SetTitleSize(0.08); RatioorPull->GetYaxis()->SetTitleOffset(0.5); RatioorPull->GetYaxis()->SetLabelSize(0.08);
                 RatioorPull->GetXaxis()->SetLabelSize(0.08); RatioorPull->GetXaxis()->SetTitleSize(0.08);
-                RatioorPull->Draw("e0p EX0");
+                RatioorPull->Draw("eP EX0");
                 TLine* line = new TLine(RatioorPull->GetXaxis()->GetXmin(), 1.0, RatioorPull->GetXaxis()->GetXmax(), 1.0);
                 line->SetLineColor(kRed);
                 line->SetLineStyle(1); line->SetLineWidth(3);
