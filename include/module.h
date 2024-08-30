@@ -13,6 +13,7 @@
 #include <TGraph.h>
 #include <TPad.h>
 #include <TLegend.h>
+#include <TLine.h>
 
 double reserve_function() {
     return 1.0;
@@ -1083,7 +1084,7 @@ namespace Module {
         void Start() override {
             // actually, the first and third else-if can be written in one line. However, I write them into the two line explicitly
             if ((data_label_list.size() != 0) && (MC_label_list.size() != 0)) {}
-            if ((Signal_label_list.size() != 0) && (Background_label_list.size() != 0)) {}
+            else if ((Signal_label_list.size() != 0) && (Background_label_list.size() != 0)) {}
             else if ((data_label_list.size() == 0) && (MC_label_list.size() != 0)) {}
             else {
                 printf("`DrawStack` requires one of them:\n");
@@ -1206,10 +1207,10 @@ namespace Module {
 
                 stack->Draw("pfc Hist");
 
-                stack_error[k]->SetFillColor(12);
-                stack_error[k]->SetLineWidth(0);
-                stack_error[k]->SetFillStyle(3004);
-                stack_error[k]->Draw("e2 SAME");
+                stack_error->SetFillColor(12);
+                stack_error->SetLineWidth(0);
+                stack_error->SetFillStyle(3004);
+                stack_error->Draw("e2 SAME");
 
                 hist->SetLineWidth(2);
                 hist->SetLineColor(kBlack);
@@ -1248,10 +1249,10 @@ namespace Module {
 
                 stack->Draw("pfc Hist");
 
-                stack_error[k]->SetFillColor(12);
-                stack_error[k]->SetLineWidth(0);
-                stack_error[k]->SetFillStyle(3004);
-                stack_error[k]->Draw("e2 SAME");
+                stack_error->SetFillColor(12);
+                stack_error->SetLineWidth(0);
+                stack_error->SetFillStyle(3004);
+                stack_error->Draw("e2 SAME");
 
                 hist->SetLineWidth(3);
                 hist->SetLineColor(2);
@@ -1278,10 +1279,10 @@ namespace Module {
 
                 stack->Draw("pfc Hist");
 
-                stack_error[k]->SetFillColor(12);
-                stack_error[k]->SetLineWidth(0);
-                stack_error[k]->SetFillStyle(3004);
-                stack_error[k]->Draw("e2 SAME");
+                stack_error->SetFillColor(12);
+                stack_error->SetLineWidth(0);
+                stack_error->SetFillStyle(3004);
+                stack_error->Draw("e2 SAME");
 
                 // set legend
                 TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
