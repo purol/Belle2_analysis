@@ -99,15 +99,12 @@ int main(int argc, char* argv[]) {
 
     /*
     * DrawStack:
-    * without data
-    *     signal is redline
-    *     signal is stacked
-    *     signal/background is not normalized
-    *     signal/background normalized
-    * with data
     *     show pull
     *     show ratio
     *     show nothing
+    * 
+    * normalize
+    * scale
     * 
     */
 

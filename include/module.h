@@ -1035,6 +1035,7 @@ namespace Module {
     class DrawStack : public Module {
     private:
         THStack* stack;
+        TH1D* stack_error;
         TH1D* hist;
         std::string stack_title;
         int nbins;
@@ -1074,6 +1075,7 @@ namespace Module {
 
         ~DrawStack() {
             delete stack;
+            delete stack_error;
             delete hist;
         }
 
@@ -1154,6 +1156,8 @@ namespace Module {
                 std::string hist_name = generateRandomString(12);
                 temp_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
             }
+            hist_name = generateRandomString(12);
+            stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
 
             // fill histogram
             for (int i = 0; i < weight.size(); i++) {
@@ -1167,6 +1171,7 @@ namespace Module {
                 if (std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) != stack_label_list.end()) {
                     int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) - stack_label_list.begin();
                     temp_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
+                    stack_error->Fill(x_variable.at(i), weight.at(i));
                 }
             }
 
@@ -1187,6 +1192,11 @@ namespace Module {
             if (hist_draw_option == 0) {
                 stack->Draw("pfc Hist");
 
+                stack_error[k]->SetFillColor(12);
+                stack_error[k]->SetLineWidth(0);
+                stack_error[k]->SetFillStyle(3004);
+                stack_error[k]->Draw("e2 SAME");
+
                 hist->SetLineWidth(2);
                 hist->SetLineColor(kBlack);
                 hist->SetMarkerStyle(8);
@@ -1195,6 +1205,11 @@ namespace Module {
             else if (hist_draw_option == 1) {
                 stack->Draw("pfc Hist");
 
+                stack_error[k]->SetFillColor(12);
+                stack_error[k]->SetLineWidth(0);
+                stack_error[k]->SetFillStyle(3004);
+                stack_error[k]->Draw("e2 SAME");
+
                 hist->SetLineWidth(3);
                 hist->SetLineColor(2);
                 hist->SetFillStyle(0);
@@ -1202,6 +1217,11 @@ namespace Module {
             }
             else if (hist_draw_option == 2) {
                 stack->Draw("pfc Hist");
+
+                stack_error[k]->SetFillColor(12);
+                stack_error[k]->SetLineWidth(0);
+                stack_error[k]->SetFillStyle(3004);
+                stack_error[k]->Draw("e2 SAME");
             }
             else {
                 printf("never reach\n");
