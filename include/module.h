@@ -1223,14 +1223,14 @@ namespace Module {
                     legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
-                legend->AddEntry(hist, "data", "f");
+                legend->AddEntry(hist, "data", "LP");
 
                 legend->SetFillStyle(0); legend->SetLineWidth(0);
                 legend->Draw();
 
                 // draw ratio/pull
                 c_temp->cd();
-                TPad* pad2 = new TPad("pad2", "pad2", 0.0, 0.0, 1, 0.35); pad2->SetBottomMargin(0.15); pad2->SetLeftMargin(0.15); pad2->SetGridx(); pad2->Draw(); pad2->cd();
+                TPad* pad2 = new TPad("pad2", "pad2", 0.0, 0.0, 1, 0.35); pad2->SetTopMargin(0.0);  pad2->SetBottomMargin(0.15); pad2->SetLeftMargin(0.15); pad2->SetGridx(); pad2->Draw(); pad2->cd();
                 RatioorPull->SetMinimum(0.5); RatioorPull->SetMaximum(1.5); RatioorPull->SetLineWidth(2);
                 RatioorPull->GetYaxis()->SetTitleSize(0.08); RatioorPull->GetYaxis()->SetTitleOffset(0.5);
                 RatioorPull->GetXaxis()->SetLabelSize(0.08); RatioorPull->GetYaxis()->SetLabelSize(0.08);
