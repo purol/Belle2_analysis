@@ -1037,6 +1037,7 @@ namespace Module {
         THStack* stack;
         TH1D* stack_error;
         TH1D* hist;
+        TH1D* RatioorPull;
         std::string stack_title;
         int nbins;
         double x_low;
@@ -1159,6 +1160,10 @@ namespace Module {
             hist_name = generateRandomString(12);
             stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
 
+            // create pull or ratio histogram
+            hist_name = generateRandomString(12);
+            RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
             // fill histogram
             for (int i = 0; i < weight.size(); i++) {
                 if (std::find(hist_label_list.begin(), hist_label_list.end(), label.at(i)) != hist_label_list.end()) {
@@ -1175,6 +1180,10 @@ namespace Module {
                 }
             }
 
+            // fill pull or ratio
+            RatioorPull->SetLineColor(kBlack); RatioorPull->SetMarkerStyle(21); RatioorPull->Sumw2(); RatioorPull->SetStats(0);
+            RatioorPull->Divide(hist, stack_error);
+
             // clear vector. Maybe not needed but to save memory...
             x_variable.clear();
             weight.clear();
@@ -1188,8 +1197,13 @@ namespace Module {
             // set palette
             gStyle->SetPalette(kPastel);
 
-            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             if (hist_draw_option == 0) {
+                // define Canvas and pad
+                TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+                TPad* pad1 = new TPad("pad1", "pad1", 0.0, 0.35, 1.0, 1.0);
+                pad1->SetBottomMargin(0.0); pad1->SetLeftMargin(0.15);
+                pad1->SetGridx(); pad1->Draw(); pad1->cd();
+
                 stack->Draw("pfc Hist");
 
                 stack_error[k]->SetFillColor(12);
@@ -1201,8 +1215,37 @@ namespace Module {
                 hist->SetLineColor(kBlack);
                 hist->SetMarkerStyle(8);
                 hist->Draw("SAME eP EX0");
+
+                // set legend
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
+                for (int i = 0; i < stack_label_list.size(); i++) {
+                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                }
+                legend->AddEntry(stack_error, "MC stat error", "f");
+                legend->AddEntry(hist, "data", "f");
+
+                legend->SetFillStyle(0); legend->SetLineWidth(0);
+                legend->Draw();
+
+                // draw ratio/pull
+                c_temp->cd();
+                TPad* pad2 = new TPad("pad2", "pad2", 0.0, 0.0, 1, 0.35); pad2->SetBottomMargin(0.15); pad2->SetLeftMargin(0.15); pad2->SetGridx(); pad2->Draw(); pad2->cd();
+                RatioorPull->SetMinimum(0.5); RatioorPull->SetMaximum(1.5); RatioorPull->SetLineWidth(2);
+                RatioorPull->GetYaxis()->SetTitleSize(0.08); RatioorPull->GetYaxis()->SetTitleOffset(0.5);
+                RatioorPull->GetXaxis()->SetLabelSize(0.08); RatioorPull->GetYaxis()->SetLabelSize(0.08);
+                RatioorPull->Draw("e0p EX0");
+                TLine* line = new TLine(RatioorPull->GetXaxis()->GetXmin(), 1.0, RatioorPull->GetXaxis()->GetXmax(), 1.0);
+                line->SetLineColor(kRed);
+                line->SetLineStyle(1); line->SetLineWidth(3);
+                line->Draw();
+
+                c_temp->SaveAs(png_name.c_str());
+                delete c_temp;
             }
             else if (hist_draw_option == 1) {
+                // define Canvas and pad
+                TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+
                 stack->Draw("pfc Hist");
 
                 stack_error[k]->SetFillColor(12);
@@ -1214,52 +1257,52 @@ namespace Module {
                 hist->SetLineColor(2);
                 hist->SetFillStyle(0);
                 hist->Draw("Hist SAME");
+
+                // set legend
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
+                for (int i = 0; i < stack_label_list.size(); i++) {
+                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                }
+                legend->AddEntry(stack_error, "MC stat error", "f");
+                legend->AddEntry(hist, "signal", "f");
+
+                legend->SetFillStyle(0); legend->SetLineWidth(0);
+                legend->Draw();
+
+                c_temp->SaveAs(png_name.c_str());
+                delete c_temp;
             }
             else if (hist_draw_option == 2) {
+                // define Canvas and pad
+                TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+
                 stack->Draw("pfc Hist");
 
                 stack_error[k]->SetFillColor(12);
                 stack_error[k]->SetLineWidth(0);
                 stack_error[k]->SetFillStyle(3004);
                 stack_error[k]->Draw("e2 SAME");
+
+                // set legend
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
+                for (int i = 0; i < stack_label_list.size(); i++) {
+                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                }
+                legend->AddEntry(stack_error, "MC stat error", "f");
+
+                legend->SetFillStyle(0); legend->SetLineWidth(0);
+                legend->Draw();
+
+                c_temp->SaveAs(png_name.c_str());
+                delete c_temp;
             }
             else {
                 printf("never reach\n");
                 exit(1);
             }
 
-            // set legend
-            TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
-
-            if (hist_draw_option == 0) {
-                for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
-                }
-                legend->AddEntry(hist, "data", "f");
-            }
-            else if (hist_draw_option == 1) {
-                for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
-                }
-                legend->AddEntry(hist, "signal", "f");
-            }
-            else if (hist_draw_option == 2) {
-                for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
-                }
-            }
-            else {
-                printf("never reach\n");
-                exit(1);
-            }
-
-            legend->SetFillStyle(0); legend->SetLineWidth(0);
-            legend->Draw();
-
-            c_temp->SaveAs(png_name.c_str());
-            delete c_temp;
-
-            delete[] temp_hist;
+            for (int i = 0; i < stack_label_list.size(); i++) delete temp_hist[i];
+            free(temp_hist);
         }
     };
 
