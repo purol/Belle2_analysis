@@ -85,6 +85,7 @@ public:
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
     void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
+    void InsertCustomizedModule(Module::Module* module_);
     void end();
 };
 
@@ -178,6 +179,11 @@ void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
 void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+}
+
+void Loader::InsertCustomizedModule(Module::Module* module_) {
+    // function to insert the customized module
+    Modules.push_back(module_);
 }
 
 void Loader::end() {
