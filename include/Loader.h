@@ -82,8 +82,8 @@ public:
     void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
-    void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
-    void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__ncandidates__" });
+    void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();

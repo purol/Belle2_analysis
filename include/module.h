@@ -676,7 +676,7 @@ namespace Module {
                 printf("criteria for BCS should be `highest` or `lowest`\n");
                 exit(1);
             }
-            int selected_index = -1;
+            std::vector<int> selected_indices;
 
             // initialize previous event variable
             std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
@@ -726,9 +726,12 @@ namespace Module {
 
                 // if event variable changes, do BCS
                 if (previous_event_variable != temp_event_variable) {
-                    if (selected_index != -1) {
-                        Data temp = temp_data.at(selected_index);
-                        temp_data_after_BCS.push_back(temp);
+                    if (selected_indices.size() != 0) {
+                        for (int i = 0; i < selected_indices.size(); i++) {
+                            Data temp = temp_data.at(selected_indices.at(i));
+                            temp_data_after_BCS.push_back(temp);
+                        }
+
                         temp_data.clear();
 
                         // reset extreme value/index
@@ -738,7 +741,7 @@ namespace Module {
                             printf("criteria for BCS should be `highest` or `lowest`\n");
                             exit(1);
                         }
-                        selected_index = -1;
+                        selected_indices.clear();
                     }
                 }
 
@@ -749,13 +752,21 @@ namespace Module {
                 if (criteria == "HIGHEST") {
                     if (result > extreme_value) {
                         extreme_value = result;
-                        selected_index = temp_data.size();
+                        selected_indices.clear();
+                        selected_indices.push_back(temp_data.size());
+                    }
+                    else if (result == extreme_value) {
+                        selected_indices.push_back(temp_data.size());
                     }
                 }
                 else if (criteria == "LOWEST") {
                     if (result < extreme_value) {
                         extreme_value = result;
-                        selected_index = temp_data.size();
+                        selected_indices.clear();
+                        selected_indices.push_back(temp_data.size());
+                    }
+                    else if (result == extreme_value) {
+                        selected_indices.push_back(temp_data.size());
                     }
                 }
 
@@ -768,9 +779,12 @@ namespace Module {
             }
 
             // do BCS for the final dataset
-            if (selected_index != -1) {
-                Data temp = temp_data.at(selected_index);
-                temp_data_after_BCS.push_back(temp);
+            if (selected_indices.size() != 0) {
+                for (int i = 0; i < selected_indices.size(); i++) {
+                    Data temp = temp_data.at(selected_indices.at(i));
+                    temp_data_after_BCS.push_back(temp);
+                }
+
                 temp_data.clear();
 
                 // reset extreme value/index
@@ -780,7 +794,7 @@ namespace Module {
                     printf("criteria for BCS should be `highest` or `lowest`\n");
                     exit(1);
                 }
-                selected_index = -1;
+                selected_indices.clear();
             }
 
             // use swap instead of copy to save computing resource
