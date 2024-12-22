@@ -16,9 +16,17 @@
 #include <TLine.h>
 #include <TPaveText.h>
 
-double reserve_function() {
+/*
+* reserved function which always return 1.0
+*/
+double reserve_function(std::vector<Data>::iterator data_) {
     return 1.0;
 }
+
+/*
+* global function pointer. This can be modified outside module.h
+*/
+double (*ObtainWeight)(std::vector<Data>::iterator) = reserve_function;
 
 namespace Module {
 
@@ -214,7 +222,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                Ncandidate = Ncandidate + reserve_function();
+                Ncandidate = Ncandidate + ObtainWeight(iter);
                 ++iter;
             }
 
@@ -261,7 +269,7 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 x_variable.push_back(result);
-                weight.push_back(reserve_function());
+                weight.push_back(ObtainWeight(iter));
 
                 ++iter;
             }
@@ -344,7 +352,7 @@ namespace Module {
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
                 x_variable.push_back(x_result);
                 y_variable.push_back(y_result);
-                weight.push_back(reserve_function());
+                weight.push_back(ObtainWeight(iter));
 
                 ++iter;
             }
@@ -985,8 +993,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + reserve_function();
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + reserve_function();
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
                     }
 
                     ++iter;
@@ -1138,7 +1146,7 @@ namespace Module {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
                     x_variable.push_back(result);
-                    weight.push_back(reserve_function());
+                    weight.push_back(ObtainWeight(iter));
                     label.push_back(iter->label);
                 }
 
