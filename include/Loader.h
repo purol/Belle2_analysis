@@ -122,7 +122,7 @@ void Loader::Cut(const char* cut_string_) {
 }
 
 void Loader::PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_) {
-    Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_);
+    Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
