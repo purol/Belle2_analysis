@@ -211,17 +211,95 @@ namespace Module {
     };
 
     class PrintInformation : public Module {
+        /*
+        * In this module, we assume that
+        * 1. candidates from the same event are in the same ROOT file
+        */
     private:
         std::string print_string;
+        std::vector<std::string> Event_variable_list;
+        double Nevt;
         double Ncandidate;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+
+        // event variable history
+        std::vector<std::vector<std::variant<int, unsigned int, float, double>>> history_event_variable;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
     public:
-        PrintInformation(const char* print_string_) : Module(), print_string(print_string_), Ncandidate(0){}
+        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
-        void Start() override {}
+        void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("event variable for PrintInformation should exist.\n");
+                exit(1);
+            }
+
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+
+                if (event_variable_index == variable_names->size()) {
+                    printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+        }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        exit(1);
+                    }
+                }
+
+                if (std::find(history_event_variable.begin(), history_event_variable.end(), temp_event_variable) == history_event_variable.end()) {
+                    history_event_variable.push_back(temp_event_variable);
+                    Nevt = Nevt + ObtainWeight(iter);
+                }
+
                 Ncandidate = Ncandidate + ObtainWeight(iter);
                 ++iter;
             }
@@ -231,6 +309,7 @@ namespace Module {
 
         void End() override {
             printf("%s\n", print_string.c_str());
+            printf("Number of event: %lf\n", Nevt);
             printf("Number of candidate: %lf\n", Ncandidate);
         }
     };

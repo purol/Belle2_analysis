@@ -73,7 +73,7 @@ public:
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
-    void PrintInformation(const char* print_string_);
+    void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
@@ -121,8 +121,8 @@ void Loader::Cut(const char* cut_string_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::PrintInformation(const char* print_string_) {
-    Module::Module* temp_module = new Module::PrintInformation(print_string_);
+void Loader::PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_) {
+    Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_);
     Modules.push_back(temp_module);
 }
 
