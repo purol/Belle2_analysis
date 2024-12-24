@@ -73,6 +73,7 @@ public:
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
+    void FastCut(const char* variable_name_, const char* operator_, double value_);
     void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
@@ -83,6 +84,7 @@ public:
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    void FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void InsertCustomizedModule(Module::Module* module_);
@@ -118,6 +120,11 @@ void Loader::Load(const char* dirname_, const char* including_string_, const cha
 
 void Loader::Cut(const char* cut_string_) {
     Module::Module* temp_module = new Module::Cut(cut_string_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastCut(const char* variable_name_, const char* operator_, double value_) {
+    Module::Module* temp_module = new Module::FastCut(variable_name_, operator_, value_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -168,6 +175,11 @@ void Loader::PrintRootFile(const char* output_name_) {
 
 void Loader::BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::BCS(expression_, criteria_, Event_variable_list_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_) {
+    Module::Module* temp_module = new Module::FastBCS(variable_name_, criteria_, Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

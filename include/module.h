@@ -217,6 +217,93 @@ namespace Module {
         void End() override {}
     };
 
+    class FastCut : public Module {
+        /*
+        * This module does not use `replaceVariables`, which can reduce the computing time.
+        * However, this module cannot use the complicated expression.
+        */
+    private:
+        std::string variable_name;
+        int variable_index;
+        std::string equation_operator;
+        double criteria_value;
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+    public:
+        FastCut(const char* variable_name_, const char* operator_, double value_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), variable_name(variable_name_), equation_operator(operator_), criteria_value(value_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        ~FastCut() {}
+
+        void Start() {
+            std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name);
+
+            if (iter != variable_names->end()) {
+                variable_index = std::distance(variable_names->begin(), iter);
+            }
+            else {
+                printf("[FastCut] unknown variable: %s\n", variable_name.c_str());
+                exit(1);
+            }
+
+            if (equation_operator == ">") {}
+            else if (equation_operator == "<") {}
+            else if (equation_operator == ">=") {}
+            else if (equation_operator == "<=") {}
+            else if (equation_operator == "==") {}
+            else if (equation_operator == "!=") {}
+            else {
+                printf("[FastCut] unknown variable: %s. Possible options: >, <, >=, <=, ==, or !=\n", equation_operator.c_str());
+                exit(1);
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                double temp_ = -1;
+
+                if (std::holds_alternative<double>(iter->variable.at(variable_index))) temp_ = (double)std::get<double>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<int>(iter->variable.at(variable_index))) temp_ = (double)std::get<int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<unsigned int>(iter->variable.at(variable_index))) temp_ = (double)std::get<unsigned int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<float>(iter->variable.at(variable_index))) temp_ = (double)std::get<float>(iter->variable.at(variable_index));
+                else {
+                    printf("unknown type of variable\n");
+                    exit(1);
+                }
+
+                if (equation_operator == ">") {
+                    if(temp_ > criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+                else if (equation_operator == "<") {
+                    if (temp_ < criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+                else if (equation_operator == ">=") {
+                    if (temp_ >= criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+                else if (equation_operator == "<=") {
+                    if (temp_ <= criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+                else if (equation_operator == "==") {
+                    if (temp_ == criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+                else if (equation_operator == "!=") {
+                    if (temp_ != criteria_value) ++iter;
+                    else data->erase(iter);
+                }
+
+            }
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
     class PrintInformation : public Module {
         /*
         * In this module, we assume that
@@ -863,6 +950,242 @@ namespace Module {
                         selected_indices.push_back(temp_data.size());
                     }
                     else if (result == extreme_value) {
+                        selected_indices.push_back(temp_data.size());
+                    }
+                }
+
+                // get Data
+                temp_data.push_back(*iter);
+                data->erase(iter);
+
+                previous_event_variable = temp_event_variable;
+
+            }
+
+            // do BCS for the final dataset
+            if (selected_indices.size() != 0) {
+                for (int i = 0; i < selected_indices.size(); i++) {
+                    Data temp = temp_data.at(selected_indices.at(i));
+                    temp_data_after_BCS.push_back(temp);
+                }
+
+                temp_data.clear();
+
+                // reset extreme value/index
+                if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+                else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
+                else {
+                    printf("criteria for BCS should be `highest` or `lowest`\n");
+                    exit(1);
+                }
+                selected_indices.clear();
+            }
+
+            // use swap instead of copy to save computing resource
+            data->swap(temp_data_after_BCS);
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class FastBCS : public Module {
+        /*
+        * In this module, we assume that
+        * 1. candidates from the same event are consecutive
+        * 2. candidates from the same event are in the same ROOT file
+        */
+    private:
+        std::string variable_name;
+        int variable_index;
+        std::string criteria;
+        std::vector<std::string> Event_variable_list;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+        static char to_upper(char c) {
+            return std::toupper(static_cast<unsigned char>(c));
+        }
+    public:
+        FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), variable_name(variable_name_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~FastBCS() {}
+
+        void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("event variable for BCS should exist.\n");
+                exit(1);
+            }
+
+            // convert `criteria` into upper case
+            std::transform(criteria.begin(), criteria.end(), criteria.begin(), to_upper);
+
+            if ((criteria != "HIGHEST") && (criteria != "LOWEST")) {
+                printf("criteria for BCS should be `highest` or `lowest`\n");
+                exit(1);
+            }
+
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+
+                if (event_variable_index == variable_names->size()) {
+                    printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
+            std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name);
+
+            if (iter != variable_names->end()) {
+                variable_index = std::distance(variable_names->begin(), iter);
+            }
+            else {
+                printf("[FastBCS] unknown variable: %s\n", variable_name.c_str());
+                exit(1);
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+
+            // It is temporary data to save Data before/after BCS is done.
+            std::vector<Data> temp_data;
+            std::vector<Data> temp_data_after_BCS;
+
+            // initialize extreme value/index
+            double extreme_value;
+            if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+            else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
+            else {
+                printf("criteria for BCS should be `highest` or `lowest`\n");
+                exit(1);
+            }
+            std::vector<int> selected_indices;
+
+            // initialize previous event variable
+            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = event_variable_index_list.at(i);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<double>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<int>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    previous_event_variable.at(i) = std::numeric_limits<unsigned int>::max();
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    previous_event_variable.at(i) = -std::numeric_limits<float>::max();
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        exit(1);
+                    }
+                }
+
+                // if event variable changes, do BCS
+                if (previous_event_variable != temp_event_variable) {
+                    if (selected_indices.size() != 0) {
+                        for (int i = 0; i < selected_indices.size(); i++) {
+                            Data temp = temp_data.at(selected_indices.at(i));
+                            temp_data_after_BCS.push_back(temp);
+                        }
+
+                        temp_data.clear();
+
+                        // reset extreme value/index
+                        if (criteria == "HIGHEST") extreme_value = -std::numeric_limits<double>::max();
+                        else if (criteria == "LOWEST") extreme_value = std::numeric_limits<double>::max();
+                        else {
+                            printf("criteria for BCS should be `highest` or `lowest`\n");
+                            exit(1);
+                        }
+                        selected_indices.clear();
+                    }
+                }
+
+                // get BCS variable
+                double temp_ = -1;
+                if (std::holds_alternative<double>(iter->variable.at(variable_index))) temp_ = (double)std::get<double>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<int>(iter->variable.at(variable_index))) temp_ = (double)std::get<int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<unsigned int>(iter->variable.at(variable_index))) temp_ = (double)std::get<unsigned int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<float>(iter->variable.at(variable_index))) temp_ = (double)std::get<float>(iter->variable.at(variable_index));
+                else {
+                    printf("unknown type of variable\n");
+                    exit(1);
+                }
+
+                // check the BCS criteria
+                if (criteria == "HIGHEST") {
+                    if (temp_ > extreme_value) {
+                        extreme_value = temp_;
+                        selected_indices.clear();
+                        selected_indices.push_back(temp_data.size());
+                    }
+                    else if (temp_ == extreme_value) {
+                        selected_indices.push_back(temp_data.size());
+                    }
+                }
+                else if (criteria == "LOWEST") {
+                    if (temp_ < extreme_value) {
+                        extreme_value = temp_;
+                        selected_indices.clear();
+                        selected_indices.push_back(temp_data.size());
+                    }
+                    else if (temp_ == extreme_value) {
                         selected_indices.push_back(temp_data.size());
                     }
                 }
