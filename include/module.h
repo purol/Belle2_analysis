@@ -207,8 +207,8 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 if (result < 0.5) {
-                    for (int i = 0; i < iter->variant.size(); i++) { // delete std::string* manually
-                        if (std::holds_alternative<std::string*>(iter->variant.at(i)) delete iter->variant.at(i);
+                    for (int i = 0; i < iter->variable.size(); i++) { // delete std::string* manually
+                        if (std::holds_alternative<std::string*>(iter->variable.at(i)) delete iter->variable.at(i);
                     }
                     data->erase(iter);
                 }
@@ -857,8 +857,8 @@ namespace Module {
                     if (selected_indices.size() != 0) {
                         for (int i = 0; i < temp_data.size(); i++) {
                             if (std::find(selected_indices.begin(), selected_indices.end(), i) == selected_indices.end()) {
-                                for (int j = 0; j < temp_data.at(i).variant.size(); j++) { // delete std::string* manually
-                                    if (std::holds_alternative<std::string*>(temp_data.at(i).variant.at(j)) delete temp_data.at(i).variant.at(j);
+                                for (int j = 0; j < temp_data.at(i).variable.size(); j++) { // delete std::string* manually
+                                    if (std::holds_alternative<std::string*>(temp_data.at(i).variable.at(j)) delete temp_data.at(i).variable.at(j);
                                 }
                             }
                             else {
@@ -917,8 +917,8 @@ namespace Module {
             if (selected_indices.size() != 0) {
                 for (int i = 0; i < temp_data.size(); i++) {
                     if (std::find(selected_indices.begin(), selected_indices.end(), i) == selected_indices.end()) {
-                        for (int j = 0; j < temp_data.at(i).variant.size(); j++) { // delete std::string* manually
-                            if (std::holds_alternative<std::string*>(temp_data.at(i).variant.at(j)) delete temp_data.at(i).variant.at(j);
+                        for (int j = 0; j < temp_data.at(i).variable.size(); j++) { // delete std::string* manually
+                            if (std::holds_alternative<std::string*>(temp_data.at(i).variable.at(j)) delete temp_data.at(i).variable.at(j);
                         }
                     }
                     else {

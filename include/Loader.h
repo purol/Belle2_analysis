@@ -200,8 +200,8 @@ void Loader::end() {
 
         // clear remaining data
         for (int i = 0; i < TotalData.size(); i++) { // delete std::string* manually
-            for (int j = 0; j < TotalData.at(i).variant.size(); j++) {
-                if (std::holds_alternative<std::string*>(TotalData.at(i).variant.at(j))) delete TotalData.at(i).variant.at(j);
+            for (int j = 0; j < TotalData.at(i).variable.size(); j++) {
+                if (std::holds_alternative<std::string*>(TotalData.at(i).variable.at(j))) delete TotalData.at(i).variable.at(j);
             }
         }
         TotalData.clear();
