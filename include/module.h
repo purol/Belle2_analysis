@@ -131,6 +131,7 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes->at(i).c_str(), "string") == 0) {
                     // I try to deal with string variable but it is hard to catch a memory leakage... So I decided not to use string variable
+                    VariableTypes->at(i) = std::string("Double_t");
                     temp_variable.push_back(static_cast<double>(-1.0)); // we just put (double) -1.0
                 }
                 else {
@@ -167,9 +168,6 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
                     temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes->at(j).c_str(), "string") == 0) {
-                    continue; // we do not accept string...
                 }
             }
 
