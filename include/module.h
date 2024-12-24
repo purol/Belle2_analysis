@@ -207,9 +207,6 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 if (result < 0.5) {
-                    for (int i = 0; i < iter->variable.size(); i++) { // delete std::string* manually
-                        if (std::holds_alternative<std::string*>(iter->variable.at(i))) delete std::get<std::string*>(iter->variable.at(i));
-                    }
                     data->erase(iter);
                 }
                 else ++iter;
@@ -855,16 +852,9 @@ namespace Module {
                 // if event variable changes, do BCS
                 if (previous_event_variable != temp_event_variable) {
                     if (selected_indices.size() != 0) {
-                        for (int i = 0; i < temp_data.size(); i++) {
-                            if (std::find(selected_indices.begin(), selected_indices.end(), i) == selected_indices.end()) {
-                                for (int j = 0; j < temp_data.at(i).variable.size(); j++) { // delete std::string* manually
-                                    if (std::holds_alternative<std::string*>(temp_data.at(i).variable.at(j))) delete std::get<std::string*>(temp_data.at(i).variable.at(j));
-                                }
-                            }
-                            else {
-                                Data temp = temp_data.at(selected_indices.at(i));
-                                temp_data_after_BCS.push_back(temp);
-                            }
+                        for (int i = 0; i < selected_indices.size(); i++) {
+                            Data temp = temp_data.at(selected_indices.at(i));
+                            temp_data_after_BCS.push_back(temp);
                         }
 
                         temp_data.clear();
@@ -915,16 +905,9 @@ namespace Module {
 
             // do BCS for the final dataset
             if (selected_indices.size() != 0) {
-                for (int i = 0; i < temp_data.size(); i++) {
-                    if (std::find(selected_indices.begin(), selected_indices.end(), i) == selected_indices.end()) {
-                        for (int j = 0; j < temp_data.at(i).variable.size(); j++) { // delete std::string* manually
-                            if (std::holds_alternative<std::string*>(temp_data.at(i).variable.at(j))) delete std::get<std::string*>(temp_data.at(i).variable.at(j));
-                        }
-                    }
-                    else {
-                        Data temp = temp_data.at(selected_indices.at(i));
-                        temp_data_after_BCS.push_back(temp);
-                    }
+                for (int i = 0; i < selected_indices.size(); i++) {
+                    Data temp = temp_data.at(selected_indices.at(i));
+                    temp_data_after_BCS.push_back(temp);
                 }
 
                 temp_data.clear();
