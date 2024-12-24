@@ -81,14 +81,19 @@ public:
     void FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
+    void FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
+    void FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
+    void FastDrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void FastDrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
-    void DrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
+    void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
+    void FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 };
@@ -165,6 +170,16 @@ void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, cons
     Modules.push_back(temp_module);
 }
 
+void Loader::FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawTH2D(x_variable_name_, y_variable_name_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawTH2D(x_variable_name_, y_variable_name_, hist_title_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -172,6 +187,16 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, int nb
 
 void Loader::DrawStack(const char* expression_, const char* stack_title_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastDrawStack(const char* variable_name_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawStack(variable_name_, stack_title_, nbins_, x_low_, x_high_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastDrawStack(const char* variable_name_, const char* stack_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawStack(variable_name_, stack_title_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -204,6 +229,12 @@ void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const ch
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
+
+void Loader::FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawFOM(variable_name_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 
 void Loader::InsertCustomizedModule(Module::Module* module_) {
     // function to insert the customized module
