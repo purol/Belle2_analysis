@@ -224,6 +224,9 @@ namespace Module {
         // temporary variable to extract event variable
         std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
 
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
         // event variable history
         std::vector<std::vector<std::variant<int, unsigned int, float, double>>> history_event_variable;
 
