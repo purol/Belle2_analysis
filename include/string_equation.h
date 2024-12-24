@@ -306,13 +306,13 @@ std::string replaceVariables(const std::string& expression, const std::vector<st
             // accidentally, variable names can be overlapped (ex. Btag_M and Btag_Mbc, missingMomentumOfEventCMS and missingMomentumOfEventCMS_theta). If next and previous char is alphabet or underbar just skip it.
             // to do: how about number? Mbc3 and Mbc...
             if (pos != 0) {
-                if (std::isalpha(replaced_expr.at(pos - 1)) || (replaced_expr.at(pos - 1) == "_")) {
+                if (std::isalpha(replaced_expr.at(pos - 1)) || (replaced_expr.at(pos - 1) == '_')) {
                     pos = pos + var_name->at(i).length();
                     continue;
                 }
             }
             if ((pos + var_name->at(i).length()) != replaced_expr.length()) {
-                if (std::isalpha(replaced_expr.at(pos + var_name->at(i).length())) || (replaced_expr.at(pos + var_name->at(i).length()) == "_")) {
+                if (std::isalpha(replaced_expr.at(pos + var_name->at(i).length())) || (replaced_expr.at(pos + var_name->at(i).length()) == '_')) {
                     pos = pos + var_name->at(i).length();
                     continue;
                 }
