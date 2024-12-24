@@ -485,6 +485,97 @@ namespace Module {
 
     };
 
+    class FastDrawTH1D : public Module {
+    private:
+        TH1D* hist;
+        std::string hist_title;
+        int nbins;
+        double x_low;
+        double x_high;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+        std::string variable_name;
+        int variable_index;
+
+        std::string png_name;
+
+        std::vector<double> x_variable;
+        std::vector<double> weight;
+    public:
+        FastDrawTH1D(const char* variable_name_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), variable_name(variable_name_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), variable_name(variable_name_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~FastDrawTH1D() {
+            delete hist;
+        }
+
+        void Start() override {
+            std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name);
+
+            if (iter != variable_names->end()) {
+                variable_index = std::distance(variable_names->begin(), iter);
+            }
+            else {
+                printf("[FastCut] unknown variable: %s\n", variable_name.c_str());
+                exit(1);
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double temp_ = -1;
+
+                if (std::holds_alternative<double>(iter->variable.at(variable_index))) temp_ = (double)std::get<double>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<int>(iter->variable.at(variable_index))) temp_ = (double)std::get<int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<unsigned int>(iter->variable.at(variable_index))) temp_ = (double)std::get<unsigned int>(iter->variable.at(variable_index));
+                else if (std::holds_alternative<float>(iter->variable.at(variable_index))) temp_ = (double)std::get<float>(iter->variable.at(variable_index));
+                else {
+                    printf("unknown type of variable\n");
+                    exit(1);
+                }
+
+                x_variable.push_back(temp_);
+                weight.push_back(ObtainWeight(iter));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {
+            // if range is not determined, determined from this side
+            if ((x_low == std::numeric_limits<double>::max()) && (x_high == std::numeric_limits<double>::max())) {
+                std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                x_low = *min_it;
+                x_high = *max_it;
+            }
+
+            // create histogram
+            std::string hist_name = generateRandomString(12);
+            hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+
+            // fill histogram
+            for (int i = 0; i < weight.size(); i++) {
+                hist->Fill(x_variable.at(i), weight.at(i));
+            }
+
+            // clear vector. Maybe not needed but to save memory...
+            x_variable.clear();
+            weight.clear();
+
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+            hist->SetStats(false);
+            hist->Draw("Hist");
+            c_temp->SaveAs(png_name.c_str());
+            delete c_temp;
+        }
+
+    };
+
     class DrawTH2D : public Module {
     private:
         TH2D* hist;

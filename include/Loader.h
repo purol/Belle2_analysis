@@ -77,6 +77,8 @@ public:
     void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
+    void FastDrawTH1D(const char* variable_name_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
+    void FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
@@ -140,6 +142,16 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbin
 
 void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastDrawTH1D(const char* variable_name_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawTH1D(variable_name_, hist_title_, nbins_, x_low_, x_high_, png_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_) {
+    Module::Module* temp_module = new Module::FastDrawTH1D(variable_name_, hist_title_, png_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
