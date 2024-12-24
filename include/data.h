@@ -3,9 +3,10 @@
 
 #include <variant>
 #include <vector>
+#include <string>
 
 typedef struct data {
-    std::vector<std::variant<int, unsigned int, float, double>> variable;
+    std::vector<std::variant<int, unsigned int, float, double, std::string>> variable;
     std::string label;
     std::string filename;
 } Data;
