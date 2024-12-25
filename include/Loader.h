@@ -96,6 +96,12 @@ public:
     void FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
+
+    /*
+     * get pointer when make the customized module
+     */
+    std::vector<std::string>* Getvariable_names_address();
+    std::vector<std::string>* VariableTypes_address();
 };
 
 Loader::Loader(const char* TTree_name_) : TTree_name(TTree_name_), DataStructureDefined(false) {}
@@ -265,6 +271,14 @@ void Loader::end() {
 
     // delete all modules
     for (int i = 0; i < Modules.size(); i++) delete Modules.at(i);
+}
+
+std::vector<std::string>* Loader::Getvariable_names_address() {
+    return (&variable_names);
+}
+
+std::vector<std::string>* Loader::VariableTypes_address() {
+    return (&VariableTypes);
 }
 
 #endif 
