@@ -238,7 +238,7 @@ void Loader::FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, c
 
 void Loader::InsertCustomizedModule(Module::Module* module_) {
     // function to insert the customized module
-    Modules.push_back(module_);
+    Modules.push_back(module_, &variable_names, &VariableTypes);
 }
 
 void Loader::end() {
