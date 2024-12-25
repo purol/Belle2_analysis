@@ -688,17 +688,17 @@ namespace Module {
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_variable_name(x_variable_name_), y_variable_name(y_variable_name_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_variable_name(x_variable_name_), y_variable_name(y_variable_name_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_variable_name(x_variable_name_), y_variable_name(y_variable_name_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_variable_name(x_variable_name_), y_variable_name(y_variable_name_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
-        ~DrawTH2D() {
+        ~FastDrawTH2D() {
             delete hist;
         }
 
         void Start() override {
             std::vector<std::string>::iterator x_iter = std::find(variable_names->begin(), variable_names->end(), x_variable_name);
 
-            if (iter != variable_names->end()) {
+            if (x_iter != variable_names->end()) {
                 x_variable_index = std::distance(variable_names->begin(), x_iter);
             }
             else {
@@ -708,7 +708,7 @@ namespace Module {
 
             std::vector<std::string>::iterator y_iter = std::find(variable_names->begin(), variable_names->end(), y_variable_name);
 
-            if (iter != variable_names->end()) {
+            if (y_iter != variable_names->end()) {
                 y_variable_index = std::distance(variable_names->begin(), y_iter);
             }
             else {
@@ -1812,7 +1812,7 @@ namespace Module {
             }
 
             // print result
-            printf("FOM scan result for %s:\n", equation.c_str());
+            printf("FOM scan result for %s:\n", variable_name.c_str());
             printf("Maximum FOM value: %lf\n", MaximumFOM);
             printf("Cut value: %lf\n", Cuts[MaximumIndex]);
             printf("NSIG: %lf\n", NSIGs[MaximumIndex]);
@@ -1822,7 +1822,7 @@ namespace Module {
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
 
             TGraph* gr3 = new TGraph(NBin, Cuts, FOMs);
-            gr3->SetTitle((";" + equation + " cut; #frac{S}{#sqrt{S + B}}").c_str());
+            gr3->SetTitle((";" + variable_name + " cut; #frac{S}{#sqrt{S + B}}").c_str());
             gr3->SetMarkerStyle(0);
             gr3->SetMinimum(MinimumFOM);
             gr3->Draw("");
