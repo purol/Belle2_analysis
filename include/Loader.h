@@ -260,6 +260,11 @@ void Loader::end() {
         }
 
         // clear remaining data
+        for (int i = 0; i < TotalData.size(); i++) { // delete std::string* manually
+            for (int j = 0; j < TotalData.at(i).variable.size(); j++) {
+                if (std::holds_alternative<std::string*>(TotalData.at(i).variable.at(j))) delete std::get<std::string*>(TotalData.at(i).variable.at(j));
+            }
+        }
         TotalData.clear();
 
         // If all files are read, exit from while loop
