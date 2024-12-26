@@ -1083,28 +1083,9 @@ namespace Module {
             }
             std::vector<int> selected_indices;
 
-            // initialize previous event variable
+            // initialization flag previous event variable
+            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
-            for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = event_variable_index_list.at(i);
-
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<double>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<int>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
-                    previous_event_variable.at(i) = std::numeric_limits<unsigned int>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<float>::max();
-                }
-                else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
-                    exit(1);
-                }
-            }
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
@@ -1127,6 +1108,10 @@ namespace Module {
                         printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
                         exit(1);
                     }
+                }
+                if (ItIsTheFirstData) {
+                    previous_event_variable = temp_event_variable;
+                    ItIsTheFirstData = false;
                 }
 
                 // if event variable changes, do BCS
@@ -1311,28 +1296,9 @@ namespace Module {
             }
             std::vector<int> selected_indices;
 
-            // initialize previous event variable
+            // initialization flag previous event variable
+            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
-            for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = event_variable_index_list.at(i);
-
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<double>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<int>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
-                    previous_event_variable.at(i) = std::numeric_limits<unsigned int>::max();
-                }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
-                    previous_event_variable.at(i) = -std::numeric_limits<float>::max();
-                }
-                else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
-                    exit(1);
-                }
-            }
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
@@ -1355,6 +1321,10 @@ namespace Module {
                         printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
                         exit(1);
                     }
+                }
+                if (ItIsTheFirstData) {
+                    previous_event_variable = temp_event_variable;
+                    ItIsTheFirstData = false;
                 }
 
                 // if event variable changes, do BCS
@@ -2610,6 +2580,185 @@ namespace Module {
             out_stream << classifier << std::endl;
             out_stream.close();
         }
+    };
+
+    class RandomEventSelection : public Module {
+        /*
+        * In this module, we assume that
+        * 1. candidates from the same event are consecutive
+        * 2. candidates from the same event are in the same ROOT file
+        * 
+        * you can use this module when you want to split the Ntuple.
+        * NOTE: It is NOT random BCS
+        */
+    private:
+        std::vector<std::string> Event_variable_list;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
+        std::vector<std::string>* variable_names;
+        std::vector<std::string>* VariableTypes;
+
+        // the number of split and which one do you want to select?
+        int split_num;
+        int selected_index;
+
+    public:
+        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+
+        ~RandomEventSelection() {}
+
+        void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("[RandomSplit] event variable should exist.\n");
+                exit(1);
+            }
+
+            if (split_num_ % 2 != 0) {
+                printf("[RandomSplit] split_num should be even number\n");
+                exit(1);
+            }
+
+            if (split_num_ <= 0) {
+                printf("[RandomSplit] split_num should be large than 0\n");
+                exit(1);
+            }
+
+            if ((selected_index_ >= split_num_) || (selected_index_ < 0)) {
+                printf("[RandomSplit] selected_index_ should be within [0, split_num_ - 1]\n");
+                exit(1);
+            }
+
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+
+                if (event_variable_index == variable_names->size()) {
+                    printf("[RandomSplit] cannot find variable: %s\n", Event_variable_list.at(i).c_str());
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else {
+                    printf("[RandomSplit] unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    exit(1);
+                }
+            }
+
+
+        }
+
+        int Process(std::vector<Data>* data) override {
+
+            // Convert the string to a size_t hash value
+            std::hash<std::string> hasher;
+            size_t hashValue;
+            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
+            else hashValue = 42;
+
+            // Initialize the random number generator with the hash value
+            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+            // It is temporary data to save Data before/after selection is done.
+            std::vector<Data> temp_data;
+            std::vector<Data> temp_data_after_selection;
+
+            // initialization flag previous event variable
+            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
+            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        exit(1);
+                    }
+                }
+                if (ItIsTheFirstData) {
+                    previous_event_variable = temp_event_variable;
+                    ItIsTheFirstData = false;
+                }
+
+                // if event variable changes, do random selection
+                if (previous_event_variable != temp_event_variable) {
+                    double MIN_threshold = (1.0 / split_num) * selected_index;
+                    double MAX_threshold = (1.0 / split_num) * (selected_index + 1.0);
+                    double random_number = dist(rng);
+
+                    if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+                        for (int i = 0; i < temp_data.size(); i++) {
+                            Data temp = temp_data.at(i);
+                            temp_data_after_selection.push_back(temp);
+                        }
+
+                        temp_data.clear();
+                    }
+                }
+
+                // get Data
+                temp_data.push_back(*iter);
+                data->erase(iter);
+
+                previous_event_variable = temp_event_variable;
+
+            }
+
+            // do random selection for the final dataset
+            double MIN_threshold = (1.0 / split_num) * selected_index;
+            double MAX_threshold = (1.0 / split_num) * (selected_index + 1.0);
+            double random_number = dist(rng);
+
+            if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+                for (int i = 0; i < temp_data.size(); i++) {
+                    Data temp = temp_data.at(i);
+                    temp_data_after_selection.push_back(temp);
+                }
+
+                temp_data.clear();
+
+            }
+
+            // use swap instead of copy to save computing resource
+            data->swap(temp_data_after_selection);
+
+            return 1;
+        }
+
+        void End() override {}
     };
 
 }

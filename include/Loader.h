@@ -92,6 +92,7 @@ public:
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
     void FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_);
@@ -229,6 +230,11 @@ void Loader::FastBCS(const char* variable_name_, const char* criteria_, const st
 
 void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::IsBCSValid(Event_variable_list_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_) {
+    Module::Module* temp_module = new Module::RandomEventSelection(split_num_, selected_index_, Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
