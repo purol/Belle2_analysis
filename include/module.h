@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <fstream>
 
 #include "data.h"
 #include "string_equation.h"
@@ -2491,7 +2492,7 @@ namespace Module {
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
 
-        std::map<std::string, std::double> hyperparameters;
+        std::map<std::string, double> hyperparameters;
 
         // input variables
         std::vector<std::vector<float>> InputVariables;
@@ -2508,7 +2509,7 @@ namespace Module {
         bool MEMORY_SAFE;
 
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, std::double> hyperparameters_, bool MEMORY_SAFE_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), MEMORY_SAFE(MEMORY_SAFE_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), MEMORY_SAFE(MEMORY_SAFE_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
         }
 
         ~FastBDTTrain() {}
@@ -2545,7 +2546,7 @@ namespace Module {
             classifier.SetBinning(binning);
 
             // malloc input variables
-            InputVariable = new std::vector<float>[replaced_exprs.size()]
+            InputVariable = new std::vector<float>[replaced_exprs.size()];
         }
 
         int Process(std::vector<Data>* data) {
@@ -2554,7 +2555,6 @@ namespace Module {
 
                 // care about preselection first
                 double preselection_result = -1;
-                if (iter->label);
 
                 if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) {
                     if (Signal_replaced_expr == "") preselection_result = 1;
