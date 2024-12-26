@@ -1133,6 +1133,10 @@ namespace Module {
                         }
                         selected_indices.clear();
                     }
+                    else {
+                        printf("[BCS] unexpected error");
+                        exit(1);
+                    }
                 }
 
                 // get BCS variable
@@ -1345,6 +1349,10 @@ namespace Module {
                             exit(1);
                         }
                         selected_indices.clear();
+                    }
+                    else {
+                        printf("[BCS] unexpected error");
+                        exit(1);
                     }
                 }
 
@@ -2725,8 +2733,8 @@ namespace Module {
                             temp_data_after_selection.push_back(temp);
                         }
 
-                        temp_data.clear();
                     }
+                    temp_data.clear();
                 }
 
                 // get Data
@@ -2748,9 +2756,8 @@ namespace Module {
                     temp_data_after_selection.push_back(temp);
                 }
 
-                temp_data.clear();
-
             }
+            temp_data.clear();
 
             // use swap instead of copy to save computing resource
             data->swap(temp_data_after_selection);
