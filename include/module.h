@@ -2619,17 +2619,17 @@ namespace Module {
                 exit(1);
             }
 
-            if (split_num_ % 2 != 0) {
+            if (split_num % 2 != 0) {
                 printf("[RandomSplit] split_num should be even number\n");
                 exit(1);
             }
 
-            if (split_num_ <= 0) {
+            if (split_num <= 0) {
                 printf("[RandomSplit] split_num should be large than 0\n");
                 exit(1);
             }
 
-            if ((selected_index_ >= split_num_) || (selected_index_ < 0)) {
+            if ((selected_index >= split_num) || (selected_index < 0)) {
                 printf("[RandomSplit] selected_index_ should be within [0, split_num_ - 1]\n");
                 exit(1);
             }

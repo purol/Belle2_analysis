@@ -233,7 +233,7 @@ void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
     Modules.push_back(temp_module);
 }
 
-void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_) {
+void Loader::RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::RandomEventSelection(split_num_, selected_index_, Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
