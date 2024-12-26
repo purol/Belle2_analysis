@@ -94,6 +94,7 @@ public:
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
     void FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
+    void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, std::double> hyperparameters_, bool MEMORY_SAFE_, const char* path_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -241,6 +242,10 @@ void Loader::FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, c
     Modules.push_back(temp_module);
 }
 
+void Loader::FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, std::double> hyperparameters_, bool MEMORY_SAFE_, const char* path_) {
+    Module::Module* temp_module = new Module::FastBDTTrain(input_variables_, Signal_preselection_, Background_preselection_, hyperparameters_, MEMORY_SAFE_, path_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
 
 void Loader::InsertCustomizedModule(Module::Module* module_) {
     // function to insert the customized module
