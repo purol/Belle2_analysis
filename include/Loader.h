@@ -282,6 +282,8 @@ void Loader::end() {
 
     // delete all modules
     for (int i = 0; i < Modules.size(); i++) delete Modules.at(i);
+
+    printf("[Loader] loader %s is successfully done\n", loader_name.c_str());
 }
 
 std::vector<std::string>* Loader::Getvariable_names_address() {
