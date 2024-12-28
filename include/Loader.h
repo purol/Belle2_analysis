@@ -73,28 +73,19 @@ public:
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
-    void FastCut(const char* variable_name_, const char* operator_, double value_);
     void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
-    void FastDrawTH1D(const char* variable_name_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
-    void FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
-    void FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
-    void FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
-    void FastDrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
-    void FastDrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
-    void FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
-    void FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
@@ -138,11 +129,6 @@ void Loader::Cut(const char* cut_string_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::FastCut(const char* variable_name_, const char* operator_, double value_) {
-    Module::Module* temp_module = new Module::FastCut(variable_name_, operator_, value_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
 void Loader::PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -158,16 +144,6 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const ch
     Modules.push_back(temp_module);
 }
 
-void Loader::FastDrawTH1D(const char* variable_name_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawTH1D(variable_name_, hist_title_, nbins_, x_low_, x_high_, png_name_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
-void Loader::FastDrawTH1D(const char* variable_name_, const char* hist_title_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawTH1D(variable_name_, hist_title_, png_name_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
 void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -178,16 +154,6 @@ void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, cons
     Modules.push_back(temp_module);
 }
 
-void Loader::FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawTH2D(x_variable_name_, y_variable_name_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
-void Loader::FastDrawTH2D(const char* x_variable_name_, const char* y_variable_name_, const char* hist_title_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawTH2D(x_variable_name_, y_variable_name_, hist_title_, png_name_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
 void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -195,16 +161,6 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, int nb
 
 void Loader::DrawStack(const char* expression_, const char* stack_title_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
-void Loader::FastDrawStack(const char* variable_name_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawStack(variable_name_, stack_title_, nbins_, x_low_, x_high_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
-void Loader::FastDrawStack(const char* variable_name_, const char* stack_title_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawStack(variable_name_, stack_title_, png_name_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -223,11 +179,6 @@ void Loader::BCS(const char* expression_, const char* criteria_, const std::vect
     Modules.push_back(temp_module);
 }
 
-void Loader::FastBCS(const char* variable_name_, const char* criteria_, const std::vector<std::string> Event_variable_list_) {
-    Module::Module* temp_module = new Module::FastBCS(variable_name_, criteria_, Event_variable_list_, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
 void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::IsBCSValid(Event_variable_list_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -240,11 +191,6 @@ void Loader::RandomEventSelection(int split_num_, int selected_index_, const std
 
 void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
-    Modules.push_back(temp_module);
-}
-
-void Loader::FastDrawFOM(const char* variable_name_, double MIN_, double MAX_, const char* png_name_) {
-    Module::Module* temp_module = new Module::FastDrawFOM(variable_name_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
