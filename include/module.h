@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <set>
 #include <fstream>
 
 #include "data.h"
@@ -19,6 +20,41 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <TPaveText.h>
+
+// for the comparison of `std::vector<std::variant<int, unsigned int, float, double>>`
+struct CompareHistory {
+    bool operator()(const std::vector<std::variant<int, unsigned int, float, double>>& lhs, const std::vector<std::variant<int, unsigned int, float, double>>& rhs) const {
+        size_t size = std::min(lhs.size(), rhs.size());
+
+        for (size_t i = 0; i < size; ++i) {
+            // Compare by index (type) first
+            if (lhs[i].index() != rhs[i].index()) {
+                return lhs[i].index() < rhs[i].index();
+            }
+
+            // Compare values based on the type in the variant
+            if (lhs[i].index() == 0) { // int
+                if (std::get<int>(lhs[i]) < std::get<int>(rhs[i])) return true;
+                if (std::get<int>(lhs[i]) > std::get<int>(rhs[i])) return false;
+            }
+            else if (lhs[i].index() == 1) { // unsigned int
+                if (std::get<unsigned int>(lhs[i]) < std::get<unsigned int>(rhs[i])) return true;
+                if (std::get<unsigned int>(lhs[i]) > std::get<unsigned int>(rhs[i])) return false;
+            }
+            else if (lhs[i].index() == 2) { // float
+                if (std::get<float>(lhs[i]) < std::get<float>(rhs[i])) return true;
+                if (std::get<float>(lhs[i]) > std::get<float>(rhs[i])) return false;
+            }
+            else if (lhs[i].index() == 3) { // double
+                if (std::get<double>(lhs[i]) < std::get<double>(rhs[i])) return true;
+                if (std::get<double>(lhs[i]) > std::get<double>(rhs[i])) return false;
+            }
+        }
+
+        // If all elements are equal, compare by vector size
+        return lhs.size() < rhs.size();
+    }
+};
 
 /*
 * reserved function which always return 1.0
@@ -326,7 +362,7 @@ namespace Module {
         std::vector<int> event_variable_index_list;
 
         // event variable history
-        std::vector<std::vector<std::variant<int, unsigned int, float, double>>> history_event_variable;
+        std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
@@ -396,8 +432,8 @@ namespace Module {
                     }
                 }
 
-                if (std::find(history_event_variable.begin(), history_event_variable.end(), temp_event_variable) == history_event_variable.end()) {
-                    history_event_variable.push_back(temp_event_variable);
+                if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
+                    history_event_variable.insert(temp_event_variable);
                     Nevt = Nevt + ObtainWeight(iter);
                 }
 
@@ -1440,7 +1476,7 @@ namespace Module {
         std::vector<int> event_variable_index_list;
 
         // event variable history
-        std::vector<std::vector<std::variant<int, unsigned int, float, double>>> history_event_variable;
+        std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
@@ -1511,8 +1547,8 @@ namespace Module {
                     }
                 }
 
-                if (std::find(history_event_variable.begin(), history_event_variable.end(), temp_event_variable) == history_event_variable.end()) {
-                    history_event_variable.push_back(temp_event_variable);
+                if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
+                    history_event_variable.insert(temp_event_variable);
                 }
                 else {
                     printf("BCS is not valid\n");
