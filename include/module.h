@@ -149,6 +149,7 @@ namespace Module {
                     }
                 }
 
+                delete temp_branchList;
                 input_file->Close();
                 delete input_file;
             }
