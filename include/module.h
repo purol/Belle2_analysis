@@ -150,6 +150,7 @@ namespace Module {
                 }
 
                 input_file->Close();
+                delete input_file;
             }
         }
         ~Load() {}
@@ -220,6 +221,7 @@ namespace Module {
             }
 
             input_file->Close();
+            delete input_file;
             Currententry++;
             return 0;
         }
@@ -583,6 +585,7 @@ namespace Module {
                         temp_file->cd();
                         temp_tree->Write();
                         temp_file->Close();
+                        delete temp_file;
                     }
 
                     filename = data->at(i).filename;
@@ -634,6 +637,7 @@ namespace Module {
                 temp_file->cd();
                 temp_tree->Write();
                 temp_file->Close();
+                delete temp_file;
             }
 
             return 1;
@@ -718,6 +722,7 @@ namespace Module {
                 temp_file->cd();
                 temp_tree->Write();
                 temp_file->Close();
+                delete temp_file;
             }
         }
     };
