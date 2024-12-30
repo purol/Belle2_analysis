@@ -373,6 +373,7 @@ namespace Module {
         int nbins;
         double x_low;
         double x_high;
+        bool normalized;
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
@@ -384,8 +385,10 @@ namespace Module {
         std::vector<double> x_variable;
         std::vector<double> weight;
     public:
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
         ~DrawTH1D() {
             delete hist;
@@ -433,6 +436,7 @@ namespace Module {
 
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
+            if (normalized) hist->Scale(1.0 / hist->Integral(), "width");
             hist->Draw("Hist");
             c_temp->SaveAs(png_name.c_str());
             delete c_temp;
@@ -1189,6 +1193,7 @@ namespace Module {
         int nbins;
         double x_low;
         double x_high;
+        bool normalized;
 
         std::vector<std::string>* variable_names;
         std::vector<std::string>* VariableTypes;
@@ -1218,8 +1223,10 @@ namespace Module {
         int hist_draw_option;
 
     public:
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
 
         ~DrawStack() {
             delete stack;
@@ -1335,6 +1342,23 @@ namespace Module {
             x_variable.clear();
             weight.clear();
             label.clear();
+
+            if (normalized) {
+                if(hist_draw_option == 0) printf("[DrawStack] normalized option does not work when there is data\n");
+                else if(hist_draw_option == 1) {
+                    double sum_int = 0;
+                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + temp_hist[i]->Integral();
+                    for (int i = 0; i < stack_label_list.size(); i++) temp_hist[i]->Scale(1.0 / sum_int, "width");
+                    stack_error->Scale(1.0 / stack_error->Integral(), "width");
+                    hist->Scale(1.0 / hist->Integral(), "width");
+                }
+                else if(hist_draw_option == 2) {
+                    double sum_int = 0;
+                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + temp_hist[i]->Integral();
+                    for (int i = 0; i < stack_label_list.size(); i++) temp_hist[i]->Scale(1.0 / sum_int, "width");
+                    stack_error->Scale(1.0 / stack_error->Integral(), "width");
+                }
+            }
 
             // stack histogram
             for (int i = 0; i < stack_label_list.size(); i++) {
