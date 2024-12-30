@@ -395,15 +395,51 @@ namespace Module {
         }
 
         void Start() override {
+            hist = nullptr;
+
             // change variable name into placeholder
             replaced_expr = replaceVariables(expression, variable_names);
+
+            // if range is determined, make histogram first
+            if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
+                std::string hist_name = generateRandomString(12);
+                hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+            }
         }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
-                x_variable.push_back(result);
-                weight.push_back(ObtainWeight(iter));
+
+                if (hist == nullptr) {
+                    x_variable.push_back(result);
+                    weight.push_back(ObtainWeight(iter));
+                }
+                else {
+                    hist->Fill(result, ObtainWeight(iter));
+                }
+
+                // if saved variable exceed 1MB, calculate max, min and create histogram. It is to save memory
+                if ((sizeof(double) * x_variable.size() > 1000000.0) && (hist == nullptr)) {
+                    std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                    std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                    x_low = *min_it;
+                    x_high = *max_it;
+                    
+                    std::string hist_name = generateRandomString(12);
+                    hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+
+                    // fill histogram
+                    for (int i = 0; i < weight.size(); i++) {
+                        hist->Fill(x_variable.at(i), weight.at(i));
+                    }
+
+                    x_variable.clear();
+                    std::vector<double>().swap(x_variable);
+                    weight.clear();
+                    std::vector<double>().swap(weight);
+                }
 
                 ++iter;
             }
@@ -422,8 +458,10 @@ namespace Module {
             }
 
             // create histogram
-            std::string hist_name = generateRandomString(12);
-            hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+            if (hist == nullptr) {
+                std::string hist_name = generateRandomString(12);
+                hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+            }
 
             // fill histogram
             for (int i = 0; i < weight.size(); i++) {
@@ -432,7 +470,9 @@ namespace Module {
 
             // clear vector. Maybe not needed but to save memory...
             x_variable.clear();
+            std::vector<double>().swap(x_variable);
             weight.clear();
+            std::vector<double>().swap(weight);
 
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
@@ -476,18 +516,60 @@ namespace Module {
         }
 
         void Start() override {
+            hist = nullptr;
+
             // change variable name into placeholder
             x_replaced_expr = replaceVariables(x_expression, variable_names);
             y_replaced_expr = replaceVariables(y_expression, variable_names);
+
+            // if range is determined, make histogram first
+            if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max()) && (y_low != std::numeric_limits<double>::max()) && (y_high != std::numeric_limits<double>::max())) {
+                std::string hist_name = generateRandomString(12);
+                hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+            }
         }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
-                x_variable.push_back(x_result);
-                y_variable.push_back(y_result);
-                weight.push_back(ObtainWeight(iter));
+
+                if (hist == nullptr) {
+                    x_variable.push_back(x_result);
+                    y_variable.push_back(y_result);
+                    weight.push_back(ObtainWeight(iter));
+                }
+                else {
+                    hist->Fill(x_result, y_result, ObtainWeight(iter));
+                }
+
+                // if saved variable exceed 4MB, calculate max, min and create histogram. It is to save memory
+                if ((sizeof(double) * x_variable.size() > 4000000.0) && (hist == nullptr)) {
+                    std::vector<double>::iterator x_min_it = std::min_element(x_variable.begin(), x_variable.end());
+                    std::vector<double>::iterator x_max_it = std::max_element(x_variable.begin(), x_variable.end());
+                    std::vector<double>::iterator y_min_it = std::min_element(y_variable.begin(), y_variable.end());
+                    std::vector<double>::iterator y_max_it = std::max_element(y_variable.begin(), y_variable.end());
+
+                    x_low = *x_min_it;
+                    x_high = *x_max_it;
+                    y_low = *y_min_it;
+                    y_high = *y_max_it;
+
+                    std::string hist_name = generateRandomString(12);
+                    hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+
+                    // fill histogram
+                    for (int i = 0; i < weight.size(); i++) {
+                        hist->Fill(x_variable.at(i), y_variable.at(i), weight.at(i));
+                    }
+
+                    x_variable.clear();
+                    std::vector<double>().swap(x_variable);
+                    y_variable.clear();
+                    std::vector<double>().swap(y_variable);
+                    weight.clear();
+                    std::vector<double>().swap(weight);
+                }
 
                 ++iter;
             }
@@ -510,8 +592,10 @@ namespace Module {
             }
 
             // create histogram
-            std::string hist_name = generateRandomString(12);
-            hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+            if (hist == nullptr) {
+                std::string hist_name = generateRandomString(12);
+                hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+            }
 
             // fill histogram
             for (int i = 0; i < weight.size(); i++) {
@@ -520,8 +604,11 @@ namespace Module {
 
             // clear vector. Maybe not needed but to save memory...
             x_variable.clear();
+            std::vector<double>().swap(x_variable);
             y_variable.clear();
+            std::vector<double>().swap(y_variable);
             weight.clear();
+            std::vector<double>().swap(weight);
 
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
@@ -1186,6 +1273,7 @@ namespace Module {
     class DrawStack : public Module {
     private:
         THStack* stack;
+        TH1D** stack_hist;
         TH1D* stack_error;
         TH1D* hist;
         TH1D* RatioorPull;
@@ -1230,11 +1318,19 @@ namespace Module {
 
         ~DrawStack() {
             delete stack;
+            for (int i = 0; i < stack_label_list.size(); i++) delete stack_hist[i];
+            free(stack_hist);
             delete stack_error;
             delete hist;
         }
 
         void Start() override {
+            stack = nullptr;
+            stack_hist = nullptr;
+            stack_error = nullptr;
+            hist = nullptr;
+            RatioorPull = nullptr;
+
             // actually, the first and third else-if can be written in one line. However, I write them into the two line explicitly
             if ((data_label_list.size() != 0) && (MC_label_list.size() != 0)) {}
             else if ((Signal_label_list.size() != 0) && (Background_label_list.size() != 0)) {}
@@ -1269,15 +1365,98 @@ namespace Module {
 
             // change variable name into placeholder
             replaced_expr = replaceVariables(expression, variable_names);
+
+            if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
+                std::string hist_name = generateRandomString(12);
+                hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                // create histogram for stack
+                TH1D** stack_hist;
+                stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
+                for (int i = 0; i < stack_label_list.size(); i++) {
+                    std::string hist_name = generateRandomString(12);
+                    stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                }
+                hist_name = generateRandomString(12);
+                stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                // create pull or ratio histogram
+                hist_name = generateRandomString(12);
+                RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+            }
         }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
-                    x_variable.push_back(result);
-                    weight.push_back(ObtainWeight(iter));
-                    label.push_back(iter->label);
+
+                    if (stack_hist == nullptr) {
+                        x_variable.push_back(result);
+                        weight.push_back(ObtainWeight(iter));
+                        label.push_back(iter->label);
+                    }
+                    else {
+                        if (std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) != stack_label_list.end()) {
+                            int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) - stack_label_list.begin();
+                            stack_hist[label_index]->Fill(result, ObtainWeight(iter));
+                            stack_error->Fill(result, ObtainWeight(iter));
+                        }
+                        else if (std::find(hist_label_list.begin(), hist_label_list.end(), label.at(i)) != hist_label_list.end()) {
+                            hist->Fill(result, ObtainWeight(iter));
+                        }
+                    }
+
+                    // if saved variable exceed 1MB, calculate max, min and create histogram. It is to save memory
+                    if ((sizeof(double) * x_variable.size() > 1000000.0) && (stack_hist == nullptr)) {
+                        std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
+                        std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
+
+                        x_low = *min_it;
+                        x_high = *max_it;
+
+                        // create histogram
+                        std::string hist_name = generateRandomString(12);
+                        hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                        // create histogram for stack
+                        TH1D** stack_hist;
+                        stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
+                        for (int i = 0; i < stack_label_list.size(); i++) {
+                            std::string hist_name = generateRandomString(12);
+                            stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                        }
+                        hist_name = generateRandomString(12);
+                        stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                        // create pull or ratio histogram
+                        hist_name = generateRandomString(12);
+                        RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                        // fill histogram
+                        for (int i = 0; i < weight.size(); i++) {
+                            if (std::find(hist_label_list.begin(), hist_label_list.end(), label.at(i)) != hist_label_list.end()) {
+                                hist->Fill(x_variable.at(i), weight.at(i));
+                            }
+                        }
+
+                        // fill histogram for stack
+                        for (int i = 0; i < weight.size(); i++) {
+                            if (std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) != stack_label_list.end()) {
+                                int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) - stack_label_list.begin();
+                                stack_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
+                                stack_error->Fill(x_variable.at(i), weight.at(i));
+                            }
+                        }
+
+                        x_variable.clear();
+                        std::vector<double>().swap(x_variable);
+                        weight.clear();
+                        std::vector<double>().swap(weight);
+                        label.clear();
+                        std::vector<double>().swap(label);
+                    }
+
                 }
 
                 ++iter;
@@ -1300,23 +1479,24 @@ namespace Module {
             std::string stack_name = generateRandomString(12);
             stack = new THStack(stack_name.c_str(), stack_title.c_str());
 
-            // create histogram
-            std::string hist_name = generateRandomString(12);
-            hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
-
-            // create histogram for stack
-            TH1D** temp_hist;
-            temp_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
-            for (int i = 0; i < stack_label_list.size(); i++) {
+            if (stack_hist == nullptr) {
+                // create histogram
                 std::string hist_name = generateRandomString(12);
-                temp_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
-            }
-            hist_name = generateRandomString(12);
-            stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
 
-            // create pull or ratio histogram
-            hist_name = generateRandomString(12);
-            RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                // create histogram for stack
+                stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
+                for (int i = 0; i < stack_label_list.size(); i++) {
+                    std::string hist_name = generateRandomString(12);
+                    stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                }
+                hist_name = generateRandomString(12);
+                stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+
+                // create pull or ratio histogram
+                hist_name = generateRandomString(12);
+                RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+            }
 
             // fill histogram
             for (int i = 0; i < weight.size(); i++) {
@@ -1329,7 +1509,7 @@ namespace Module {
             for (int i = 0; i < weight.size(); i++) {
                 if (std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) != stack_label_list.end()) {
                     int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) - stack_label_list.begin();
-                    temp_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
+                    stack_hist[label_index]->Fill(x_variable.at(i), weight.at(i));
                     stack_error->Fill(x_variable.at(i), weight.at(i));
                 }
             }
@@ -1340,29 +1520,32 @@ namespace Module {
 
             // clear vector. Maybe not needed but to save memory...
             x_variable.clear();
+            std::vector<double>().swap(x_variable);
             weight.clear();
+            std::vector<double>().swap(weight);
             label.clear();
+            std::vector<double>().swap(label);
 
             if (normalized) {
                 if(hist_draw_option == 0) printf("[DrawStack] normalized option does not work when there is data\n");
                 else if(hist_draw_option == 1) {
                     double sum_int = 0;
-                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + temp_hist[i]->Integral();
-                    for (int i = 0; i < stack_label_list.size(); i++) temp_hist[i]->Scale(1.0 / sum_int, "width");
+                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + stack_hist[i]->Integral();
+                    for (int i = 0; i < stack_label_list.size(); i++) stack_hist[i]->Scale(1.0 / sum_int, "width");
                     stack_error->Scale(1.0 / stack_error->Integral(), "width");
                     hist->Scale(1.0 / hist->Integral(), "width");
                 }
                 else if(hist_draw_option == 2) {
                     double sum_int = 0;
-                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + temp_hist[i]->Integral();
-                    for (int i = 0; i < stack_label_list.size(); i++) temp_hist[i]->Scale(1.0 / sum_int, "width");
+                    for (int i = 0; i < stack_label_list.size(); i++) sum_int = sum_int + stack_hist[i]->Integral();
+                    for (int i = 0; i < stack_label_list.size(); i++) stack_hist[i]->Scale(1.0 / sum_int, "width");
                     stack_error->Scale(1.0 / stack_error->Integral(), "width");
                 }
             }
 
             // stack histogram
             for (int i = 0; i < stack_label_list.size(); i++) {
-                stack->Add(temp_hist[i]);
+                stack->Add(stack_hist[i]);
             }
 
             // set palette
@@ -1399,7 +1582,7 @@ namespace Module {
                 // set legend
                 TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.08);
                 for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                    legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
                 legend->AddEntry(hist, "data", "LP");
@@ -1454,7 +1637,7 @@ namespace Module {
                 // set legend
                 TLegend* legend = new TLegend(0.95, 0.9, 0.75, 0.9 - stack_label_list.size() * 0.0375);
                 for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                    legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
                 legend->AddEntry(hist, "signal", "f");
@@ -1485,7 +1668,7 @@ namespace Module {
                 // set legend
                 TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
                 for (int i = 0; i < stack_label_list.size(); i++) {
-                    legend->AddEntry(temp_hist[i], stack_label_list.at(i).c_str(), "f");
+                    legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
 
@@ -1506,8 +1689,6 @@ namespace Module {
                 exit(1);
             }
 
-            for (int i = 0; i < stack_label_list.size(); i++) delete temp_hist[i];
-            free(temp_hist);
         }
     };
 
