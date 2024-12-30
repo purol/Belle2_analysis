@@ -1397,12 +1397,12 @@ namespace Module {
                         label.push_back(iter->label);
                     }
                     else {
-                        if (std::find(stack_label_list.begin(), stack_label_list.end(), label.at(i)) != stack_label_list.end()) {
+                        if (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) {
                             int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) - stack_label_list.begin();
                             stack_hist[label_index]->Fill(result, ObtainWeight(iter));
                             stack_error->Fill(result, ObtainWeight(iter));
                         }
-                        else if (std::find(hist_label_list.begin(), hist_label_list.end(), label.at(i)) != hist_label_list.end()) {
+                        else if (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end()) {
                             hist->Fill(result, ObtainWeight(iter));
                         }
                     }
@@ -1454,7 +1454,7 @@ namespace Module {
                         weight.clear();
                         std::vector<double>().swap(weight);
                         label.clear();
-                        std::vector<double>().swap(label);
+                        std::vector<std::string>().swap(label);
                     }
 
                 }
@@ -1524,7 +1524,7 @@ namespace Module {
             weight.clear();
             std::vector<double>().swap(weight);
             label.clear();
-            std::vector<double>().swap(label);
+            std::vector<std::string>().swap(label);
 
             if (normalized) {
                 if(hist_draw_option == 0) printf("[DrawStack] normalized option does not work when there is data\n");
