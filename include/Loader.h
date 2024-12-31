@@ -75,15 +75,15 @@ public:
     void Cut(const char* cut_string_);
     void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
-    void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_);
+    void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
-    void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_);
+    void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
     void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
-    void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_);
+    void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
-    void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_);
+    void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_);
     void PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_);
     void PrintRootFile(const char* output_name_);
     void BCS(const char* expression_, const char* criteria_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
@@ -147,8 +147,8 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbin
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_) {
-    Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, nbins_, x_low_, x_high_, png_name_, normalized_, &variable_names, &VariableTypes);
+void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_) {
+    Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, nbins_, x_low_, x_high_, png_name_, normalized_, LogScale_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -157,8 +157,8 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const ch
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_) {
-    Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, png_name_, normalized_, &variable_names, &VariableTypes);
+void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_) {
+    Module::Module* temp_module = new Module::DrawTH1D(expression_, hist_title_, png_name_, normalized_, LogScale_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -177,8 +177,8 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, int nb
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_) {
-    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, png_name_, normalized_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+void Loader::DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_) {
+    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, nbins_, x_low_, x_high_, png_name_, normalized_, LogScale_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -187,8 +187,8 @@ void Loader::DrawStack(const char* expression_, const char* stack_title_, const 
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_) {
-    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, png_name_, normalized_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
+void Loader::DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_) {
+    Module::Module* temp_module = new Module::DrawStack(expression_, stack_title_, png_name_, normalized_, LogScale_, Signal_label_list, Background_label_list, Data_label_list, MC_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
