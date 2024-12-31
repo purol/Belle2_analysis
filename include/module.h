@@ -1580,7 +1580,7 @@ namespace Module {
                 hist->Draw("SAME eP EX0");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.08);
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1592,9 +1592,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 // draw ratio/pull
@@ -1636,7 +1636,7 @@ namespace Module {
                 hist->Draw("Hist SAME");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.75, 0.9 - stack_label_list.size() * 0.0375);
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1648,9 +1648,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
@@ -1668,7 +1668,7 @@ namespace Module {
                 stack_error->Draw("e2 SAME");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.05);
+                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1679,9 +1679,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
