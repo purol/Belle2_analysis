@@ -99,6 +99,10 @@ public:
      */
     std::vector<std::string>* Getvariable_names_address();
     std::vector<std::string>* VariableTypes_address();
+    std::vector<std::string>* SignalLabel_address();
+    std::vector<std::string>* BackgroundLabel_address();
+    std::vector<std::string>* DataLabel_address();
+    std::vector<std::string>* MCLabel_address();
 };
 
 Loader::Loader(const char* TTree_name_) : TTree_name(TTree_name_), DataStructureDefined(false) {}
