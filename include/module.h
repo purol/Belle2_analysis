@@ -419,8 +419,8 @@ namespace Module {
                     hist->Fill(result, ObtainWeight(iter));
                 }
 
-                // if saved variable exceed 1MB, calculate max, min and create histogram. It is to save memory
-                if ((sizeof(double) * x_variable.size() > 1000000.0) && (hist == nullptr)) {
+                // if saved variable exceed 10MB, calculate max, min and create histogram. It is to save memory
+                if ((sizeof(double) * x_variable.size() > 10000000.0) && (hist == nullptr)) {
                     std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
                     std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
 
@@ -543,8 +543,8 @@ namespace Module {
                     hist->Fill(x_result, y_result, ObtainWeight(iter));
                 }
 
-                // if saved variable exceed 4MB, calculate max, min and create histogram. It is to save memory
-                if ((sizeof(double) * x_variable.size() > 4000000.0) && (hist == nullptr)) {
+                // if saved variable exceed 40MB, calculate max, min and create histogram. It is to save memory
+                if ((sizeof(double) * x_variable.size() > 40000000.0) && (hist == nullptr)) {
                     std::vector<double>::iterator x_min_it = std::min_element(x_variable.begin(), x_variable.end());
                     std::vector<double>::iterator x_max_it = std::max_element(x_variable.begin(), x_variable.end());
                     std::vector<double>::iterator y_min_it = std::min_element(y_variable.begin(), y_variable.end());
@@ -1371,7 +1371,6 @@ namespace Module {
                 hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
 
                 // create histogram for stack
-                TH1D** stack_hist;
                 stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     std::string hist_name = generateRandomString(12);
@@ -1407,8 +1406,8 @@ namespace Module {
                         }
                     }
 
-                    // if saved variable exceed 1MB, calculate max, min and create histogram. It is to save memory
-                    if ((sizeof(double) * x_variable.size() > 1000000.0) && (stack_hist == nullptr)) {
+                    // if saved variable exceed 10MB, calculate max, min and create histogram. It is to save memory
+                    if ((sizeof(double) * x_variable.size() > 10000000.0) && (stack_hist == nullptr)) {
                         std::vector<double>::iterator min_it = std::min_element(x_variable.begin(), x_variable.end());
                         std::vector<double>::iterator max_it = std::max_element(x_variable.begin(), x_variable.end());
 
@@ -1420,7 +1419,6 @@ namespace Module {
                         hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
 
                         // create histogram for stack
-                        TH1D** stack_hist;
                         stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
                         for (int i = 0; i < stack_label_list.size(); i++) {
                             std::string hist_name = generateRandomString(12);
