@@ -1558,7 +1558,7 @@ namespace Module {
             if (ymax_1 > ymax_2) real_max = ymax_1;
             else real_max = ymax_2;
 
-            stack->SetMaximum(real_max * 1.3);
+            stack->SetMaximum(real_max * 1.4);
 
             if (hist_draw_option == 0) {
                 // define Canvas and pad
@@ -1580,7 +1580,7 @@ namespace Module {
                 hist->Draw("SAME eP EX0");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
+                TLegend* legend = new TLegend(0.94, 0.9, 0.44, 0.7);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1592,9 +1592,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.13, 0.83, 0.37, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.13, 0.79, 0.37, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 // draw ratio/pull
@@ -1636,7 +1636,7 @@ namespace Module {
                 hist->Draw("Hist SAME");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
+                TLegend* legend = new TLegend(0.94, 0.9, 0.44, 0.7);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1648,9 +1648,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.13, 0.83, 0.37, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.13, 0.79, 0.37, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
@@ -1668,7 +1668,7 @@ namespace Module {
                 stack_error->Draw("e2 SAME");
 
                 // set legend
-                TLegend* legend = new TLegend(0.95, 0.9, 0.70, 0.9 - stack_label_list.size() * 0.03);
+                TLegend* legend = new TLegend(0.94, 0.9, 0.44, 0.7);
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
@@ -1679,9 +1679,9 @@ namespace Module {
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.14, 0.84, 0.38, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.13, 0.83, 0.37, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.14, 0.78, 0.38, 0.81, "NDC NB");
+                TPaveText* pt_lumi = new TPaveText(0.13, 0.79, 0.37, 0.81, "NDC NB");
                 pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
