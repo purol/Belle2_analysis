@@ -1586,15 +1586,16 @@ namespace Module {
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
                 legend->AddEntry(hist, "data", "LP");
+                legend->SetNColumns(3);
 
                 legend->SetFillStyle(0); legend->SetLineWidth(0);
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.16, 0.83, 0.4, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.16, 0.76, 0.4, 0.81, "NDC NB");
-                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 361.7 fb^{-1}"); pt_lumi->Draw();
+                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 // draw ratio/pull
                 c_temp->cd();
@@ -1641,15 +1642,16 @@ namespace Module {
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
                 legend->AddEntry(hist, "signal", "f");
+                legend->SetNColumns(3);
 
                 legend->SetFillStyle(0); legend->SetLineWidth(0);
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.16, 0.83, 0.4, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.16, 0.76, 0.4, 0.81, "NDC NB");
-                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 361.7 fb^{-1}"); pt_lumi->Draw();
+                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
                 delete c_temp;
@@ -1671,15 +1673,16 @@ namespace Module {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
+                legend->SetNColumns(3);
 
                 legend->SetFillStyle(0); legend->SetLineWidth(0);
                 legend->Draw();
 
                 // write Belle text
-                TPaveText* pt_belle = new TPaveText(0.16, 0.83, 0.4, 0.88, "NDC NB");
+                TPaveText* pt_belle = new TPaveText(0.15, 0.84, 0.39, 0.88, "NDC NB");
                 pt_belle->SetTextSize(0.035); pt_belle->SetFillStyle(0); pt_belle->SetLineWidth(0); pt_belle->SetTextAlign(11); pt_belle->AddText("Belle II"); pt_belle->Draw();
-                TPaveText* pt_lumi = new TPaveText(0.16, 0.76, 0.4, 0.81, "NDC NB");
-                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 361.7 fb^{-1}"); pt_lumi->Draw();
+                TPaveText* pt_lumi = new TPaveText(0.15, 0.78, 0.39, 0.82, "NDC NB");
+                pt_lumi->SetTextSize(0.035); pt_lumi->SetFillStyle(0); pt_lumi->SetLineWidth(0); pt_lumi->SetTextAlign(11); pt_lumi->AddText("#int L dt = 365.4 fb^{-1}"); pt_lumi->Draw();
 
                 c_temp->SaveAs(png_name.c_str());
                 delete c_temp;
