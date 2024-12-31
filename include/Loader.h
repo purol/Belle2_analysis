@@ -264,4 +264,20 @@ std::vector<std::string>* Loader::VariableTypes_address() {
     return (&VariableTypes);
 }
 
+std::vector<std::string>* Loader::SignalLabel_address() {
+    return (&Signal_label_list);
+}
+
+std::vector<std::string>* Loader::BackgroundLabel_address() {
+    return (&Background_label_list);
+}
+
+std::vector<std::string>* Loader::DataLabel_address() {
+    return (&Data_label_list);
+}
+
+std::vector<std::string>* Loader::MCLabel_address() {
+    return (&MC_label_list);
+}
+
 #endif 
