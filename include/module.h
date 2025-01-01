@@ -1560,7 +1560,8 @@ namespace Module {
             if (ymax_1 > ymax_2) real_max = ymax_1;
             else real_max = ymax_2;
 
-            stack->SetMaximum(real_max * 1.4);
+            if (LogScale) stack->SetMaximum(std::pow(real_max, 1.4));
+            else stack->SetMaximum(real_max * 1.4);
 
             if (hist_draw_option == 0) {
                 // define Canvas and pad
