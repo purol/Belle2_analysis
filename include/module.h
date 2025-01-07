@@ -1845,6 +1845,80 @@ namespace Module {
         }
     };
 
+    class FastBDTApplication : public Module {
+    private:
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        // FBDT class
+        std::string classifier_path;
+        FastBDT::Classifier classifier;
+
+        std::string branch_name;
+
+    public:
+        FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_) {
+        }
+
+        ~FastBDTApplication() {}
+
+        void Start() {
+
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+            }
+
+            // malloc input variables
+            InputVariable = new std::vector<float>[replaced_exprs.size()];
+
+            // load FBDT
+            std::fstream in_stream(classifier_path.c_str(), std::ios_base::in);
+            classifier = FastBDT::Classifier(in_stream);
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), branch_name) != variable_names_->end()) {
+                printf("[FastBDTApplication] there is already %s variable\n", branch_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(branch_name);
+            VariableTypes_->push_back("Float_t");
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                std::vector<float> inputs;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    inputs.push_back(result);
+                }
+
+                float Output_FBDT = classifier.predict(inputs);
+                iter->variable.push_back(static_cast<float>(Output_FBDT));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
     class RandomEventSelection : public Module {
         /*
         * In this module, we assume that
