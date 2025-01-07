@@ -72,6 +72,10 @@ namespace Module {
 
     class Module {
     public:
+        /*
+        * design philosophy:
+        * 1. data structure should be modified in constructor. Do not touch data structure in `start`, `process`, and `End` function.
+        */
         Module() {}
         virtual ~Module() {}
         /*
@@ -1398,7 +1402,7 @@ namespace Module {
 
             // print AUC
             FILE* fp = fopen(output_name.c_str(), write_option.c_str());
-            fprint("%lf ", AUC);
+            fprintf(fp, "%lf ", AUC);
             fclose(fp);
 
             free(Cuts);
@@ -1987,12 +1991,6 @@ namespace Module {
 
     public:
         FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_) {
-        }
-
-        ~FastBDTApplication() {}
-
-        void Start() {
-
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
@@ -2000,10 +1998,6 @@ namespace Module {
 
             // malloc input variables
             InputVariable = new std::vector<float>[replaced_exprs.size()];
-
-            // load FBDT
-            std::fstream in_stream(classifier_path.c_str(), std::ios_base::in);
-            classifier = FastBDT::Classifier(in_stream);
 
             // check there is the same branch name or not
             if (std::find(variable_names_->begin(), variable_names_->end(), branch_name) != variable_names_->end()) {
@@ -2018,6 +2012,15 @@ namespace Module {
             // add variable
             variable_names_->push_back(branch_name);
             VariableTypes_->push_back("Float_t");
+        }
+
+        ~FastBDTApplication() {}
+
+        void Start() {
+
+            // load FBDT
+            std::fstream in_stream(classifier_path.c_str(), std::ios_base::in);
+            classifier = FastBDT::Classifier(in_stream);
 
         }
 
