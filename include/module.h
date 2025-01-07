@@ -1996,9 +1996,6 @@ namespace Module {
                 replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
             }
 
-            // malloc input variables
-            InputVariable = new std::vector<float>[replaced_exprs.size()];
-
             // check there is the same branch name or not
             if (std::find(variable_names_->begin(), variable_names_->end(), branch_name) != variable_names_->end()) {
                 printf("[FastBDTApplication] there is already %s variable\n", branch_name.c_str());
