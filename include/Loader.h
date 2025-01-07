@@ -91,6 +91,7 @@ public:
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_);
+    void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -224,6 +225,11 @@ void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const ch
 
 void Loader::FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_) {
     Module::Module* temp_module = new Module::FastBDTTrain(input_variables_, Signal_preselection_, Background_preselection_, hyperparameters_, MEMORY_SAFE_, path_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_) {
+    Module::Module* temp_module = new Module::FastBDTApplication(input_variables_, classifier_path_, branch_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
