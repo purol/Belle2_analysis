@@ -102,11 +102,11 @@ namespace Module {
         std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
 
         bool* DataStructureDefined;
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string TTree_name;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_){
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), TTree_name(TTree_name_){
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -128,8 +128,8 @@ namespace Module {
                         const char* temp_branch_name = temp_branchList->At(j)->GetName();
                         const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
 
-                        variable_names->push_back(temp_branch_name);
-                        VariableTypes->push_back(std::string(TypeName));
+                        variable_names_->push_back(temp_branch_name);
+                        VariableTypes_->push_back(std::string(TypeName));
                     }
                     (*DataStructureDefined) = true;
                 }
@@ -138,12 +138,12 @@ namespace Module {
                         const char* temp_branch_name = temp_branchList->At(j)->GetName();
                         const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
 
-                        if (variable_names->at(j) != std::string(temp_branch_name)) {
-                            printf("variable name is different: %s %s\n", variable_names->at(j).c_str(), temp_branch_name);
+                        if (variable_names_->at(j) != std::string(temp_branch_name)) {
+                            printf("variable name is different: %s %s\n", variable_names_->at(j).c_str(), temp_branch_name);
                             exit(1);
                         }
-                        else if (VariableTypes->at(j) != std::string(TypeName)) {
-                            printf("type is different: %s %s\n", VariableTypes->at(j).c_str(), TypeName);
+                        else if (VariableTypes_->at(j) != std::string(TypeName)) {
+                            printf("type is different: %s %s\n", VariableTypes_->at(j).c_str(), TypeName);
                             exit(1);
                         }
                     }
@@ -152,31 +152,35 @@ namespace Module {
                 input_file->Close();
                 delete input_file;
             }
+
+            // copy variable name and variable type
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
         }
         ~Load() {}
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
-            for (int i = 0; i < VariableTypes->size(); i++) {
-                if (strcmp(VariableTypes->at(i).c_str(), "Double_t") == 0) {
+            for (int i = 0; i < VariableTypes.size(); i++) {
+                if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
                     temp_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Int_t") == 0) {
                     temp_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "UInt_t") == 0) {
                     temp_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "string") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
                     // I try to deal with string variable but it is hard to catch a memory leakage... So I decided not to use string variable
-                    VariableTypes->at(i) = std::string("Double_t");
+                    VariableTypes.at(i) = std::string("Double_t");
                     temp_variable.push_back(static_cast<double>(-1.0)); // we just put (double) -1.0
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -198,17 +202,17 @@ namespace Module {
 
             // set branch addresses
             for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-                if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
                 }
             }
 
@@ -233,20 +237,20 @@ namespace Module {
     private:
         std::string cut_string;
         std::string replaced_expr;
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
         ~Cut() {}
 
         void Start() {
-            replaced_expr = replaceVariables(cut_string, variable_names);
+            replaced_expr = replaceVariables(cut_string, &variable_names);
         }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                 if (result < 0.5) {
                     data->erase(iter);
                 }
@@ -279,11 +283,11 @@ namespace Module {
         // event variable history
         std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
     public:
-        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_), Nevt(0), Ncandidate(0){}
+        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
         void Start() override {
@@ -295,29 +299,29 @@ namespace Module {
 
             // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+                int event_variable_index = std::find(variable_names.begin(), variable_names.end(), Event_variable_list.at(i)) - variable_names.begin();
 
-                if (event_variable_index == variable_names->size()) {
+                if (event_variable_index == variable_names.size()) {
                     printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
                 event_variable_index_list.push_back(event_variable_index);
 
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                     temp_event_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                     temp_event_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                     temp_event_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -329,20 +333,20 @@ namespace Module {
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
 
-                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                         temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                         temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                         temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
                     }
                     else {
-                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                         exit(1);
                     }
                 }
@@ -376,8 +380,8 @@ namespace Module {
         bool normalized;
         bool LogScale;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string expression;
         std::string replaced_expr;
 
@@ -386,10 +390,10 @@ namespace Module {
         std::vector<double> x_variable;
         std::vector<double> weight;
     public:
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~DrawTH1D() {
             delete hist;
@@ -399,7 +403,7 @@ namespace Module {
             hist = nullptr;
 
             // change variable name into placeholder
-            replaced_expr = replaceVariables(expression, variable_names);
+            replaced_expr = replaceVariables(expression, &variable_names);
 
             // if range is determined, make histogram first
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
@@ -410,7 +414,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(result);
@@ -498,8 +502,8 @@ namespace Module {
         double y_low;
         double y_high;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string x_expression;
         std::string x_replaced_expr;
         std::string y_expression;
@@ -511,8 +515,8 @@ namespace Module {
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~DrawTH2D() {
             delete hist;
@@ -522,8 +526,8 @@ namespace Module {
             hist = nullptr;
 
             // change variable name into placeholder
-            x_replaced_expr = replaceVariables(x_expression, variable_names);
-            y_replaced_expr = replaceVariables(y_expression, variable_names);
+            x_replaced_expr = replaceVariables(x_expression, &variable_names);
+            y_replaced_expr = replaceVariables(y_expression, &variable_names);
 
             // if range is determined, make histogram first
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max()) && (y_low != std::numeric_limits<double>::max()) && (y_high != std::numeric_limits<double>::max())) {
@@ -534,8 +538,8 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double x_result = evaluateExpression(x_replaced_expr, iter->variable, VariableTypes);
-                double y_result = evaluateExpression(y_replaced_expr, iter->variable, VariableTypes);
+                double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
+                double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(x_result);
@@ -631,31 +635,31 @@ namespace Module {
         // temporary variable to save data into branch
         std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string TTree_name;
     public:
-        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_){}
+        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), TTree_name(TTree_name_){}
 
         ~PrintSeparateRootFile() {}
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
-            for (int i = 0; i < VariableTypes->size(); i++) {
-                if (strcmp(VariableTypes->at(i).c_str(), "Double_t") == 0) {
+            for (int i = 0; i < VariableTypes.size(); i++) {
+                if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
                     temp_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Int_t") == 0) {
                     temp_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "UInt_t") == 0) {
                     temp_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -704,18 +708,18 @@ namespace Module {
                     temp_tree = new TTree(TTree_name.c_str(), "");
 
                     // set Branch
-                    for (int j = 0; j < VariableTypes->size(); j++) {
-                        if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
-                            temp_tree->Branch(variable_names->at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                    for (int j = 0; j < VariableTypes.size(); j++) {
+                        if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                            temp_tree->Branch(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
                         }
-                        else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
-                            temp_tree->Branch(variable_names->at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                        else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                            temp_tree->Branch(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
                         }
-                        else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
-                            temp_tree->Branch(variable_names->at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                        else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                            temp_tree->Branch(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
                         }
-                        else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
-                            temp_tree->Branch(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                        else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                            temp_tree->Branch(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
                         }
                     }
 
@@ -749,31 +753,31 @@ namespace Module {
         // temporary variable to save data into branch
         std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string TTree_name;
     public:
-        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(variable_names_), VariableTypes(VariableTypes_), TTree_name(TTree_name_) {}
+        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), TTree_name(TTree_name_) {}
 
         ~PrintRootFile() {}
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
-            for (int i = 0; i < VariableTypes->size(); i++) {
-                if (strcmp(VariableTypes->at(i).c_str(), "Double_t") == 0) {
+            for (int i = 0; i < VariableTypes.size(); i++) {
+                if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
                     temp_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Int_t") == 0) {
                     temp_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "UInt_t") == 0) {
                     temp_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(i).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -783,18 +787,18 @@ namespace Module {
             temp_tree = new TTree(TTree_name.c_str(), "");
 
             // set Branch
-            for (int j = 0; j < VariableTypes->size(); j++) {
-                if (strcmp(VariableTypes->at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+            for (int j = 0; j < VariableTypes.size(); j++) {
+                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                    temp_tree->Branch(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                    temp_tree->Branch(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                    temp_tree->Branch(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
                 }
-                else if (strcmp(VariableTypes->at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->Branch(variable_names->at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                    temp_tree->Branch(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
                 }
             }
         }
@@ -840,14 +844,14 @@ namespace Module {
 
         std::string replaced_expr;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
         static char to_upper(char c) {
             return std::toupper(static_cast<unsigned char>(c));
         }
     public:
-        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
         
         ~BCS() {}
 
@@ -868,34 +872,34 @@ namespace Module {
 
             // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+                int event_variable_index = std::find(variable_names.begin(), variable_names.end(), Event_variable_list.at(i)) - variable_names.begin();
 
-                if (event_variable_index == variable_names->size()) {
+                if (event_variable_index == variable_names.size()) {
                     printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
                 event_variable_index_list.push_back(event_variable_index);
 
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                     temp_event_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                     temp_event_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                     temp_event_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
 
-            replaced_expr = replaceVariables(equation, variable_names);
+            replaced_expr = replaceVariables(equation, &variable_names);
         }
 
         int Process(std::vector<Data>* data) override {
@@ -923,20 +927,20 @@ namespace Module {
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
 
-                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                         temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                         temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                         temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
                     }
                     else {
-                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                         exit(1);
                     }
                 }
@@ -971,7 +975,7 @@ namespace Module {
                 }
 
                 // get BCS variable
-                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                 
                 // check the BCS criteria
                 if (criteria == "HIGHEST") {
@@ -1048,11 +1052,11 @@ namespace Module {
         // event variable history
         std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
     public:
-        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~IsBCSValid() {}
 
@@ -1065,29 +1069,29 @@ namespace Module {
 
             // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+                int event_variable_index = std::find(variable_names.begin(), variable_names.end(), Event_variable_list.at(i)) - variable_names.begin();
 
-                if (event_variable_index == variable_names->size()) {
+                if (event_variable_index == variable_names.size()) {
                     printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
                 event_variable_index_list.push_back(event_variable_index);
 
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                     temp_event_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                     temp_event_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                     temp_event_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -1099,20 +1103,20 @@ namespace Module {
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
 
-                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                         temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                         temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                         temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
                     }
                     else {
-                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                         exit(1);
                     }
                 }
@@ -1155,14 +1159,14 @@ namespace Module {
         double* NBKGs;
         double* FOMs;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
         std::string png_name;
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 50
             NBin = 50;
 
@@ -1174,7 +1178,7 @@ namespace Module {
 
         void Start() {
             // change variable name into placeholder
-            replaced_expr = replaceVariables(equation, variable_names);
+            replaced_expr = replaceVariables(equation, &variable_names);
 
             if (Signal_label_list.size() == 0) {
                 printf("signal should be defined. Use `SetSignal`\n");
@@ -1205,7 +1209,7 @@ namespace Module {
                 for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                     bool DoesItPassCriteria = false;
-                    double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                     if (result > variable_value) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
@@ -1287,8 +1291,8 @@ namespace Module {
         bool normalized;
         bool LogScale;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
         std::string expression;
         std::string replaced_expr;
 
@@ -1315,10 +1319,10 @@ namespace Module {
         int hist_draw_option;
 
     public:
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~DrawStack() {
             delete stack;
@@ -1368,7 +1372,7 @@ namespace Module {
             }
 
             // change variable name into placeholder
-            replaced_expr = replaceVariables(expression, variable_names);
+            replaced_expr = replaceVariables(expression, &variable_names);
 
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
                 std::string hist_name = generateRandomString(12);
@@ -1391,7 +1395,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, VariableTypes);
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
 
                     if (stack_hist == nullptr) {
@@ -1718,8 +1722,8 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
         std::map<std::string, double> hyperparameters;
 
@@ -1738,7 +1742,7 @@ namespace Module {
         bool MEMORY_SAFE;
 
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), MEMORY_SAFE(MEMORY_SAFE_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), MEMORY_SAFE(MEMORY_SAFE_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
         }
 
         ~FastBDTTrain() {}
@@ -1755,10 +1759,10 @@ namespace Module {
 
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names));
+                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
             }
-            Signal_replaced_expr = replaceVariables(Signal_equation, variable_names);
-            Background_replaced_expr = replaceVariables(Background_equation, variable_names);
+            Signal_replaced_expr = replaceVariables(Signal_equation, &variable_names);
+            Background_replaced_expr = replaceVariables(Background_equation, &variable_names);
 
             // set hyperparmater
             if (hyperparameters.find("NTrees") == hyperparameters.end()) hyperparameters["NTrees"] = 100;
@@ -1788,13 +1792,13 @@ namespace Module {
                 if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) {
                     if (Signal_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = evaluateExpression(Signal_replaced_expr, iter->variable, VariableTypes);
+                        preselection_result = evaluateExpression(Signal_replaced_expr, iter->variable, &VariableTypes);
                     }
                 }
                 else if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) {
                     if (Background_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = evaluateExpression(Background_replaced_expr, iter->variable, VariableTypes);
+                        preselection_result = evaluateExpression(Background_replaced_expr, iter->variable, &VariableTypes);
                     }
                 }
                 else {
@@ -1803,7 +1807,7 @@ namespace Module {
 
                 if (preselection_result > 0.5) { // put input variables
                     for (int i = 0; i < replaced_exprs.size(); i++) {
-                        double result = evaluateExpression(replaced_exprs.at(i), iter->variable, VariableTypes);
+                        double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
                         InputVariable[i].push_back(result);
                     }
 
@@ -1859,15 +1863,15 @@ namespace Module {
         // index of event variables in `variable_names`
         std::vector<int> event_variable_index_list;
 
-        std::vector<std::string>* variable_names;
-        std::vector<std::string>* VariableTypes;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
 
         // the number of split and which one do you want to select?
         int split_num;
         int selected_index;
 
     public:
-        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(variable_names_), VariableTypes(VariableTypes_) {}
+        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~RandomEventSelection() {}
 
@@ -1895,29 +1899,29 @@ namespace Module {
 
             // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < Event_variable_list.size(); i++) {
-                int event_variable_index = std::find(variable_names->begin(), variable_names->end(), Event_variable_list.at(i)) - variable_names->begin();
+                int event_variable_index = std::find(variable_names.begin(), variable_names.end(), Event_variable_list.at(i)) - variable_names.begin();
 
-                if (event_variable_index == variable_names->size()) {
+                if (event_variable_index == variable_names.size()) {
                     printf("[RandomSplit] cannot find variable: %s\n", Event_variable_list.at(i).c_str());
                     exit(1);
                 }
 
                 event_variable_index_list.push_back(event_variable_index);
 
-                if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                     temp_event_variable.push_back(static_cast<double>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                     temp_event_variable.push_back(static_cast<int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                     temp_event_variable.push_back(static_cast<unsigned int>(0.0));
                 }
-                else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
                 else {
-                    printf("[RandomSplit] unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                    printf("[RandomSplit] unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
                 }
             }
@@ -1950,20 +1954,20 @@ namespace Module {
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
 
-                    if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Double_t") == 0) {
+                    if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
                         temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Int_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
                         temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
                         temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
                     }
-                    else if (strcmp(VariableTypes->at(event_variable_index).c_str(), "Float_t") == 0) {
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
                     }
                     else {
-                        printf("unexpected data type: %s\n", VariableTypes->at(i).c_str());
+                        printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                         exit(1);
                     }
                 }
