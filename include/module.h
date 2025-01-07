@@ -1277,6 +1277,136 @@ namespace Module {
         }
     };
 
+    class CalculateAUC : public Module {
+    private:
+        std::string equation;
+        std::string replaced_expr;
+
+        std::vector<std::string> Signal_label_list;
+        std::vector<std::string> Background_label_list;
+
+        // FOM range/bin
+        int NBin;
+        double MIN;
+        double MAX;
+
+        double* Cuts;
+        double* NSIGs;
+        double* NBKGs;
+
+        double NSIGs_total;
+        double NBKGs_total;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        std::string output_name;
+        std::string write_option;
+
+        double MyEPSILON;
+    public:
+        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+            // just 100
+            NBin = 100;
+
+            NSIGs_total = 0;
+            NBKGs_total = 0;
+        }
+
+        ~CalculateAUC() {}
+
+        void Start() {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(equation, &variable_names);
+
+            if (Signal_label_list.size() == 0) {
+                printf("signal should be defined. Use `SetSignal`\n");
+                exit(1);
+            }
+            else if (Background_label_list.size() == 0) {
+                printf("background should be defined. Use `SetBackground`\n");
+                exit(1);
+            }
+
+            // malloc history
+            Cuts = (double*)malloc(sizeof(double) * NBin);
+            NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs = (double*)malloc(sizeof(double) * NBin);
+            for (int i = 0; i < NBin; i++) {
+                Cuts[i] = 0.0;
+                NSIGs[i] = 0.0;
+                NBKGs[i] = 0.0;
+            }
+
+            // check write option
+            if (write_option == "w") {}
+            else if (write_option == "a") {}
+            else {
+                printf("[CalculateAUC] write option should be one of `w` or `a`\n");
+                exit(1);
+            }
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+
+                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                    bool DoesItPassCriteria = false;
+                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                    if (result > variable_value) DoesItPassCriteria = true;
+                    else DoesItPassCriteria = false;
+
+                    if (DoesItPassCriteria) {
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
+                    }
+
+                    ++iter;
+                }
+
+            }
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter);
+                if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter);
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+            // get AUC
+            double AUC = 0;
+            for (int i = 0; i < NBin; i++) {
+                if (i != (NBin - 1)) {
+                    double del_FPR = (NBKGs[i] / NBKGs_total) - (NBKGs[i + 1] / NBKGs_total);
+                    double avg_TPR = ((NSIGs[i + 1] / NSIGs_total) + (NSIGs[i] / NSIGs_total)) / 2.0;
+                    AUC = AUC + del_FPR * avg_TPR;
+                }
+                else {
+                    double del_FPR = (NBKGs[i] / NBKGs_total) - 0.0;
+                    double avg_TPR = ((NSIGs[i] / NSIGs_total) + 0.0) / 2.0;
+                    AUC = AUC + del_FPR * avg_TPR;
+                }
+            }
+
+            // print AUC
+            FILE* fp = fopen(output_name.c_str(), write_option.c_str());
+            fprint("%lf ", AUC);
+            fclose(fp);
+
+            free(Cuts);
+            free(NSIGs);
+            free(NBKGs);
+        }
+    };
+
     class DrawStack : public Module {
     private:
         THStack* stack;
