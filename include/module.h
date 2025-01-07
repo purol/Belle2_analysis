@@ -1738,11 +1738,8 @@ namespace Module {
         // FBDT class
         FastBDT::Classifier classifier;
 
-        // memory safe option
-        bool MEMORY_SAFE;
-
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool MEMORY_SAFE_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), MEMORY_SAFE(MEMORY_SAFE_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
         }
 
         ~FastBDTTrain() {}
@@ -1819,8 +1816,7 @@ namespace Module {
                     weight.push_back(static_cast<float>(ObtainWeight(iter)));
                 }
 
-                if (MEMORY_SAFE) data->erase(iter);
-                else ++iter;
+                ++iter;
             }
 
             return 1;
