@@ -364,6 +364,9 @@ namespace Module {
                 ++iter;
             }
 
+            // clear the vector under the assumption
+            history_event_variable.clear();
+
             return 1;
         }
 
