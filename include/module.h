@@ -2238,7 +2238,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), new_variable_name(new_variable_name_), classifier_path(classifier_path_), branch_name(branch_name_) {
+        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, variable_names_);
 
@@ -2296,7 +2296,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), classifier_path(classifier_path_), branch_name(branch_name_) {
+        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (std::map<std::string, std::string>::iterator iter_eq = condition_equation__criteria_equation_list.begin(); iter_eq != condition_equation__criteria_equation_list.end(); ++iter_eq) {
                 std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
