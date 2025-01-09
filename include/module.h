@@ -2226,6 +2226,156 @@ namespace Module {
         void End() override {}
     };
 
+    class DefineNewVariable : public Module {
+    private:
+        std::string equation;
+        std::string replaced_expr;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        // FBDT class
+        std::string new_variable_name;
+
+    public:
+        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), new_variable_name(new_variable_name_), classifier_path(classifier_path_), branch_name(branch_name_) {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(equation, variable_names_);
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[DefineNewVariable] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~DefineNewVariable() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+
+                iter->variable.push_back(static_cast<double>(result));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
+    class ConditionalPairDefineNewVariable : public Module {
+    private:
+        std::map<std::string, std::string> condition_equation__criteria_equation_list;
+        std::map<std::string, std::string> condition_replaced_expr__criteria_replaced_expr_list;
+
+        int condition_order; // start from 0. 0 means highest
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        // FBDT class
+        std::string new_variable_name;
+
+    public:
+        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), classifier_path(classifier_path_), branch_name(branch_name_) {
+            // change variable name into placeholder
+            for (std::map<std::string, std::string>::iterator iter_eq = condition_equation__criteria_equation_list.begin(); iter_eq != condition_equation__criteria_equation_list.end(); ++iter_eq) {
+                std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
+                std::string criteria_replaced_expr = replaceVariables(iter_eq->second, variable_names_);
+
+                condition_replaced_expr__criteria_replaced_expr_list.insert(std::make_pair(condition_replaced_expr, criteria_replaced_expr));
+            }
+
+            // check `condition_order` is valid
+            if (condition_order >= condition_equation__criteria_equation_list.size()) {
+                printf("[ConditionalPairDefineNewVariable] condition order (%d) should be smaller than size of condition_equation__criteria_equation_list (%d)\n", condition_order, condition_equation__criteria_equation_list.size());
+                exit(1);
+            }
+            if (condition_order < 0) {
+                printf("[ConditionalPairDefineNewVariable] condition order (%d) should be larger or equal to 0.\n", condition_order);
+                exit(1);
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[ConditionalPairDefineNewVariable] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~ConditionalPairDefineNewVariable() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                double condition_result = -1;
+                std::vector<double> condition_results;
+                double criteria_result = std::numeric_limits<double>::max();
+                std::vector<std::string> criteria_replaced_exprs;
+
+                for (std::map<std::string, std::string>::iterator iter_eq = condition_replaced_expr__criteria_replaced_expr_list.begin(); iter_eq != condition_replaced_expr__criteria_replaced_expr_list.end(); ++iter_eq) {
+                    double temp_ = evaluateExpression(iter_eq->first, iter->variable, &VariableTypes);
+                    condition_results.push_back(temp_);
+                    criteria_replaced_exprs.push_back(iter_eq->second);
+                }
+
+                std::vector<double> temp_condition_results = condition_results;
+                std::nth_element(temp_condition_results.begin(), temp_condition_results.begin() + condition_order, temp_condition_results.end(), std::greater<double>());
+
+                // The n-th largest value
+                condition_result = temp_condition_results.at(condition_order);
+
+                // Find the original index of the n-th largest value
+                std::vector<double>::iterator iter_condition_results = std::find(condition_results.begin(), condition_results.end(), condition_result);
+                std::size_t index = std::distance(condition_results.begin(), iter_condition_results);
+
+                criteria_result = evaluateExpression(criteria_replaced_exprs.at(index), iter->variable, &VariableTypes);
+
+                iter->variable.push_back(static_cast<double>(criteria_result));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
 }
 
 #endif 

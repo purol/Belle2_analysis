@@ -93,6 +93,8 @@ public:
     void CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_);
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
+    void DefineNewVariable(const char* equation_, const char* new_variable_name_);
+    void ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -236,6 +238,16 @@ void Loader::FastBDTTrain(std::vector<std::string> input_variables_, const char*
 
 void Loader::FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_) {
     Module::Module* temp_module = new Module::FastBDTApplication(input_variables_, classifier_path_, branch_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DefineNewVariable(const char* equation_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::DefineNewVariable(equation_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::ConditionalPairDefineNewVariable(condition_equation__criteria_equation_list_, condition_order_, new_variable_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
