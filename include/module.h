@@ -1284,6 +1284,146 @@ namespace Module {
         }
     };
 
+    class DrawPunziFOM : public Module {
+    private:
+        std::string equation;
+        std::string replaced_expr;
+
+        std::vector<std::string> Signal_label_list;
+        std::vector<std::string> Background_label_list;
+
+        // FOM range/bin
+        int NBin;
+        double MIN;
+        double MAX;
+
+        double* Cuts;
+        double* NSIGs;
+        double* NBKGs;
+        double* FOMs;
+
+        // vars for PunziFOM
+        double NSIG_initial;
+        double alpha;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        std::string png_name;
+
+        double MyEPSILON;
+    public:
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+            // just 50
+            NBin = 50;
+
+            // just 0.000001
+            MyEPSILON = 0.000001;
+        }
+
+        ~DrawPunziFOM() {}
+
+        void Start() {
+            // change variable name into placeholder
+            replaced_expr = replaceVariables(equation, &variable_names);
+
+            if (Signal_label_list.size() == 0) {
+                printf("signal should be defined. Use `SetSignal`\n");
+                exit(1);
+            }
+            else if (Background_label_list.size() == 0) {
+                printf("background should be defined. Use `SetBackground`\n");
+                exit(1);
+            }
+
+            // malloc history
+            Cuts = (double*)malloc(sizeof(double) * NBin);
+            NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs = (double*)malloc(sizeof(double) * NBin);
+            for (int i = 0; i < NBin; i++) {
+                Cuts[i] = 0.0;
+                NSIGs[i] = 0.0;
+                NBKGs[i] = 0.0;
+            }
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+
+                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                    bool DoesItPassCriteria = false;
+                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                    if (result > variable_value) DoesItPassCriteria = true;
+                    else DoesItPassCriteria = false;
+
+                    if (DoesItPassCriteria) {
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
+                    }
+
+                    ++iter;
+                }
+
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+            FOMs = (double*)malloc(sizeof(double) * NBin);
+            for (int i = 0; i < NBin; i++) {
+                if ((NSIGs[i] + NBKGs[i]) < MyEPSILON) FOMs[i] = 0.0;
+                else {
+                    FOMs[i] = (NSIGs[i] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs[i]));
+                }
+            }
+
+            double MinimumFOM = std::numeric_limits<double>::max();
+            for (int i = 0; i < NBin; i++) {
+                if (MinimumFOM > FOMs[i]) MinimumFOM = FOMs[i];
+            }
+
+            double MaximumFOM = -std::numeric_limits<double>::max();
+            int MaximumIndex = -1;
+            for (int i = 0; i < NBin; i++) {
+                if (MaximumFOM < FOMs[i]) {
+                    MaximumFOM = FOMs[i];
+                    MaximumIndex = i;
+                }
+            }
+
+            // print result
+            printf("FOM scan result for %s:\n", equation.c_str());
+            printf("Maximum FOM value: %lf\n", MaximumFOM);
+            printf("Cut value: %lf\n", Cuts[MaximumIndex]);
+            printf("NSIG: %lf\n", NSIGs[MaximumIndex]);
+            printf("NBKG: %lf\n", NBKGs[MaximumIndex]);
+
+            // draw FOM plot
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+
+            TGraph* gr3 = new TGraph(NBin, Cuts, FOMs);
+            gr3->SetTitle((";" + equation + " cut; Punzi FOM").c_str());
+            gr3->SetMarkerStyle(0);
+            gr3->SetMinimum(MinimumFOM);
+            gr3->Draw("");
+
+            c_temp->SaveAs(png_name.c_str());
+
+            free(Cuts);
+            free(NSIGs);
+            free(NBKGs);
+            free(FOMs);
+
+            delete c_temp;
+        }
+    };
+
     class CalculateAUC : public Module {
     private:
         std::string equation;
