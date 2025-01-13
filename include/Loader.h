@@ -228,7 +228,7 @@ void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const ch
 }
 
 void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawPunziFOM(expression_, MIN_, MAX_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
