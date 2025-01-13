@@ -20,6 +20,7 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <TPaveText.h>
+#include <TFile.h>
 
 // for the comparison of `std::vector<std::variant<int, unsigned int, float, double>>`
 struct CompareHistory {
