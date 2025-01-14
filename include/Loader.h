@@ -78,8 +78,8 @@ public:
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_);
-    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_);
-    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_);
+    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_);
+    void DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawStack(const char* expression_, const char* stack_title_, const char* png_name_);
@@ -167,13 +167,13 @@ void Loader::DrawTH1D(const char* expression_, const char* hist_title_, const ch
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, &variable_names, &VariableTypes);
+void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_) {
+    Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, x_nbins_, x_low_, x_high_, y_nbins_, y_low_, y_high_, png_name_, draw_option_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, png_name_, &variable_names, &VariableTypes);
+void Loader::DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_) {
+    Module::Module* temp_module = new Module::DrawTH2D(x_expression_, y_expression_, hist_title_, png_name_, draw_option_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
