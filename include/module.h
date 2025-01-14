@@ -518,13 +518,14 @@ namespace Module {
         std::string y_replaced_expr;
 
         std::string png_name;
+        std::string draw_option;
 
         std::vector<double> x_variable;
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~DrawTH2D() {
             delete hist;
@@ -627,7 +628,7 @@ namespace Module {
 
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
             hist->SetStats(false);
-            hist->Draw("COLZ");
+            hist->Draw(draw_option.c_str());
             c_temp->SaveAs(png_name.c_str());
             delete c_temp;
         }
