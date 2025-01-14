@@ -73,13 +73,13 @@ int main(int argc, char* argv[]) {
 
     // draw histogram
     loader.DrawTH1D("Btag_chiProb^2", ";Btag chiProb square;", 30, 0.0, 1.0, "Btag_chiProb_square.png");
-    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png");
+    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE.png", "COLZ");
     loader.DrawStack("Btag_Mbc", ";Mbc [GeV];", 50, 5.28, 5.29, "Btag_Mbc_stack.png");
 
     // complicated cut
     loader.Cut("Btag_deltaE > (-15) * Btag_Mbc + 79.15");
     loader.PrintInformation("========== Btag_deltaE > (-15) * Btag_Mbc + 79.15 ==========");
-    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png");
+    loader.DrawTH2D("Btag_Mbc", "Btag_deltaE", ";Mbc [GeV];deltaE [GeV];", 30, 5.27, 5.29, 30, -0.2, 0.2, "Mbc_deltaE_after_cut.png", "COLZ");
 
     // BCS
     loader.BCS("Btag_chiProb", "highest");
