@@ -229,7 +229,7 @@ void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const ch
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, const char* png_name_) {
+void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
