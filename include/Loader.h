@@ -17,6 +17,11 @@
 #include "THStack.h"
 #include "TCanvas.h"
 #include "TObjArray.h"
+#include "RooDataSet.h"
+#include "RooRealVar.h"
+#include "TProfile.h"
+#include "TH1.h"
+#include "TH2.h"
 
 #include "base.h"
 #include "data.h"
@@ -98,6 +103,12 @@ public:
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
     void DefineNewVariable(const char* equation_, const char* new_variable_name_);
     void ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_);
+    void FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_);
+    void FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_);
+    void FillTH1D(TH1D* th1d_, std::string equation_);
+    void FillCustomizedTH1D(TH1D* th1d_, std::string equation_, double (*custom_function_)(double));
+    void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
+    void FillCustomizedTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, double (*x_custom_function_)(double, double), double (*y_custom_function_)(double, double));
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -266,6 +277,36 @@ void Loader::DefineNewVariable(const char* equation_, const char* new_variable_n
 
 void Loader::ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_) {
     Module::Module* temp_module = new Module::ConditionalPairDefineNewVariable(condition_equation__criteria_equation_list_, condition_order_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_) {
+    Module::Module* temp_module = new Module::FillDataSet(dataset_, realvars_, equations_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_) {
+    Module::Module* temp_module = new Module::FillTProfile(tprofile_, equation_x_, equation_y_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillTH1D(TH1D* th1d_, std::string equation_) {
+    Module::Module* temp_module = new Module::FillTH1D(th1d_, equation_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillCustomizedTH1D(TH1D* th1d_, std::string equation_, double (*custom_function_)(double)) {
+    Module::Module* temp_module = new Module::FillCustomizedTH1D(th1d_, equation_, custom_function_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_) {
+    Module::Module* temp_module = new Module::FillTH2D(th2d_, x_expression_, y_expression_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillCustomizedTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, double (*x_custom_function_)(double, double), double (*y_custom_function_)(double, double)) {
+    Module::Module* temp_module = new Module::FillCustomizedTH2D(th2d_, x_expression_, y_expression_, x_custom_function_, y_custom_function_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
