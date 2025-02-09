@@ -164,6 +164,14 @@ namespace Module {
                 delete input_file;
             }
 
+            // it is tedious to deal with string... Just remove it.
+            for (int i = VariableTypes.size() - 1; i >= 0; --i) {
+                if (VariableTypes[i] == "string") {
+                    variable_names.erase(variable_names.begin() + i);
+                    VariableTypes.erase(VariableTypes.begin() + i);
+                }
+            }
+
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
@@ -184,11 +192,6 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
-                }
-                else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
-                    // I try to deal with string variable but it is hard to catch a memory leakage... So I decided not to use string variable
-                    VariableTypes.at(i) = std::string("Double_t");
-                    temp_variable.push_back(static_cast<double>(-1.0)); // we just put (double) -1.0
                 }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
