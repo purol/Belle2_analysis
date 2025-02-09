@@ -73,7 +73,7 @@ int precedence(const std::string& op) {
     return 0;
 }
 
-double evaluateExpression(const std::string& replaced_expr_, const std::vector<std::variant<int, unsigned int, float, double>> variables_, const std::vector<std::string>* VariableTypes_) {
+double evaluateExpression(const std::string& replaced_expr_, const std::vector<std::variant<int, unsigned int, float, double, std::string*>> variables_, const std::vector<std::string>* VariableTypes_) {
     std::istringstream iss(replaced_expr_);
     std::stack<double> values;
     std::stack<std::string> ops;

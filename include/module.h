@@ -28,9 +28,9 @@
 #include <TH1.h>
 #include <TH2.h>
 
-// for the comparison of `std::vector<std::variant<int, unsigned int, float, double>>`
+// for the comparison of `std::vector<std::variant<int, unsigned int, float, double, std::string*>>`
 struct CompareHistory {
-    bool operator()(const std::vector<std::variant<int, unsigned int, float, double>>& lhs, const std::vector<std::variant<int, unsigned int, float, double>>& rhs) const {
+    bool operator()(const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& lhs, const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& rhs) const {
         size_t size = std::min(lhs.size(), rhs.size());
 
         for (size_t i = 0; i < size; ++i) {
@@ -55,6 +55,14 @@ struct CompareHistory {
             else if (lhs[i].index() == 3) { // double
                 if (std::get<double>(lhs[i]) < std::get<double>(rhs[i])) return true;
                 if (std::get<double>(lhs[i]) > std::get<double>(rhs[i])) return false;
+            }
+            else if (lhs[i].index() == 4) { // std::string*
+                std::string* lhs_str = std::get<std::string*>(lhs[i]);
+                std::string* rhs_str = std::get<std::string*>(rhs[i]);
+
+                if (!lhs_str || !rhs_str) return lhs_str < rhs_str; // Handle null pointers safely
+                if (*lhs_str < *rhs_str) return true;
+                if (*lhs_str > *rhs_str) return false;
             }
         }
 
@@ -110,7 +118,7 @@ namespace Module {
         std::string label;
 
         // temporary variable to extract data from branch
-        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
 
         bool* DataStructureDefined;
         std::vector<std::string> variable_names;
@@ -186,9 +194,7 @@ namespace Module {
                     temp_variable.push_back(static_cast<float>(0.0));
                 }
                 else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
-                    // I try to deal with string variable but it is hard to catch a memory leakage... So I decided not to use string variable
-                    VariableTypes.at(i) = std::string("Double_t");
-                    temp_variable.push_back(static_cast<double>(-1.0)); // we just put (double) -1.0
+                    temp_variable.push_back(static_cast<std::string*>(nullptr));
                 }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -224,6 +230,9 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
                     temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
                 }
             }
 
@@ -286,13 +295,13 @@ namespace Module {
         double Ncandidate;
 
         // temporary variable to extract event variable
-        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_event_variable;
 
         // index of event variables in `variable_names`
         std::vector<int> event_variable_index_list;
 
         // event variable history
-        std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
+        std::set<std::vector<std::variant<int, unsigned int, float, double, std::string*>>, CompareHistory> history_event_variable;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -331,6 +340,9 @@ namespace Module {
                 else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                    temp_event_variable.push_back(static_cast<std::string*>(nullptr));
+                }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
@@ -355,6 +367,9 @@ namespace Module {
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -648,7 +663,7 @@ namespace Module {
         std::string suffix;
 
         // temporary variable to save data into branch
-        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -672,6 +687,9 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
+                    temp_variable.push_back(static_cast<std::string*>(nullptr));
                 }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -736,6 +754,9 @@ namespace Module {
                         else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
                             temp_tree->Branch(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
                         }
+                        else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                            temp_tree->Branch(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
+                        }
                     }
 
                 }
@@ -766,7 +787,7 @@ namespace Module {
         TTree* temp_tree = nullptr;
 
         // temporary variable to save data into branch
-        std::vector<std::variant<int, unsigned int, float, double>> temp_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -791,6 +812,9 @@ namespace Module {
                 else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
                     temp_variable.push_back(static_cast<float>(0.0));
                 }
+                else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
+                    temp_variable.push_back(static_cast<std::string*>(nullptr));
+                }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
@@ -814,6 +838,9 @@ namespace Module {
                 }
                 else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
                     temp_tree->Branch(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                    temp_tree->Branch(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
                 }
             }
         }
@@ -852,7 +879,7 @@ namespace Module {
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
-        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_event_variable;
 
         // index of event variables in `variable_names`
         std::vector<int> event_variable_index_list;
@@ -908,6 +935,9 @@ namespace Module {
                 else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                    temp_event_variable.push_back(static_cast<std::string*>(nullptr));
+                }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
@@ -935,7 +965,7 @@ namespace Module {
 
             // initialization flag previous event variable
             bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
-            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
+            std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
@@ -953,6 +983,9 @@ namespace Module {
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1059,13 +1092,13 @@ namespace Module {
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
-        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_event_variable;
 
         // index of event variables in `variable_names`
         std::vector<int> event_variable_index_list;
 
         // event variable history
-        std::set<std::vector<std::variant<int, unsigned int, float, double>>, CompareHistory> history_event_variable;
+        std::set<std::vector<std::variant<int, unsigned int, float, double, std::string*>>, CompareHistory> history_event_variable;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -1105,6 +1138,9 @@ namespace Module {
                 else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                    temp_event_variable.push_back(static_cast<std::string*>(nullptr));
+                }
                 else {
                     printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
@@ -1129,6 +1165,9 @@ namespace Module {
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -2217,7 +2256,7 @@ namespace Module {
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
-        std::vector<std::variant<int, unsigned int, float, double>> temp_event_variable;
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_event_variable;
 
         // index of event variables in `variable_names`
         std::vector<int> event_variable_index_list;
@@ -2279,6 +2318,9 @@ namespace Module {
                 else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                     temp_event_variable.push_back(static_cast<float>(0.0));
                 }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                    temp_event_variable.push_back(static_cast<std::string*>(nullptr));
+                }
                 else {
                     printf("[RandomSplit] unexpected data type: %s\n", VariableTypes.at(i).c_str());
                     exit(1);
@@ -2306,7 +2348,7 @@ namespace Module {
 
             // initialization flag previous event variable
             bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
-            std::vector<std::variant<int, unsigned int, float, double>> previous_event_variable = temp_event_variable;
+            std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
@@ -2324,6 +2366,9 @@ namespace Module {
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
                         temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
