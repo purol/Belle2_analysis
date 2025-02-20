@@ -1083,6 +1083,188 @@ namespace Module {
         void End() override {}
     };
 
+    class RandomBCS : public Module {
+        /*
+        * In this module, we assume that
+        * 1. candidates from the same event are consecutive
+        * 2. candidates from the same event are in the same ROOT file
+        */
+    private:
+        std::vector<std::string> Event_variable_list;
+
+        // temporary variable to extract event variable
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_event_variable;
+
+        // index of event variables in `variable_names`
+        std::vector<int> event_variable_index_list;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+    public:
+        RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+
+        ~RandomBCS() {}
+
+        void Start() override {
+            // exception handling
+            if (Event_variable_list.size() == 0) {
+                printf("event variable for RandomBCS should exist.\n");
+                exit(1);
+            }
+
+            // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < Event_variable_list.size(); i++) {
+                int event_variable_index = std::find(variable_names.begin(), variable_names.end(), Event_variable_list.at(i)) - variable_names.begin();
+
+                if (event_variable_index == variable_names.size()) {
+                    printf("cannot find variable: %s\n", Event_variable_list.at(i).c_str());
+                    exit(1);
+                }
+
+                event_variable_index_list.push_back(event_variable_index);
+
+                if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
+                    temp_event_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
+                    temp_event_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
+                    temp_event_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
+                    temp_event_variable.push_back(static_cast<float>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                    temp_event_variable.push_back(static_cast<std::string*>(nullptr));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
+                    exit(1);
+                }
+            }
+
+        }
+
+        int Process(std::vector<Data>* data) override {
+
+            // Convert the string to a size_t hash value
+            std::hash<std::string> hasher;
+            size_t hashValue;
+            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
+            else hashValue = 42;
+
+            // Initialize the random number generator with the hash value
+            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+            // It is temporary data to save Data before/after BCS is done.
+            std::vector<Data> temp_data;
+            std::vector<Data> temp_data_after_BCS;
+
+            // initialize extreme value/index
+            double extreme_value = -std::numeric_limits<double>::max();
+            std::vector<int> selected_indices;
+
+            // initialization flag previous event variable
+            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
+            std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                // get event variable
+                for (int i = 0; i < Event_variable_list.size(); i++) {
+                    int event_variable_index = event_variable_index_list.at(i);
+
+                    if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
+                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
+                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
+                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
+                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                    }
+                    else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
+                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                    }
+                    else {
+                        printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
+                        exit(1);
+                    }
+                }
+                if (ItIsTheFirstData) {
+                    previous_event_variable = temp_event_variable;
+                    ItIsTheFirstData = false;
+                }
+
+                // if event variable changes, do BCS
+                if (previous_event_variable != temp_event_variable) {
+                    if (selected_indices.size() != 0) {
+                        for (int i = 0; i < selected_indices.size(); i++) {
+                            Data temp = temp_data.at(selected_indices.at(i));
+                            temp_data_after_BCS.push_back(temp);
+                        }
+
+                        temp_data.clear();
+
+                        // reset extreme value/index
+                        extreme_value = -std::numeric_limits<double>::max();
+                        selected_indices.clear();
+                    }
+                    else {
+                        printf("[RandomBCS] unexpected error");
+                        exit(1);
+                    }
+                }
+
+                // get random variable
+                double result = dist(rng);
+
+                // check the BCS criteria
+                if (result > extreme_value) {
+                    extreme_value = result;
+                    selected_indices.clear();
+                    selected_indices.push_back(temp_data.size());
+                }
+                else if (result == extreme_value) {
+                    selected_indices.push_back(temp_data.size());
+                }
+
+                // get Data
+                temp_data.push_back(*iter);
+                data->erase(iter);
+
+                previous_event_variable = temp_event_variable;
+
+            }
+
+            // do BCS for the final dataset
+            if (selected_indices.size() != 0) {
+                for (int i = 0; i < selected_indices.size(); i++) {
+                    Data temp = temp_data.at(selected_indices.at(i));
+                    temp_data_after_BCS.push_back(temp);
+                }
+
+                temp_data.clear();
+
+                // reset extreme value/index
+                extreme_value = -std::numeric_limits<double>::max();
+                selected_indices.clear();
+            }
+
+            // use swap instead of copy to save computing resource
+            data->swap(temp_data_after_BCS);
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
     class IsBCSValid : public Module {
         /*
         * In this module, we assume that
