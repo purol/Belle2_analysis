@@ -74,14 +74,14 @@ struct CompareHistory {
 /*
 * reserved function which always return 1.0
 */
-double reserve_function(std::vector<Data>::iterator data_) {
+double reserve_function(std::vector<Data>::iterator data_, std::vector<std::string> variable_names_) {
     return 1.0;
 }
 
 /*
 * global function pointer. This can be modified outside module.h
 */
-double (*ObtainWeight)(std::vector<Data>::iterator) = reserve_function;
+double (*ObtainWeight)(std::vector<Data>::iterator, std::vector<std::string>) = reserve_function;
 
 namespace Module {
 
@@ -379,10 +379,10 @@ namespace Module {
 
                 if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
                     history_event_variable.insert(temp_event_variable);
-                    Nevt = Nevt + ObtainWeight(iter);
+                    Nevt = Nevt + ObtainWeight(iter, variable_names);
                 }
 
-                Ncandidate = Ncandidate + ObtainWeight(iter);
+                Ncandidate = Ncandidate + ObtainWeight(iter, variable_names);
                 ++iter;
             }
 
@@ -447,10 +447,10 @@ namespace Module {
 
                 if (hist == nullptr) {
                     x_variable.push_back(result);
-                    weight.push_back(ObtainWeight(iter));
+                    weight.push_back(ObtainWeight(iter, variable_names));
                 }
                 else {
-                    hist->Fill(result, ObtainWeight(iter));
+                    hist->Fill(result, ObtainWeight(iter, variable_names));
                 }
 
                 // if saved variable exceed 10MB, calculate max, min and create histogram. It is to save memory
@@ -574,10 +574,10 @@ namespace Module {
                 if (hist == nullptr) {
                     x_variable.push_back(x_result);
                     y_variable.push_back(y_result);
-                    weight.push_back(ObtainWeight(iter));
+                    weight.push_back(ObtainWeight(iter, variable_names));
                 }
                 else {
-                    hist->Fill(x_result, y_result, ObtainWeight(iter));
+                    hist->Fill(x_result, y_result, ObtainWeight(iter, variable_names));
                 }
 
                 // if saved variable exceed 40MB, calculate max, min and create histogram. It is to save memory
@@ -1454,8 +1454,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1598,8 +1598,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1745,8 +1745,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter);
+                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1755,8 +1755,8 @@ namespace Module {
             }
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter);
-                if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter);
+                if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
+                if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
 
                 ++iter;
             }
@@ -1914,17 +1914,17 @@ namespace Module {
 
                     if (stack_hist == nullptr) {
                         x_variable.push_back(result);
-                        weight.push_back(ObtainWeight(iter));
+                        weight.push_back(ObtainWeight(iter, variable_names));
                         label.push_back(iter->label);
                     }
                     else {
                         if (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) {
                             int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) - stack_label_list.begin();
-                            stack_hist[label_index]->Fill(result, ObtainWeight(iter));
-                            stack_error->Fill(result, ObtainWeight(iter));
+                            stack_hist[label_index]->Fill(result, ObtainWeight(iter, variable_names));
+                            stack_error->Fill(result, ObtainWeight(iter, variable_names));
                         }
                         else if (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end()) {
-                            hist->Fill(result, ObtainWeight(iter));
+                            hist->Fill(result, ObtainWeight(iter, variable_names));
                         }
                     }
 
@@ -2327,7 +2327,7 @@ namespace Module {
                     else if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) IsItSignal.push_back(false);
 
                     // put weight
-                    weight.push_back(static_cast<float>(ObtainWeight(iter)));
+                    weight.push_back(static_cast<float>(ObtainWeight(iter, variable_names)));
                 }
 
                 ++iter;
@@ -2796,7 +2796,7 @@ namespace Module {
                 RooArgSet temp_;
                 for (int i = 0; i < replaced_exprs.size(); i++) temp_.add(*(realvars.at(i)));
 
-                dataset->add(temp_, ObtainWeight(iter));
+                dataset->add(temp_, ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
@@ -2837,7 +2837,7 @@ namespace Module {
                 double result_x = evaluateExpression(replaced_expr_x, iter->variable, &VariableTypes);
                 double result_y = evaluateExpression(replaced_expr_y, iter->variable, &VariableTypes);
 
-                tprofile->Fill(result_x, result_y, ObtainWeight(iter));
+                tprofile->Fill(result_x, result_y, ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
@@ -2870,7 +2870,7 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
-                th1d->Fill(result, ObtainWeight(iter));
+                th1d->Fill(result, ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
@@ -2904,7 +2904,7 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
-                th1d->Fill(custom_function(result), ObtainWeight(iter));
+                th1d->Fill(custom_function(result), ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
@@ -2941,7 +2941,7 @@ namespace Module {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
 
-                th2d->Fill(x_result, y_result, ObtainWeight(iter));
+                th2d->Fill(x_result, y_result, ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
@@ -2980,7 +2980,7 @@ namespace Module {
                 double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
                 double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
 
-                th2d->Fill(x_custom_function(x_result, y_result), y_custom_function(x_result, y_result), ObtainWeight(iter));
+                th2d->Fill(x_custom_function(x_result, y_result), y_custom_function(x_result, y_result), ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
