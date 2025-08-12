@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <variant>
+#include <tuple>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -99,6 +100,7 @@ public:
     void DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, const char* png_name_);
     void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
     void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_);
+    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, double>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
     void CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_);
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
@@ -258,6 +260,11 @@ void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, doubl
 
 void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_) {
     Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_) {
+    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

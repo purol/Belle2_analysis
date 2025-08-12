@@ -1661,6 +1661,206 @@ namespace Module {
         }
     };
 
+    class Draw2DPunziFOM : public Module {
+    private:
+        /*
+         * usage:
+         * scan_condition: equation, min, max, bin
+         */
+        std::vector<std::tuple<const char*, double, double, int>> scan_conditions;
+        std::vector<std::string> replaced_exprs;
+
+        std::vector<std::string> Signal_label_list;
+        std::vector<std::string> Background_label_list;
+
+        // FOM range/bin
+        int NBin_x;
+        int NBin_y;
+        double MIN_x;
+        double MIN_y;
+        double MAX_x;
+        double MAX_y;
+
+        double** Cuts_x;
+        double** Cuts_y;
+        double** NSIGs;
+        double** NBKGs;
+        double** FOMs;
+
+        // vars for PunziFOM
+        double NSIG_initial;
+        double alpha;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        std::string png_name;
+
+        double MyEPSILON;
+    public:
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+            // just 0.000001
+            MyEPSILON = 0.000001;
+        }
+
+        ~Draw2DPunziFOM() {}
+
+        void Start() {
+            // change variable name into placeholder
+            for (std::vector<std::tuple<const char*, double, double, int>>::const_iterator iter = scan_conditions.begin(); iter != scan_conditions.end(); ++iter) {
+                const char* equation = std::get<0>(*iter);
+
+                replaced_expr = replaceVariables(std::string(equation), &variable_names);
+                replaced_exprs.push_back(replaced_expr);
+            }
+
+            if (scan_conditions.size() != 2) {
+                printf("Draw2DPunziFOM requires 2 element. Currently there are %d element(s)\n", scan_conditions.size());
+                exit(1);
+            }
+
+            if (Signal_label_list.size() == 0) {
+                printf("signal should be defined. Use `SetSignal`\n");
+                exit(1);
+            }
+            else if (Background_label_list.size() == 0) {
+                printf("background should be defined. Use `SetBackground`\n");
+                exit(1);
+            }
+
+            // copy information
+            NBin_x = std::get<3>(scan_conditions.at(0));
+            NBin_y = std::get<3>(scan_conditions.at(1));
+            MIN_x = std::get<1>(scan_conditions.at(0));
+            MIN_y = std::get<1>(scan_conditions.at(1));
+            MAX_x = std::get<2>(scan_conditions.at(0));
+            MAX_y = std::get<2>(scan_conditions.at(1));
+
+            // malloc history
+            Cuts_x = (double*)malloc(sizeof(double) * NBin_x);
+            Cuts_y = (double*)malloc(sizeof(double) * NBin_x);
+            NSIGs = (double*)malloc(sizeof(double) * NBin_x);
+            NBKGs = (double*)malloc(sizeof(double) * NBin_x);
+            for (int i = 0; i < NBin_x; i++) {
+                Cuts_x[i] = (double*)malloc(sizeof(double) * NBin_y);
+                Cuts_y[i] = (double*)malloc(sizeof(double) * NBin_y);
+                NSIGs[i] = (double*)malloc(sizeof(double) * NBin_y);
+                NBKGs[i] = (double*)malloc(sizeof(double) * NBin_y);
+            }
+
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    Cuts_x[i][j] = 0.0;
+                    Cuts_y[i][j] = 0.0;
+                    NSIGs[i][j] = 0.0;
+                    NBKGs[i][j] = 0.0;
+                }
+            }
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    double variable_value_x = MIN_x + ((double)i) * (MAX_x - MIN_x) / (NBin_x - 1);
+                    double variable_value_y = MIN_y + ((double)j) * (MAX_y - MIN_y) / (NBin_y - 1);
+                    Cuts_x[i][j] = variable_value_x;
+                    Cuts_y[i][j] = variable_value_y;
+
+                    for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                        bool DoesItPassCriteria = false;
+                        double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
+                        double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
+                        if ((result_x > variable_value_x) && (result_y > variable_value_y)) DoesItPassCriteria = true;
+                        else DoesItPassCriteria = false;
+
+                        if (DoesItPassCriteria) {
+                            if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
+                            if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i][j] = NBKGs[i][j] + ObtainWeight(iter, variable_names);
+                        }
+
+                        ++iter;
+                    }
+
+                }
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+            FOMs = (double*)malloc(sizeof(double) * NBin_x);
+            for (int i = 0; i < NBin_x; i++) {
+                FOMs[i] = (double*)malloc(sizeof(double) * NBin_y);
+            }
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    if ((NSIGs[i][j] + NBKGs[i][j]) < MyEPSILON) FOMs[i][j] = 0.0;
+                    else {
+                        FOMs[i][j] = (NSIGs[i][j] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs[i][j]));
+                    }
+                }
+            }
+
+            double MinimumFOM = std::numeric_limits<double>::max();
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    if (MinimumFOM > FOMs[i][j]) MinimumFOM = FOMs[i][j];
+                }
+            }
+
+            double MaximumFOM = -std::numeric_limits<double>::max();
+            int MaximumIndex_x = -1;
+            int MaximumIndex_y = -1;
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    if (MaximumFOM < FOMs[i][j]) {
+                        MaximumFOM = FOMs[i][j];
+                        MaximumIndex_x = i;
+                        MaximumIndex_y = j;
+                    }
+                }
+            }
+
+            // print result
+            printf("FOM scan result for %s,%s:\n", std::get<0>(scan_conditions.at(0)), std::get<0>(scan_conditions.at(1)));
+            printf("Maximum FOM value: %lf\n", MaximumFOM);
+            printf("Cut value: %lf,%lf\n", Cuts_x[MaximumIndex_x][MaximumIndex_y], Cuts_y[MaximumIndex_x][MaximumIndex_y]);
+            printf("NSIG: %lf\n", NSIGs[MaximumIndex_x][MaximumIndex_y]);
+            printf("NBKG: %lf\n", NBKGs[MaximumIndex_x][MaximumIndex_y]);
+
+            // draw FOM plot
+            TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
+
+            TH2D* th2 = new TH2D("th2", (";" + std::string(std::get<0>(scan_conditions.at(0))) + " cut;" + std::string(std::get<0>(scan_conditions.at(1))) + " cut;Punzi FOM").c_str(), NBin_x, MIN_x - (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), MAX_x + (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), NBin_y, MIN_y - (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)), MAX_y + (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)));
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    th2->SetBinContent(i, j, FOMs[i][j]);
+                }
+            }
+            th2->Draw("COLZ");
+
+            c_temp->SaveAs(png_name.c_str());
+
+            for (int i = 0; i < NBin_x; i++) {
+                free(Cuts_x[i]);
+                free(Cuts_y[i]);
+                free(NSIGs[i]);
+                free(NBKGs[i]);
+            }
+            free(Cuts_x);
+            free(Cuts_y);
+            free(NSIGs);
+            free(NBKGs);
+            for (int i = 0; i < NBin_x; i++) free(FOMs[i]);
+            free(FOMs);
+
+            delete c_temp;
+        }
+    };
+
     class CalculateAUC : public Module {
     private:
         std::string equation;
