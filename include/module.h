@@ -3140,7 +3140,8 @@ namespace Module {
                     results.push_back(result);
                 }
 
-                th1d->Fill(custom_function(results), ObtainWeight(iter, variable_names));
+                double filled_value = custom_function(results);
+                if(std::isnan(filled_value) == false) th1d->Fill(custom_function(results), ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
