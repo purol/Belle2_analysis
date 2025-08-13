@@ -100,7 +100,8 @@ public:
     void DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, const char* png_name_);
     void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
     void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_);
-    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, double>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
+    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
+    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_);
     void CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_);
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
@@ -109,9 +110,9 @@ public:
     void FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_);
     void FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_);
     void FillTH1D(TH1D* th1d_, std::string equation_);
-    void FillCustomizedTH1D(TH1D* th1d_, std::string equation_, double (*custom_function_)(double));
+    void FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>));
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
-    void FillCustomizedTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, double (*x_custom_function_)(double, double), double (*y_custom_function_)(double, double));
+    void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -268,6 +269,11 @@ void Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, 
     Modules.push_back(temp_module);
 }
 
+void Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_) {
+    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, preselection_x_, preselection_y_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
 void Loader::CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_) {
     Module::Module* temp_module = new Module::CalculateAUC(equation_, MIN_, MAX_, output_name_, write_option_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
@@ -308,8 +314,8 @@ void Loader::FillTH1D(TH1D* th1d_, std::string equation_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::FillCustomizedTH1D(TH1D* th1d_, std::string equation_, double (*custom_function_)(double)) {
-    Module::Module* temp_module = new Module::FillCustomizedTH1D(th1d_, equation_, custom_function_, &variable_names, &VariableTypes);
+void Loader::FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>)) {
+    Module::Module* temp_module = new Module::FillCustomizedTH1D(th1d_, equations_, custom_function_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -318,8 +324,8 @@ void Loader::FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expr
     Modules.push_back(temp_module);
 }
 
-void Loader::FillCustomizedTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, double (*x_custom_function_)(double, double), double (*y_custom_function_)(double, double)) {
-    Module::Module* temp_module = new Module::FillCustomizedTH2D(th2d_, x_expression_, y_expression_, x_custom_function_, y_custom_function_, &variable_names, &VariableTypes);
+void Loader::FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>)) {
+    Module::Module* temp_module = new Module::FillCustomizedTH2D(th2d_, equations_, x_custom_function_, y_custom_function_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
