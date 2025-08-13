@@ -1727,7 +1727,7 @@ namespace Module {
             for (std::vector<std::tuple<const char*, double, double, int>>::const_iterator iter = scan_conditions.begin(); iter != scan_conditions.end(); ++iter) {
                 const char* equation = std::get<0>(*iter);
 
-                replaced_expr = replaceVariables(std::string(equation), &variable_names);
+                std::string replaced_expr = replaceVariables(std::string(equation), &variable_names);
                 replaced_exprs.push_back(replaced_expr);
             }
             preselection_replaced_expr_x = replaceVariables(preselection_equation_x, &variable_names);
@@ -1756,10 +1756,10 @@ namespace Module {
             MAX_y = std::get<2>(scan_conditions.at(1));
 
             // malloc history
-            Cuts_x = (double*)malloc(sizeof(double) * NBin_x);
-            Cuts_y = (double*)malloc(sizeof(double) * NBin_x);
-            NSIGs = (double*)malloc(sizeof(double) * NBin_x);
-            NBKGs = (double*)malloc(sizeof(double) * NBin_x);
+            Cuts_x = (double**)malloc(sizeof(double*) * NBin_x);
+            Cuts_y = (double**)malloc(sizeof(double*) * NBin_x);
+            NSIGs = (double**)malloc(sizeof(double*) * NBin_x);
+            NBKGs = (double**)malloc(sizeof(double*) * NBin_x);
             for (int i = 0; i < NBin_x; i++) {
                 Cuts_x[i] = (double*)malloc(sizeof(double) * NBin_y);
                 Cuts_y[i] = (double*)malloc(sizeof(double) * NBin_y);
@@ -1820,7 +1820,7 @@ namespace Module {
 
         void End() {
 
-            FOMs = (double*)malloc(sizeof(double) * NBin_x);
+            FOMs = (double**)malloc(sizeof(double*) * NBin_x);
             for (int i = 0; i < NBin_x; i++) {
                 FOMs[i] = (double*)malloc(sizeof(double) * NBin_y);
             }
