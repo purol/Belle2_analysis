@@ -3115,25 +3115,32 @@ namespace Module {
     private:
 
         TH1D* th1d;
-        double (*custom_function)(double);
+        double (*custom_function)(std::vector<double>);
 
-        std::string equation;
-        std::string replaced_expr;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
     public:
-        FillCustomizedTH1D(TH1D* th1d_, std::string equation_, double (*custom_function_)(double), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), th1d(th1d_), equation(equation_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
         ~FillCustomizedTH1D() {}
         void Start() {
-            replaced_expr = replaceVariables(equation, &variable_names);
+            for (int i = 0; i < equations.size(); i++) {
+                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                replaced_exprs.push_back(replaced_expr);
+            }
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                std::vector<double> results;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    results.push_back(result);
+                }
 
-                th1d->Fill(custom_function(result), ObtainWeight(iter, variable_names));
+                th1d->Fill(custom_function(results), ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
