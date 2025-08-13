@@ -3194,30 +3194,35 @@ namespace Module {
     private:
 
         TH2D* th2d;
-        double (*x_custom_function)(double, double);
-        double (*y_custom_function)(double, double);
+        double (*x_custom_function)(std::vector<double>);
+        double (*y_custom_function)(std::vector<double>);
 
-        std::string x_expression;
-        std::string x_replaced_expr;
-        std::string y_expression;
-        std::string y_replaced_expr;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
     public:
-        FillCustomizedTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, double (*x_custom_function_)(double, double), double (*y_custom_function_)(double, double), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
         ~FillCustomizedTH2D() {}
         void Start() {
-            x_replaced_expr = replaceVariables(x_expression, &variable_names);
-            y_replaced_expr = replaceVariables(y_expression, &variable_names);
+            for (int i = 0; i < equations.size(); i++) {
+                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                replaced_exprs.push_back(replaced_expr);
+            }
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
-                double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
+                std::vector<double> results;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    results.push_back(result);
+                }
 
-                th2d->Fill(x_custom_function(x_result, y_result), y_custom_function(x_result, y_result), ObtainWeight(iter, variable_names));
+                double filled_value_x = x_custom_function(results);
+                double filled_value_y = y_custom_function(results);
+                if ((std::isnan(filled_value_x) == false) && (std::isnan(filled_value_y) == false)) th2d->Fill(filled_value_x, filled_value_y, ObtainWeight(iter, variable_names));
 
                 ++iter;
             }
