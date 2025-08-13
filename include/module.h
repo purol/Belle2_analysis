@@ -1670,6 +1670,19 @@ namespace Module {
         std::vector<std::tuple<const char*, double, double, int>> scan_conditions;
         std::vector<std::string> replaced_exprs;
 
+        /*
+         * When preselection_equation_x is satisfied, equation_x is used to calculate PunziFOM.
+         * On the other hand, when preselection_equation_y is satisfied, equation_y is used to calculate PunziFOM.
+         * If both conditions are satisfied, both equation_x and equation_y are used to calculate PunziFOM.
+         * If none of them are satisfied, that event is not considered for PunziFOM.
+         * This option is useful when you want to add two separate region with different cut variables
+         */
+        std::string preselection_equation_x;
+        std::string preselection_replaced_expr_x;
+
+        std::string preselection_equation_y;
+        std::string preselection_replaced_expr_y;
+
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
@@ -1698,7 +1711,11 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+            // just 0.000001
+            MyEPSILON = 0.000001;
+        }
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1713,6 +1730,8 @@ namespace Module {
                 replaced_expr = replaceVariables(std::string(equation), &variable_names);
                 replaced_exprs.push_back(replaced_expr);
             }
+            preselection_replaced_expr_x = replaceVariables(preselection_equation_x, &variable_names);
+            preselection_replaced_expr_y = replaceVariables(preselection_equation_y, &variable_names);
 
             if (scan_conditions.size() != 2) {
                 printf("Draw2DPunziFOM requires 2 element. Currently there are %d element(s)\n", scan_conditions.size());
@@ -1769,11 +1788,21 @@ namespace Module {
 
                     for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                        bool DoesItPassCriteria = false;
+                        bool DoesItPassCriteria = true;
+                        double result_preselection_x = evaluateExpression(preselection_replaced_expr_x, iter->variable, &VariableTypes);
+                        double result_preselection_y = evaluateExpression(preselection_replaced_expr_y, iter->variable, &VariableTypes);
                         double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
                         double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
-                        if ((result_x > variable_value_x) && (result_y > variable_value_y)) DoesItPassCriteria = true;
-                        else DoesItPassCriteria = false;
+
+                        if((result_preselection_x < 0.5) && (result_preselection_y < 0.5)) DoesItPassCriteria = false;
+                        else {
+                            if (result_preselection_x > 0.5) {
+                                if (result_x < variable_value_x) DoesItPassCriteria = false;
+                            }
+                            if (result_preselection_y > 0.5) {
+                                if (result_y < variable_value_y) DoesItPassCriteria = false;
+                            }
+                        }
 
                         if (DoesItPassCriteria) {
                             if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
