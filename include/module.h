@@ -1880,12 +1880,12 @@ namespace Module {
                 int first_bin_x = -1;
                 if (result_x < MIN_x) first_bin_x = -1;
                 else if (result_x >= MAX_x) first_bin_x = NBin_x - 1;
-                else first_bin_x = std::min(NBin_x - 1, int(std::floor((result - MIN_x) / ((MAX_x - MIN_x) / (NBin_x - 1)))));
+                else first_bin_x = std::min(NBin_x - 1, int(std::floor((result_x - MIN_x) / ((MAX_x - MIN_x) / (NBin_x - 1)))));
 
                 int first_bin_y = -1;
                 if (result_y < MIN_y) first_bin_y = -1;
                 else if (result_y >= MAX_y) first_bin_y = NBin_y - 1;
-                else first_bin_y = std::min(NBin_y - 1, int(std::floor((result - MIN_y) / ((MAX_y - MIN_y) / (NBin_y - 1)))));
+                else first_bin_y = std::min(NBin_y - 1, int(std::floor((result_y - MIN_y) / ((MAX_y - MIN_y) / (NBin_y - 1)))));
 
                 if ((result_preselection_x > 0.5) && (result_preselection_y > 0.5)) {
                     if ((first_bin_x >= 0) && (first_bin_y >= 0)) {
