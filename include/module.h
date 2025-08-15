@@ -1453,14 +1453,15 @@ namespace Module {
 
         int Process(std::vector<Data>* data) {
 
-            for (int i = 0; i < NBin; i++) {
-                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                Cuts[i] = variable_value;
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+
+                for (int i = 0; i < NBin; i++) {
+                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                    Cuts[i] = variable_value;
 
                     bool DoesItPassCriteria = false;
-                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                     if (result > variable_value) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
@@ -1468,10 +1469,9 @@ namespace Module {
                         if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
                         if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
-
-                    ++iter;
                 }
 
+                ++iter;
             }
 
             return 1;
@@ -1607,14 +1607,15 @@ namespace Module {
 
         int Process(std::vector<Data>* data) {
 
-            for (int i = 0; i < NBin; i++) {
-                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                Cuts[i] = variable_value;
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+
+                for (int i = 0; i < NBin; i++) {
+                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                    Cuts[i] = variable_value;
 
                     bool DoesItPassCriteria = false;
-                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                     if (result > variable_value) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
@@ -1622,10 +1623,9 @@ namespace Module {
                         if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
                         if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
-
-                    ++iter;
                 }
 
+                ++iter;
             }
 
             return 1;
@@ -1810,22 +1810,23 @@ namespace Module {
 
         int Process(std::vector<Data>* data) {
 
-            for (int i = 0; i < NBin_x; i++) {
-                for (int j = 0; j < NBin_y; j++) {
-                    double variable_value_x = MIN_x + ((double)i) * (MAX_x - MIN_x) / (NBin_x - 1);
-                    double variable_value_y = MIN_y + ((double)j) * (MAX_y - MIN_y) / (NBin_y - 1);
-                    Cuts_x[i][j] = variable_value_x;
-                    Cuts_y[i][j] = variable_value_y;
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                    for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result_preselection_x = evaluateExpression(preselection_replaced_expr_x, iter->variable, &VariableTypes);
+                double result_preselection_y = evaluateExpression(preselection_replaced_expr_y, iter->variable, &VariableTypes);
+                double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
+                double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
+
+                for (int i = 0; i < NBin_x; i++) {
+                    for (int j = 0; j < NBin_y; j++) {
+                        double variable_value_x = MIN_x + ((double)i) * (MAX_x - MIN_x) / (NBin_x - 1);
+                        double variable_value_y = MIN_y + ((double)j) * (MAX_y - MIN_y) / (NBin_y - 1);
+                        Cuts_x[i][j] = variable_value_x;
+                        Cuts_y[i][j] = variable_value_y;
 
                         bool DoesItPassCriteria = true;
-                        double result_preselection_x = evaluateExpression(preselection_replaced_expr_x, iter->variable, &VariableTypes);
-                        double result_preselection_y = evaluateExpression(preselection_replaced_expr_y, iter->variable, &VariableTypes);
-                        double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
-                        double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
 
-                        if((result_preselection_x < 0.5) && (result_preselection_y < 0.5)) DoesItPassCriteria = false;
+                        if ((result_preselection_x < 0.5) && (result_preselection_y < 0.5)) DoesItPassCriteria = false;
                         else {
                             if (result_preselection_x > 0.5) {
                                 if (result_x < variable_value_x) DoesItPassCriteria = false;
@@ -1839,11 +1840,10 @@ namespace Module {
                             if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
                             if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i][j] = NBKGs[i][j] + ObtainWeight(iter, variable_names);
                         }
-
-                        ++iter;
                     }
-
                 }
+
+                ++iter;
             }
 
             return 1;
@@ -2003,14 +2003,15 @@ namespace Module {
 
         int Process(std::vector<Data>* data) {
 
-            for (int i = 0; i < NBin; i++) {
-                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                Cuts[i] = variable_value;
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+
+                for (int i = 0; i < NBin; i++) {
+                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                    Cuts[i] = variable_value;
 
                     bool DoesItPassCriteria = false;
-                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
                     if (result > variable_value) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
@@ -2018,10 +2019,9 @@ namespace Module {
                         if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
                         if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
-
-                    ++iter;
                 }
 
+                ++iter;
             }
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
