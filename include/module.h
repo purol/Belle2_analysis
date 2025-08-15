@@ -1397,7 +1397,9 @@ namespace Module {
 
         double* Cuts;
         double* NSIGs;
+        double* NSIGs_cumulative;
         double* NBKGs;
+        double* NBKGs_cumulative;
         double* FOMs;
 
         std::vector<std::string> variable_names;
@@ -1443,11 +1445,15 @@ namespace Module {
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NSIGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             NBKGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
                 Cuts[i] = 0.0;
                 NSIGs[i] = 0.0;
+                NSIGs_cumulative[i] = 0.0;
                 NBKGs[i] = 0.0;
+                NBKGs_cumulative[i] = 0.0;
             }
 
             // initialize cuts
@@ -1463,15 +1469,13 @@ namespace Module {
 
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
-                for (int i = 0; i < NBin; i++) {
-                    bool DoesItPassCriteria = false;
-                    if (result > Cuts[i]) DoesItPassCriteria = true;
-                    else DoesItPassCriteria = false;
-
-                    if (DoesItPassCriteria) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
-                    }
+                int first_bin = -1;
+                if (result < MIN) first_bin = -1;
+                else if (result >= MAX) first_bin = NBin - 1;
+                else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
+                if (first_bin >= 0) {
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
                 }
 
                 ++iter;
@@ -1482,11 +1486,23 @@ namespace Module {
 
         void End() {
 
+            // calculate cumulative sum
+            for (int i = NBin - 1; i >= 0; i--) {
+                if (i == (NBin - 1)) {
+                    NSIGs_cumulative[i] = NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs[i];
+                }
+                else {
+                    NSIGs_cumulative[i] = NSIGs_cumulative[i + 1] + NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs_cumulative[i + 1] + NBKGs[i];
+                }
+            }
+
             FOMs = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
-                if ((NSIGs[i] + NBKGs[i]) < MyEPSILON) FOMs[i] = 0.0;
+                if ((NSIGs_cumulative[i] + NBKGs_cumulative[i]) < MyEPSILON) FOMs[i] = 0.0;
                 else {
-                    FOMs[i] = NSIGs[i] / std::sqrt(NSIGs[i] + NBKGs[i]);
+                    FOMs[i] = NSIGs_cumulative[i] / std::sqrt(NSIGs_cumulative[i] + NBKGs_cumulative[i]);
                 }
             }
 
@@ -1508,8 +1524,8 @@ namespace Module {
             printf("FOM scan result for %s:\n", equation.c_str());
             printf("Maximum FOM value: %lf\n", MaximumFOM);
             printf("Cut value: %lf\n", Cuts[MaximumIndex]);
-            printf("NSIG: %lf\n", NSIGs[MaximumIndex]);
-            printf("NBKG: %lf\n", NBKGs[MaximumIndex]);
+            printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex]);
+            printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
@@ -1524,7 +1540,9 @@ namespace Module {
 
             free(Cuts);
             free(NSIGs);
+            free(NSIGs_cumulative);
             free(NBKGs);
+            free(NBKGs_cumulative);
             free(FOMs);
 
             delete c_temp;
@@ -1550,7 +1568,9 @@ namespace Module {
 
         double* Cuts;
         double* NSIGs;
+        double* NSIGs_cumulative;
         double* NBKGs;
+        double* NBKGs_cumulative;
         double* FOMs;
 
         // vars for PunziFOM
@@ -1600,11 +1620,15 @@ namespace Module {
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NSIGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             NBKGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
                 Cuts[i] = 0.0;
                 NSIGs[i] = 0.0;
+                NSIGs_cumulative[i] = 0.0;
                 NBKGs[i] = 0.0;
+                NBKGs_cumulative[i] = 0.0;
             }
 
             // initialize cuts
@@ -1620,15 +1644,13 @@ namespace Module {
 
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
-                for (int i = 0; i < NBin; i++) {
-                    bool DoesItPassCriteria = false;
-                    if (result > Cuts[i]) DoesItPassCriteria = true;
-                    else DoesItPassCriteria = false;
-
-                    if (DoesItPassCriteria) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
-                    }
+                int first_bin = -1;
+                if (result < MIN) first_bin = -1;
+                else if (result >= MAX) first_bin = NBin - 1;
+                else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
+                if (first_bin >= 0) {
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
                 }
 
                 ++iter;
@@ -1639,11 +1661,23 @@ namespace Module {
 
         void End() {
 
+            // calculate cumulative sum
+            for (int i = NBin - 1; i >= 0; i--) {
+                if (i == (NBin - 1)) {
+                    NSIGs_cumulative[i] = NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs[i];
+                }
+                else {
+                    NSIGs_cumulative[i] = NSIGs_cumulative[i + 1] + NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs_cumulative[i + 1] + NBKGs[i];
+                }
+            }
+
             FOMs = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
-                if ((NSIGs[i] + NBKGs[i]) < MyEPSILON) FOMs[i] = 0.0;
+                if ((NSIGs_cumulative[i] + NBKGs_cumulative[i]) < MyEPSILON) FOMs[i] = 0.0;
                 else {
-                    FOMs[i] = (NSIGs[i] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs[i]));
+                    FOMs[i] = (NSIGs_cumulative[i] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs_cumulative[i]));
                 }
             }
 
@@ -1665,8 +1699,8 @@ namespace Module {
             printf("FOM scan result for %s:\n", equation.c_str());
             printf("Maximum FOM value: %lf\n", MaximumFOM);
             printf("Cut value: %lf\n", Cuts[MaximumIndex]);
-            printf("NSIG: %lf\n", NSIGs[MaximumIndex]);
-            printf("NBKG: %lf\n", NBKGs[MaximumIndex]);
+            printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex]);
+            printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
@@ -1681,7 +1715,9 @@ namespace Module {
 
             free(Cuts);
             free(NSIGs);
+            free(NSIGs_cumulative);
             free(NBKGs);
+            free(NBKGs_cumulative);
             free(FOMs);
 
             delete c_temp;
@@ -1728,7 +1764,9 @@ namespace Module {
         double** Cuts_x;
         double** Cuts_y;
         double** NSIGs;
+        double** NSIGs_cumulative;
         double** NBKGs;
+        double** NBKGs_cumulative;
         double** FOMs;
 
         // vars for PunziFOM
@@ -1796,12 +1834,16 @@ namespace Module {
             Cuts_x = (double**)malloc(sizeof(double*) * NBin_x);
             Cuts_y = (double**)malloc(sizeof(double*) * NBin_x);
             NSIGs = (double**)malloc(sizeof(double*) * NBin_x);
+            NSIGs_cumulative = (double**)malloc(sizeof(double*) * NBin_x);
             NBKGs = (double**)malloc(sizeof(double*) * NBin_x);
+            NBKGs_cumulative = (double**)malloc(sizeof(double*) * NBin_x);
             for (int i = 0; i < NBin_x; i++) {
                 Cuts_x[i] = (double*)malloc(sizeof(double) * NBin_y);
                 Cuts_y[i] = (double*)malloc(sizeof(double) * NBin_y);
                 NSIGs[i] = (double*)malloc(sizeof(double) * NBin_y);
+                NSIGs_cumulative[i] = (double*)malloc(sizeof(double) * NBin_y);
                 NBKGs[i] = (double*)malloc(sizeof(double) * NBin_y);
+                NBKGs_cumulative[i] = (double*)malloc(sizeof(double) * NBin_y);
             }
 
             for (int i = 0; i < NBin_x; i++) {
@@ -1809,7 +1851,9 @@ namespace Module {
                     Cuts_x[i][j] = 0.0;
                     Cuts_y[i][j] = 0.0;
                     NSIGs[i][j] = 0.0;
+                    NSIGs_cumulative[i][j] = 0.0;
                     NBKGs[i][j] = 0.0;
+                    NBKGs_cumulative[i][j] = 0.0;
                 }
             }
 
@@ -1833,24 +1877,32 @@ namespace Module {
                 double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
                 double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
 
-                for (int i = 0; i < NBin_x; i++) {
-                    for (int j = 0; j < NBin_y; j++) {
-                        bool DoesItPassCriteria = true;
+                int first_bin_x = -1;
+                if (result_x < MIN_x) first_bin_x = -1;
+                else if (result_x >= MAX_x) first_bin_x = NBin_x - 1;
+                else first_bin_x = std::min(NBin_x - 1, int(std::floor((result - MIN_x) / ((MAX_x - MIN_x) / (NBin_x - 1)))));
 
-                        if ((result_preselection_x < 0.5) && (result_preselection_y < 0.5)) DoesItPassCriteria = false;
-                        else {
-                            if (result_preselection_x > 0.5) {
-                                if (result_x < Cuts_x[i][j]) DoesItPassCriteria = false;
-                            }
-                            if (result_preselection_y > 0.5) {
-                                if (result_y < Cuts_y[i][j]) DoesItPassCriteria = false;
-                            }
-                        }
+                int first_bin_y = -1;
+                if (result_y < MIN_y) first_bin_y = -1;
+                else if (result_y >= MAX_y) first_bin_y = NBin_y - 1;
+                else first_bin_y = std::min(NBin_y - 1, int(std::floor((result - MIN_y) / ((MAX_y - MIN_y) / (NBin_y - 1)))));
 
-                        if (DoesItPassCriteria) {
-                            if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
-                            if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i][j] = NBKGs[i][j] + ObtainWeight(iter, variable_names);
-                        }
+                if ((result_preselection_x > 0.5) && (result_preselection_y > 0.5)) {
+                    if ((first_bin_x >= 0) && (first_bin_y >= 0)) {
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][first_bin_y] = NSIGs[first_bin_x][first_bin_y] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][first_bin_y] = NBKGs[first_bin_x][first_bin_y] + ObtainWeight(iter, variable_names);
+                    }
+                }
+                else if ((result_preselection_x > 0.5) && (result_preselection_y < 0.5)) {
+                    if (first_bin_x >= 0) {
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][NBin_y - 1] = NSIGs[first_bin_x][NBin_y - 1] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][NBin_y - 1] = NBKGs[first_bin_x][NBin_y - 1] + ObtainWeight(iter, variable_names);
+                    }
+                }
+                else if ((result_preselection_x < 0.5) && (result_preselection_y > 0.5)) {
+                    if (first_bin_y >= 0) {
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[NBin_x - 1][first_bin_y] = NSIGs[NBin_x - 1][first_bin_y] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[NBin_x - 1][first_bin_y] = NBKGs[NBin_x - 1][first_bin_y] + ObtainWeight(iter, variable_names);
                     }
                 }
 
@@ -1862,15 +1914,37 @@ namespace Module {
 
         void End() {
 
+            // calculate cumulative sum
+            for (int i = NBin_x - 1; i >= 0; i--) {
+                for (int j = NBin_y - 1; j >= 0; j--) {
+                    if ((i == (NBin_x - 1)) && (j == (NBin_y - 1))) {
+                        NSIGs_cumulative[i][j] = NSIGs[i][j];
+                        NBKGs_cumulative[i][j] = NBKGs[i][j];
+                    }
+                    else if ((i == (NBin_x - 1)) && (j != (NBin_y - 1))) {
+                        NSIGs_cumulative[i][j] = NSIGs_cumulative[i][j + 1] + NSIGs[i][j];
+                        NBKGs_cumulative[i][j] = NBKGs_cumulative[i][j + 1] + NBKGs[i][j];
+                    }
+                    else if ((i != (NBin_x - 1)) && (j == (NBin_y - 1))) {
+                        NSIGs_cumulative[i][j] = NSIGs_cumulative[i + 1][j] + NSIGs[i][j];
+                        NBKGs_cumulative[i][j] = NBKGs_cumulative[i + 1][j] + NBKGs[i][j];
+                    }
+                    else {
+                        NSIGs_cumulative[i][j] = NSIGs_cumulative[i + 1][j] + NSIGs_cumulative[i][j + 1] - NSIGs_cumulative[i + 1][j + 1] + NSIGs[i][j];
+                        NBKGs_cumulative[i][j] = NBKGs_cumulative[i + 1][j] + NBKGs_cumulative[i][j + 1] - NBKGs_cumulative[i + 1][j + 1] + NBKGs[i][j];
+                    }
+                }
+            }
+
             FOMs = (double**)malloc(sizeof(double*) * NBin_x);
             for (int i = 0; i < NBin_x; i++) {
                 FOMs[i] = (double*)malloc(sizeof(double) * NBin_y);
             }
             for (int i = 0; i < NBin_x; i++) {
                 for (int j = 0; j < NBin_y; j++) {
-                    if ((NSIGs[i][j] + NBKGs[i][j]) < MyEPSILON) FOMs[i][j] = 0.0;
+                    if ((NSIGs_cumulative[i][j] + NBKGs_cumulative[i][j]) < MyEPSILON) FOMs[i][j] = 0.0;
                     else {
-                        FOMs[i][j] = (NSIGs[i][j] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs[i][j]));
+                        FOMs[i][j] = (NSIGs_cumulative[i][j] / NSIG_initial) / (alpha / 2.0 + std::sqrt(NBKGs_cumulative[i][j]));
                     }
                 }
             }
@@ -1899,8 +1973,8 @@ namespace Module {
             printf("FOM scan result for %s,%s:\n", std::get<0>(scan_conditions.at(0)), std::get<0>(scan_conditions.at(1)));
             printf("Maximum FOM value: %lf\n", MaximumFOM);
             printf("Cut value: %lf,%lf\n", Cuts_x[MaximumIndex_x][MaximumIndex_y], Cuts_y[MaximumIndex_x][MaximumIndex_y]);
-            printf("NSIG: %lf\n", NSIGs[MaximumIndex_x][MaximumIndex_y]);
-            printf("NBKG: %lf\n", NBKGs[MaximumIndex_x][MaximumIndex_y]);
+            printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
+            printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
@@ -1908,7 +1982,7 @@ namespace Module {
             TH2D* th2 = new TH2D("th2", (";" + std::string(std::get<0>(scan_conditions.at(0))) + " cut;" + std::string(std::get<0>(scan_conditions.at(1))) + " cut;Punzi FOM").c_str(), NBin_x, MIN_x - (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), MAX_x + (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), NBin_y, MIN_y - (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)), MAX_y + (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)));
             for (int i = 0; i < NBin_x; i++) {
                 for (int j = 0; j < NBin_y; j++) {
-                    th2->SetBinContent(i, j, FOMs[i][j]);
+                    th2->SetBinContent(i + 1, j + 1, FOMs[i][j]);
                 }
             }
             th2->Draw("COLZ");
@@ -1919,12 +1993,16 @@ namespace Module {
                 free(Cuts_x[i]);
                 free(Cuts_y[i]);
                 free(NSIGs[i]);
+                free(NSIGs_cumulative[i]);
                 free(NBKGs[i]);
+                free(NBKGs_cumulative[i]);
             }
             free(Cuts_x);
             free(Cuts_y);
             free(NSIGs);
+            free(NSIGs_cumulative);
             free(NBKGs);
+            free(NBKGs_cumulative);
             for (int i = 0; i < NBin_x; i++) free(FOMs[i]);
             free(FOMs);
 
@@ -1951,7 +2029,9 @@ namespace Module {
 
         double* Cuts;
         double* NSIGs;
+        double* NSIGs_cumulative;
         double* NBKGs;
+        double* NBKGs_cumulative;
 
         double NSIGs_total;
         double NBKGs_total;
@@ -1996,11 +2076,15 @@ namespace Module {
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
+            NSIGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             NBKGs = (double*)malloc(sizeof(double) * NBin);
+            NBKGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
                 Cuts[i] = 0.0;
                 NSIGs[i] = 0.0;
+                NSIGs_cumulative[i] = 0.0;
                 NBKGs[i] = 0.0;
+                NBKGs_cumulative[i] = 0.0;
             }
 
             // initialize cuts
@@ -2024,23 +2108,14 @@ namespace Module {
 
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
-                for (int i = 0; i < NBin; i++) {
-                    bool DoesItPassCriteria = false;
-                    if (result > Cuts[i]) DoesItPassCriteria = true;
-                    else DoesItPassCriteria = false;
-
-                    if (DoesItPassCriteria) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
-                    }
+                int first_bin = -1;
+                if (result < MIN) first_bin = -1;
+                else if (result >= MAX) first_bin = NBin - 1;
+                else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
+                if (first_bin >= 0) {
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
                 }
-
-                ++iter;
-            }
-
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
-                if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
 
                 ++iter;
             }
@@ -2049,17 +2124,30 @@ namespace Module {
         }
 
         void End() {
+
+            // calculate cumulative sum
+            for (int i = NBin - 1; i >= 0; i--) {
+                if (i == (NBin - 1)) {
+                    NSIGs_cumulative[i] = NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs[i];
+                }
+                else {
+                    NSIGs_cumulative[i] = NSIGs_cumulative[i + 1] + NSIGs[i];
+                    NBKGs_cumulative[i] = NBKGs_cumulative[i + 1] + NBKGs[i];
+                }
+            }
+
             // get AUC
             double AUC = 0;
             for (int i = 0; i < NBin; i++) {
                 if (i != (NBin - 1)) {
-                    double del_FPR = (NBKGs[i] / NBKGs_total) - (NBKGs[i + 1] / NBKGs_total);
-                    double avg_TPR = ((NSIGs[i + 1] / NSIGs_total) + (NSIGs[i] / NSIGs_total)) / 2.0;
+                    double del_FPR = (NBKGs_cumulative[i] / NBKGs_total) - (NBKGs_cumulative[i + 1] / NBKGs_total);
+                    double avg_TPR = ((NSIGs_cumulative[i + 1] / NSIGs_total) + (NSIGs_cumulative[i] / NSIGs_total)) / 2.0;
                     AUC = AUC + del_FPR * avg_TPR;
                 }
                 else {
-                    double del_FPR = (NBKGs[i] / NBKGs_total) - 0.0;
-                    double avg_TPR = ((NSIGs[i] / NSIGs_total) + 0.0) / 2.0;
+                    double del_FPR = (NBKGs_cumulative[i] / NBKGs_total) - 0.0;
+                    double avg_TPR = ((NSIGs_cumulative[i] / NSIGs_total) + 0.0) / 2.0;
                     AUC = AUC + del_FPR * avg_TPR;
                 }
             }
@@ -2071,7 +2159,9 @@ namespace Module {
 
             free(Cuts);
             free(NSIGs);
+            free(NSIGs_cumulative);
             free(NBKGs);
+            free(NBKGs_cumulative);
         }
     };
 
