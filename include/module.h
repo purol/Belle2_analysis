@@ -1449,6 +1449,12 @@ namespace Module {
                 NSIGs[i] = 0.0;
                 NBKGs[i] = 0.0;
             }
+
+            // initialize cuts
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+            }
         }
 
         int Process(std::vector<Data>* data) {
@@ -1458,11 +1464,8 @@ namespace Module {
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
                 for (int i = 0; i < NBin; i++) {
-                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                    Cuts[i] = variable_value;
-
                     bool DoesItPassCriteria = false;
-                    if (result > variable_value) DoesItPassCriteria = true;
+                    if (result > Cuts[i]) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
@@ -1603,6 +1606,12 @@ namespace Module {
                 NSIGs[i] = 0.0;
                 NBKGs[i] = 0.0;
             }
+
+            // initialize cuts
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+            }
         }
 
         int Process(std::vector<Data>* data) {
@@ -1612,11 +1621,8 @@ namespace Module {
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
                 for (int i = 0; i < NBin; i++) {
-                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                    Cuts[i] = variable_value;
-
                     bool DoesItPassCriteria = false;
-                    if (result > variable_value) DoesItPassCriteria = true;
+                    if (result > Cuts[i]) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
@@ -1806,6 +1812,16 @@ namespace Module {
                     NBKGs[i][j] = 0.0;
                 }
             }
+
+            // initialize cuts
+            for (int i = 0; i < NBin_x; i++) {
+                for (int j = 0; j < NBin_y; j++) {
+                    double variable_value_x = MIN_x + ((double)i) * (MAX_x - MIN_x) / (NBin_x - 1);
+                    double variable_value_y = MIN_y + ((double)j) * (MAX_y - MIN_y) / (NBin_y - 1);
+                    Cuts_x[i][j] = variable_value_x;
+                    Cuts_y[i][j] = variable_value_y;
+                }
+            }
         }
 
         int Process(std::vector<Data>* data) {
@@ -1819,20 +1835,15 @@ namespace Module {
 
                 for (int i = 0; i < NBin_x; i++) {
                     for (int j = 0; j < NBin_y; j++) {
-                        double variable_value_x = MIN_x + ((double)i) * (MAX_x - MIN_x) / (NBin_x - 1);
-                        double variable_value_y = MIN_y + ((double)j) * (MAX_y - MIN_y) / (NBin_y - 1);
-                        Cuts_x[i][j] = variable_value_x;
-                        Cuts_y[i][j] = variable_value_y;
-
                         bool DoesItPassCriteria = true;
 
                         if ((result_preselection_x < 0.5) && (result_preselection_y < 0.5)) DoesItPassCriteria = false;
                         else {
                             if (result_preselection_x > 0.5) {
-                                if (result_x < variable_value_x) DoesItPassCriteria = false;
+                                if (result_x < Cuts_x[i][j]) DoesItPassCriteria = false;
                             }
                             if (result_preselection_y > 0.5) {
-                                if (result_y < variable_value_y) DoesItPassCriteria = false;
+                                if (result_y < Cuts_y[i][j]) DoesItPassCriteria = false;
                             }
                         }
 
@@ -1992,6 +2003,12 @@ namespace Module {
                 NBKGs[i] = 0.0;
             }
 
+            // initialize cuts
+            for (int i = 0; i < NBin; i++) {
+                double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
+                Cuts[i] = variable_value;
+            }
+
             // check write option
             if (write_option == "w") {}
             else if (write_option == "a") {}
@@ -2008,11 +2025,8 @@ namespace Module {
                 double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
 
                 for (int i = 0; i < NBin; i++) {
-                    double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
-                    Cuts[i] = variable_value;
-
                     bool DoesItPassCriteria = false;
-                    if (result > variable_value) DoesItPassCriteria = true;
+                    if (result > Cuts[i]) DoesItPassCriteria = true;
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
