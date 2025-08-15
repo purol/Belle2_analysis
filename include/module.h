@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <unordered_set>
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -1385,6 +1386,10 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
+        // For the O(1) look-up
+        std::unordered_set<std::string> Signal_label_set;
+        std::unordered_set<std::string> Background_label_set;
+
         // FOM range/bin
         int NBin;
         double MIN;
@@ -1429,6 +1434,12 @@ namespace Module {
                 exit(1);
             }
 
+            // Convert from vector to set
+            Signal_label_set.clear();
+            Signal_label_set.insert(Signal_label_list.begin(), Signal_label_list.end());
+            Background_label_set.clear();
+            Background_label_set.insert(Background_label_list.begin(), Background_label_list.end());
+
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
@@ -1454,8 +1465,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1525,6 +1536,10 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
+        // For the O(1) look-up
+        std::unordered_set<std::string> Signal_label_set;
+        std::unordered_set<std::string> Background_label_set;
+
         // FOM range/bin
         int NBin;
         double MIN;
@@ -1573,6 +1588,12 @@ namespace Module {
                 exit(1);
             }
 
+            // Convert from vector to set
+            Signal_label_set.clear();
+            Signal_label_set.insert(Signal_label_list.begin(), Signal_label_list.end());
+            Background_label_set.clear();
+            Background_label_set.insert(Background_label_list.begin(), Background_label_list.end());
+
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
@@ -1598,8 +1619,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1686,6 +1707,10 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
+        // For the O(1) look-up
+        std::unordered_set<std::string> Signal_label_set;
+        std::unordered_set<std::string> Background_label_set;
+
         // FOM range/bin
         int NBin_x;
         int NBin_y;
@@ -1747,6 +1772,12 @@ namespace Module {
                 exit(1);
             }
 
+            // Convert from vector to set
+            Signal_label_set.clear();
+            Signal_label_set.insert(Signal_label_list.begin(), Signal_label_list.end());
+            Background_label_set.clear();
+            Background_label_set.insert(Background_label_list.begin(), Background_label_list.end());
+
             // copy information
             NBin_x = std::get<3>(scan_conditions.at(0));
             NBin_y = std::get<3>(scan_conditions.at(1));
@@ -1805,8 +1836,8 @@ namespace Module {
                         }
 
                         if (DoesItPassCriteria) {
-                            if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
-                            if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i][j] = NBKGs[i][j] + ObtainWeight(iter, variable_names);
+                            if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i][j] = NSIGs[i][j] + ObtainWeight(iter, variable_names);
+                            if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i][j] = NBKGs[i][j] + ObtainWeight(iter, variable_names);
                         }
 
                         ++iter;
@@ -1898,6 +1929,10 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
+        // For the O(1) look-up
+        std::unordered_set<std::string> Signal_label_set;
+        std::unordered_set<std::string> Background_label_set;
+
         // FOM range/bin
         int NBin;
         double MIN;
@@ -1941,6 +1976,12 @@ namespace Module {
                 exit(1);
             }
 
+            // Convert from vector to set
+            Signal_label_set.clear();
+            Signal_label_set.insert(Signal_label_list.begin(), Signal_label_list.end());
+            Background_label_set.clear();
+            Background_label_set.insert(Background_label_list.begin(), Background_label_list.end());
+
             // malloc history
             Cuts = (double*)malloc(sizeof(double) * NBin);
             NSIGs = (double*)malloc(sizeof(double) * NBin);
@@ -1974,8 +2015,8 @@ namespace Module {
                     else DoesItPassCriteria = false;
 
                     if (DoesItPassCriteria) {
-                        if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
-                        if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[i] = NSIGs[i] + ObtainWeight(iter, variable_names);
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[i] = NBKGs[i] + ObtainWeight(iter, variable_names);
                     }
 
                     ++iter;
@@ -1984,8 +2025,8 @@ namespace Module {
             }
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
-                if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
+                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
+                if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
 
                 ++iter;
             }
@@ -2465,6 +2506,10 @@ namespace Module {
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
 
+        // For the O(1) look-up
+        std::unordered_set<std::string> Signal_label_set;
+        std::unordered_set<std::string> Background_label_set;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -2496,6 +2541,12 @@ namespace Module {
                 printf("background should be defined. Use `SetBackground`\n");
                 exit(1);
             }
+
+            // Convert from vector to set
+            Signal_label_set.clear();
+            Signal_label_set.insert(Signal_label_list.begin(), Signal_label_list.end());
+            Background_label_set.clear();
+            Background_label_set.insert(Background_label_list.begin(), Background_label_list.end());
 
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -2529,13 +2580,13 @@ namespace Module {
                 // care about preselection first
                 double preselection_result = -1;
 
-                if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) {
+                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) {
                     if (Signal_replaced_expr == "") preselection_result = 1;
                     else {
                         preselection_result = evaluateExpression(Signal_replaced_expr, iter->variable, &VariableTypes);
                     }
                 }
-                else if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) {
+                else if (Background_label_set.find(iter->label) != Background_label_set.end()) {
                     if (Background_replaced_expr == "") preselection_result = 1;
                     else {
                         preselection_result = evaluateExpression(Background_replaced_expr, iter->variable, &VariableTypes);
@@ -2552,8 +2603,8 @@ namespace Module {
                     }
 
                     // put answer
-                    if (std::find(Signal_label_list.begin(), Signal_label_list.end(), iter->label) != Signal_label_list.end()) IsItSignal.push_back(true);
-                    else if (std::find(Background_label_list.begin(), Background_label_list.end(), iter->label) != Background_label_list.end()) IsItSignal.push_back(false);
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) IsItSignal.push_back(true);
+                    else if (Background_label_set.find(iter->label) != Background_label_set.end()) IsItSignal.push_back(false);
 
                     // put weight
                     weight.push_back(static_cast<float>(ObtainWeight(iter, variable_names)));
