@@ -2120,6 +2120,13 @@ namespace Module {
                 ++iter;
             }
 
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
+                if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
+
+                ++iter;
+            }
+
             return 1;
         }
 
