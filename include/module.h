@@ -2637,8 +2637,17 @@ namespace Module {
         // FBDT class
         FastBDT::Classifier classifier;
 
+        /* 
+         * balanced_weight option :
+         * if it is turn ON, the number of signal is reweighted to the number of background
+         */
+        bool balanced_weight;
+
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        }
+
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(balanced_weight_), path(path_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
         }
 
         ~FastBDTTrain() {}
@@ -2728,6 +2737,28 @@ namespace Module {
         }
 
         void End() {
+            // reweight, if balanced_weight == true
+            if (balanced_weight) {
+                double sum_bkgs = 0.0;
+                double sum_signal = 0.0;
+
+                for (int i = 0; i < weight.size(); i++) {
+                    if (IsItSignal.at(i)) sum_signal = sum_signal + weight.at(i);
+                    else sum_bkgs = sum_bkgs + weight.at(i);
+                }
+
+                if (sum_signal == 0) {
+                    printf("[FastBDTTrain] there is zero signal\n");
+                    exit(1);
+                }
+
+                double reweight_factor = sum_bkgs / sum_signal;
+
+                for (int i = 0; i < weight.size(); i++) {
+                    if (IsItSignal.at(i)) weight.at(i) = weight.at(i) * reweight_factor;
+                }
+            }
+
             // fill
             for (int i = 0; i < replaced_exprs.size(); i++) {
                 InputVariables.push_back(InputVariable[i]);
