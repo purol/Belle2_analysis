@@ -1395,8 +1395,10 @@ namespace Module {
         double MIN;
         double MAX;
 
-        // print point when FOM value is `rank`'th, range from 0 to NBin - 1
-        // this option can be used if you do not want to highly optimize the result
+        /*
+        * print point when FOM value is `rank`'th, counting from maximum point to negative direction
+        * this option is useful if you do not want to highly optimize the result
+        */
         int rank;
 
         double* Cuts;
@@ -1529,10 +1531,27 @@ namespace Module {
                     return a.first > b.first;
                 });
 
-            // get index
+            // get maximum index, and minimum FOM
+            int MaximumIndex = FOM_with_index[0].second;
+            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
+
+            // remove the data whose FOM cut is higher than the maximized point
+            FOM_with_index.erase(
+                std::remove_if(FOM_with_index.begin(), FOM_with_index.end(),
+                    [MaximumIndex](const std::pair<double, int>& p) {
+                        return p.second > MaximumIndex;
+                    }),
+                FOM_with_index.end()
+            );
+
+            // If `rank` is too high or maximized point is close to 0, this can happend
+            if (rank >= (int)FOM_with_index.size()) {
+                printf("You try to find too far from maximized point. Just smallest value is set.\n");
+                rank = FOM_with_index.size() - 1;
+            }
+
             int OptimizedIndex = FOM_with_index[rank].second;
             double OptimizedFOM = FOM_with_index[rank].first;
-            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
 
             // print result
             printf("FOM scan result for %s:\n", equation.c_str());
@@ -1581,8 +1600,10 @@ namespace Module {
         double MIN;
         double MAX;
 
-        // print point when FOM value is `rank`'th, range from 0 to NBin - 1
-        // this option can be used if you do not want to highly optimize the result
+        /*
+        * print point when FOM value is `rank`'th, counting from maximum point to negative direction
+        * this option is useful if you do not want to highly optimize the result
+        */
         int rank;
 
         double* Cuts;
@@ -1718,10 +1739,27 @@ namespace Module {
                     return a.first > b.first;
                 });
 
-            // get index
+            // get maximum index, and minimum FOM
+            int MaximumIndex = FOM_with_index[0].second;
+            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
+
+            // remove the data whose FOM cut is higher than the maximized point
+            FOM_with_index.erase(
+                std::remove_if(FOM_with_index.begin(), FOM_with_index.end(),
+                    [MaximumIndex](const std::pair<double, int>& p) {
+                        return p.second > MaximumIndex;
+                    }),
+                FOM_with_index.end()
+            );
+
+            // If `rank` is too high or maximized point is close to 0, this can happend
+            if (rank >= (int)FOM_with_index.size()) {
+                printf("You try to find too far from maximized point. Just smallest value is set.\n");
+                rank = FOM_with_index.size() - 1;
+            }
+
             int OptimizedIndex = FOM_with_index[rank].second;
             double OptimizedFOM = FOM_with_index[rank].first;
-            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
 
             // print result
             printf("PunziFOM scan result for %s:\n", equation.c_str());
