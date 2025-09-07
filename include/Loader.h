@@ -97,9 +97,9 @@ public:
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
-    void DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, const char* png_name_);
+    void DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_);
     void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
-    void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_);
+    void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_);
     void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
     void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_);
     void CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
@@ -250,8 +250,8 @@ void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const ch
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
@@ -260,8 +260,8 @@ void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, doubl
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_) {
-    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_) {
+    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

@@ -1395,6 +1395,10 @@ namespace Module {
         double MIN;
         double MAX;
 
+        // print point when FOM value is `rank`'th, range from 0 to NBin - 1
+        // this option can be used if you do not want to highly optimize the result
+        int rank;
+
         double* Cuts;
         double* NSIGs;
         double* NSIGs_cumulative;
@@ -1409,14 +1413,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1460,6 +1464,12 @@ namespace Module {
             for (int i = 0; i < NBin; i++) {
                 double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
                 Cuts[i] = variable_value;
+            }
+
+            // check `rank` variable
+            if ((rank < 0) || (rank > (NBin - 1))) {
+                printf("rank should be within [%d, %d]; current: %d\n", 0, Nbin - 1, rank);
+                exit(1);
             }
         }
 
@@ -1506,26 +1516,31 @@ namespace Module {
                 }
             }
 
-            double MinimumFOM = std::numeric_limits<double>::max();
-            for (int i = 0; i < NBin; i++) {
-                if (MinimumFOM > FOMs[i]) MinimumFOM = FOMs[i];
+
+            // Store FOMs with their corresponding indices
+            std::vector<std::pair<double, int>> FOM_with_index;
+            for (int i = 0; i < NBin; ++i) {
+                FOM_with_index.push_back(std::make_pair(FOMs[i], i));
             }
 
-            double MaximumFOM = -std::numeric_limits<double>::max();
-            int MaximumIndex = -1;
-            for (int i = 0; i < NBin; i++) {
-                if (MaximumFOM < FOMs[i]) {
-                    MaximumFOM = FOMs[i];
-                    MaximumIndex = i;
-                }
-            }
+            // sort
+            std::sort(FOM_with_index.begin(), FOM_with_index.end(),
+                [](const std::pair<double, int>& a, const std::pair<double, int>& b) {
+                    return a.first > b.first;
+                });
+
+            // get index
+            int OptimizedIndex = FOM_with_index[rank].second;
+            double OptimizedFOM = FOM_with_index[rank].first;
+            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
 
             // print result
             printf("FOM scan result for %s:\n", equation.c_str());
-            printf("Maximum FOM value: %lf\n", MaximumFOM);
-            printf("Cut value: %lf\n", Cuts[MaximumIndex]);
-            printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex]);
-            printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex]);
+            printf("try to find %d-th highest value\n", rank);
+            printf("Optimized FOM value: %lf\n", OptimizedFOM);
+            printf("Cut value: %lf\n", Cuts[OptimizedIndex]);
+            printf("NSIG: %lf\n", NSIGs_cumulative[OptimizedIndex]);
+            printf("NBKG: %lf\n", NBKGs_cumulative[OptimizedIndex]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
@@ -1566,6 +1581,10 @@ namespace Module {
         double MIN;
         double MAX;
 
+        // print point when FOM value is `rank`'th, range from 0 to NBin - 1
+        // this option can be used if you do not want to highly optimize the result
+        int rank;
+
         double* Cuts;
         double* NSIGs;
         double* NSIGs_cumulative;
@@ -1584,14 +1603,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1635,6 +1654,12 @@ namespace Module {
             for (int i = 0; i < NBin; i++) {
                 double variable_value = MIN + ((double)i) * (MAX - MIN) / NBin;
                 Cuts[i] = variable_value;
+            }
+
+            // check `rank` variable
+            if ((rank < 0) || (rank > (NBin - 1))) {
+                printf("rank should be within [%d, %d]; current: %d\n", 0, Nbin - 1, rank);
+                exit(1);
             }
         }
 
@@ -1681,26 +1706,30 @@ namespace Module {
                 }
             }
 
-            double MinimumFOM = std::numeric_limits<double>::max();
-            for (int i = 0; i < NBin; i++) {
-                if (MinimumFOM > FOMs[i]) MinimumFOM = FOMs[i];
+            // Store FOMs with their corresponding indices
+            std::vector<std::pair<double, int>> FOM_with_index;
+            for (int i = 0; i < NBin; ++i) {
+                FOM_with_index.push_back(std::make_pair(FOMs[i], i));
             }
 
-            double MaximumFOM = -std::numeric_limits<double>::max();
-            int MaximumIndex = -1;
-            for (int i = 0; i < NBin; i++) {
-                if (MaximumFOM < FOMs[i]) {
-                    MaximumFOM = FOMs[i];
-                    MaximumIndex = i;
-                }
-            }
+            // sort
+            std::sort(FOM_with_index.begin(), FOM_with_index.end(),
+                [](const std::pair<double, int>& a, const std::pair<double, int>& b) {
+                    return a.first > b.first;
+                });
+
+            // get index
+            int OptimizedIndex = FOM_with_index[rank].second;
+            double OptimizedFOM = FOM_with_index[rank].first;
+            double MinimumFOM = FOM_with_index[FOM_with_index.size() - 1].first;
 
             // print result
-            printf("FOM scan result for %s:\n", equation.c_str());
-            printf("Maximum FOM value: %lf\n", MaximumFOM);
-            printf("Cut value: %lf\n", Cuts[MaximumIndex]);
-            printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex]);
-            printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex]);
+            printf("PunziFOM scan result for %s:\n", equation.c_str());
+            printf("try to find %d-th highest value\n", rank);
+            printf("Optimized FOM value: %lf\n", OptimizedFOM);
+            printf("Cut value: %lf\n", Cuts[OptimizedIndex]);
+            printf("NSIG: %lf\n", NSIGs_cumulative[OptimizedIndex]);
+            printf("NBKG: %lf\n", NBKGs_cumulative[OptimizedIndex]);
 
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
