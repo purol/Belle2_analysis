@@ -1468,7 +1468,7 @@ namespace Module {
 
             // check `rank` variable
             if ((rank < 0) || (rank > (NBin - 1))) {
-                printf("rank should be within [%d, %d]; current: %d\n", 0, Nbin - 1, rank);
+                printf("rank should be within [%d, %d]; current: %d\n", 0, NBin - 1, rank);
                 exit(1);
             }
         }
@@ -1658,7 +1658,7 @@ namespace Module {
 
             // check `rank` variable
             if ((rank < 0) || (rank > (NBin - 1))) {
-                printf("rank should be within [%d, %d]; current: %d\n", 0, Nbin - 1, rank);
+                printf("rank should be within [%d, %d]; current: %d\n", 0, NBin - 1, rank);
                 exit(1);
             }
         }
