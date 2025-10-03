@@ -3505,7 +3505,7 @@ namespace Module {
         void Start() {
             // change variable name into placeholder
             for (int i = 0; i < printed_values.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(printed_values.at(i), variable_names_));
+                replaced_exprs.push_back(replaceVariables(printed_values.at(i), &variable_names));
             }
         }
 
