@@ -3491,6 +3491,48 @@ namespace Module {
         void End() override {}
     };
 
+    class PrintEvent : public Module {
+    private:
+        std::vector<std::string> printed_values;
+        std::vector<std::string> replaced_exprs;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+    public:
+        PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        ~PrintEvent() {}
+
+        void Start() {
+            // change variable name into placeholder
+            for (int i = 0; i < printed_values.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(printed_values.at(i), variable_names_));
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                std::vector<double> results;
+
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    results.push_back(result);
+                }
+
+                printf("===================================\n");
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    printf("%s: %lf\n", printed_values.at(i).c_str(), results.at(i));
+                }
+                printf("===================================\n");
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
 }
 
 #endif 

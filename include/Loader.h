@@ -114,6 +114,7 @@ public:
     void FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>));
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
     void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
+    void PrintEvent(std::vector<std::string> print_variables_);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -332,6 +333,11 @@ void Loader::FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expr
 
 void Loader::FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>)) {
     Module::Module* temp_module = new Module::FillCustomizedTH2D(th2d_, equations_, x_custom_function_, y_custom_function_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::PrintEvent(std::vector<std::string> print_variables_) {
+    Module::Module* temp_module = new Module::PrintEvent(print_variables_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
