@@ -3262,7 +3262,7 @@ namespace Module {
         GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
             }
 
             // check there is the same branch name or not
@@ -3324,7 +3324,7 @@ namespace Module {
         GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
             }
 
             // check there is the same branch name or not
@@ -3396,7 +3396,7 @@ namespace Module {
         GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
             }
 
             // check there is the same branch name or not
@@ -3476,7 +3476,7 @@ namespace Module {
         GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
             }
 
             // check there is the same branch name or not
