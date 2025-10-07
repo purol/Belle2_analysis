@@ -3248,6 +3248,298 @@ namespace Module {
         }
     };
 
+    class GetAverage : public Module {
+    private:
+        std::map<std::string, std::string> equations;
+        std::map<std::string, std::string> replaced_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        std::string new_variable_name;
+
+    public:
+        GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[GetAverage] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~GetAverage() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                double avg = 0;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    avg = avg + result;
+                }
+                avg = avg / replaced_exprs.size();
+
+                iter->variable.push_back(avg);
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
+    class GetStdDev : public Module {
+    private:
+        std::map<std::string, std::string> equations;
+        std::map<std::string, std::string> replaced_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        std::string new_variable_name;
+
+    public:
+        GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[GetStdDev] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~GetStdDev() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                double avg = 0;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    avg = avg + result;
+                }
+                avg = avg / replaced_exprs.size();
+
+                double std = 0;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    std = std + (result - avg) * (result - avg);
+                }
+                std = std / replaced_exprs.size();
+                std = std::sqrt(std);
+
+                iter->variable.push_back(std);
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
+    class GetDiff : public Module {
+    private:
+        std::map<std::string, std::string> equations;
+        std::map<std::string, std::string> replaced_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        int order;
+
+        std::string new_variable_name;
+
+    public:
+        GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[GetDiff] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            int N_comb = replaced_exprs.size() * (replaced_exprs.size() - 1) / 2;
+            if ((order < 0) || (order > (N_comb - 1))) {
+                printf("[GetDiff] order should be within [%d,%d]\n", 0, N_comb - 1);
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~GetDiff() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                std::vector<double> inputs;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    inputs.push_back(result);
+                }
+
+                std::vector<double> Diffs;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result_i = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    for (int j = i + 1; j < replaced_exprs.size(); j++) {
+                        double result_j = evaluateExpression(replaced_exprs.at(j), iter->variable, &VariableTypes);
+                        Diffs.push_back(std::abs(result_i - result_j));
+                    }
+                }
+
+                std::sort(Diffs.begin(), Diffs.end(), std::greater<double>());
+
+                iter->variable.push_back(Diffs.at(order));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
+    class GetAdd : public Module {
+    private:
+        std::map<std::string, std::string> equations;
+        std::map<std::string, std::string> replaced_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        int order;
+
+        std::string new_variable_name;
+
+    public:
+        GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[GetAdd] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            int N_comb = replaced_exprs.size() * (replaced_exprs.size() - 1) / 2;
+            if ((order < 0) || (order > (N_comb - 1))) {
+                printf("[GetAdd] order should be within [%d,%d]\n", 0, N_comb - 1);
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~GetAdd() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::vector<Data>* data) {
+
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                std::vector<double> inputs;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    inputs.push_back(result);
+                }
+
+                std::vector<double> Adds;
+                for (int i = 0; i < replaced_exprs.size(); i++) {
+                    double result_i = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    for (int j = i + 1; j < replaced_exprs.size(); j++) {
+                        double result_j = evaluateExpression(replaced_exprs.at(j), iter->variable, &VariableTypes);
+                        Adds.push_back(result_i + result_j);
+                    }
+                }
+
+                std::sort(Adds.begin(), Adds.end(), std::greater<double>());
+
+                iter->variable.push_back(Adds.at(order));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
     class FillDataSet : public Module {
         /*
         * This module is used to fill RooDataSet

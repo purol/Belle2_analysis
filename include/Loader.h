@@ -108,6 +108,10 @@ public:
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
     void DefineNewVariable(const char* equation_, const char* new_variable_name_);
     void ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_);
+    void GetAverage(std::vector<std::string> equations_, const char* new_variable_name_);
+    void GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_);
+    void GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
+    void GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
     void FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_);
     void FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_);
     void FillTH1D(TH1D* th1d_, std::string equation_);
@@ -303,6 +307,26 @@ void Loader::DefineNewVariable(const char* equation_, const char* new_variable_n
 
 void Loader::ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_) {
     Module::Module* temp_module = new Module::ConditionalPairDefineNewVariable(condition_equation__criteria_equation_list_, condition_order_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::GetAverage(std::vector<std::string> equations_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::GetAverage(equations_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::GetStdDev(equations_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::GetDiff(equations_, order_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::GetAdd(equations_, order_, new_variable_name_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
