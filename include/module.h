@@ -3250,8 +3250,8 @@ namespace Module {
 
     class GetAverage : public Module {
     private:
-        std::map<std::string, std::string> equations;
-        std::map<std::string, std::string> replaced_exprs;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3312,8 +3312,8 @@ namespace Module {
 
     class GetStdDev : public Module {
     private:
-        std::map<std::string, std::string> equations;
-        std::map<std::string, std::string> replaced_exprs;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3382,8 +3382,8 @@ namespace Module {
 
     class GetDiff : public Module {
     private:
-        std::map<std::string, std::string> equations;
-        std::map<std::string, std::string> replaced_exprs;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3462,8 +3462,8 @@ namespace Module {
 
     class GetAdd : public Module {
     private:
-        std::map<std::string, std::string> equations;
-        std::map<std::string, std::string> replaced_exprs;
+        std::vector<std::string> equations;
+        std::vector<std::string> replaced_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
