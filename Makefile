@@ -7,7 +7,7 @@ INCDIR = ./include
 SRCDIR = ./src
 TMPDIR = ./tmp
 LIBDIR = ./lib
-BDTINC = ./include_FBDT
+BDTINC = ./FastBDT/include
 
 CFLAGS = `root-config --cflags`
 LDFLAGS = `root-config --ldflags --glibs`
