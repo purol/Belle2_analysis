@@ -3825,6 +3825,177 @@ namespace Module {
         void End() override {}
     };
 
+    class ABCDmethod : public Module {
+    private:
+
+        // N_A = N_B * (N_C/N_D)
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+        TH1D* th1d_ABCD;
+        std::string expression_A;
+        std::string replaced_expr_A;
+        std::string expression_B;
+        std::string replaced_expr_B;
+        std::string expression_C;
+        std::string replaced_expr_C;
+        std::string expression_D;
+        std::string replaced_expr_D;
+
+        TH1D* th1d_ABCD_validation;
+        std::string expression_Aprime;
+        std::string replaced_expr_Aprime;
+        std::string expression_Bprime;
+        std::string replaced_expr_Bprime;
+        std::string expression_Cprime;
+        std::string replaced_expr_Cprime;
+        std::string expression_Dprime;
+        std::string replaced_expr_Dprime;
+
+        bool WeightSumError;
+        bool validation;
+
+    public:
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+
+        ~ABCDmethod() {}
+
+        void Start() override {
+            replaced_expr_A = replaceVariables(expression_A, &variable_names);
+            replaced_expr_B = replaceVariables(expression_B, &variable_names);
+            replaced_expr_C = replaceVariables(expression_C, &variable_names);
+            replaced_expr_D = replaceVariables(expression_D, &variable_names);
+
+            if (validation) {
+                replaced_expr_Aprime = replaceVariables(expression_Aprime, &variable_names);
+                replaced_expr_Bprime = replaceVariables(expression_Bprime, &variable_names);
+                replaced_expr_Cprime = replaceVariables(expression_Cprime, &variable_names);
+                replaced_expr_Dprime = replaceVariables(expression_Dprime, &variable_names);
+            }
+
+            // create histogram
+            std::string hist_name = generateRandomString(12);
+            th1d_ABCD = new TH1D(hist_name.c_str(), "ABCD", 4, 0, 4);
+
+            if (validation) {
+                hist_name = generateRandomString(12);
+                th1d_ABCD_validation = new TH1D(hist_name.c_str(), "ABCD", 4, 0, 4);
+            }
+        }
+
+        int Process(std::vector<Data>* data) override {
+            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double result = evaluateExpression(replaced_expr_A, iter->variable, &VariableTypes);
+                if (result > 0.5) th1d_ABCD->Fill(0.5, ObtainWeight(iter, variable_names));
+
+                result = evaluateExpression(replaced_expr_B, iter->variable, &VariableTypes);
+                if (result > 0.5) th1d_ABCD->Fill(1.5, ObtainWeight(iter, variable_names));
+
+                result = evaluateExpression(replaced_expr_C, iter->variable, &VariableTypes);
+                if (result > 0.5) th1d_ABCD->Fill(2.5, ObtainWeight(iter, variable_names));
+
+                result = evaluateExpression(replaced_expr_D, iter->variable, &VariableTypes);
+                if (result > 0.5) th1d_ABCD->Fill(3.5, ObtainWeight(iter, variable_names));
+
+                if (validation) {
+                    result = evaluateExpression(replaced_expr_Aprime, iter->variable, &VariableTypes);
+                    if (result > 0.5) th1d_ABCD_validation->Fill(0.5, ObtainWeight(iter, variable_names));
+
+                    result = evaluateExpression(replaced_expr_Bprime, iter->variable, &VariableTypes);
+                    if (result > 0.5) th1d_ABCD_validation->Fill(1.5, ObtainWeight(iter, variable_names));
+
+                    result = evaluateExpression(replaced_expr_Cprime, iter->variable, &VariableTypes);
+                    if (result > 0.5) th1d_ABCD_validation->Fill(2.5, ObtainWeight(iter, variable_names));
+
+                    result = evaluateExpression(replaced_expr_Dprime, iter->variable, &VariableTypes);
+                    if (result > 0.5) th1d_ABCD_validation->Fill(3.5, ObtainWeight(iter, variable_names));
+                }
+
+                ++iter;
+            }
+            return 1;
+        }
+
+        void End() override {
+
+            double N_A = th1d_ABCD->GetBinContent(1);
+            double N_B = th1d_ABCD->GetBinContent(2);
+            double N_C = th1d_ABCD->GetBinContent(3);
+            double N_D = th1d_ABCD->GetBinContent(4);
+
+            double N_A_err = 0;
+            double N_B_err = 0;
+            double N_C_err = 0;
+            double N_D_err = 0;
+
+            if (WeightSumError) {
+                N_A_err = th1d_ABCD->GetBinError(1);
+                N_B_err = th1d_ABCD->GetBinError(2);
+                N_C_err = th1d_ABCD->GetBinError(3);
+                N_D_err = th1d_ABCD->GetBinError(4);
+            }
+            else {
+                N_A_err = std::sqrt(N_A);
+                N_B_err = std::sqrt(N_B);
+                N_C_err = std::sqrt(N_C);
+                N_D_err = std::sqrt(N_D);
+            }
+
+            if (N_D == 0) {
+                printf("[ABCDmethod] N_D is 0\n");
+                exit(1);
+            }
+
+            printf("N_A = %lf+-%lf\n", N_A, N_A_err);
+            printf("N_B = %lf+-%lf\n", N_B, N_B_err);
+            printf("N_C = %lf+-%lf\n", N_C, N_C_err);
+            printf("N_D = %lf+-%lf\n", N_D, N_D_err);
+            printf("estimated N_A = %lf+-%lf\n", N_B * (N_C / N_D), N_A * std::sqrt((N_B_err / N_B) * (N_B_err / N_B) + (N_C_err / N_C) * (N_C_err / N_C) + (N_D_err / N_D) * (N_D_err / N_D)));
+
+            if (validation) {
+                double N_Aprime = th1d_ABCD_validation->GetBinContent(1);
+                double N_Bprime = th1d_ABCD_validation->GetBinContent(2);
+                double N_Cprime = th1d_ABCD_validation->GetBinContent(3);
+                double N_Dprime = th1d_ABCD_validation->GetBinContent(4);
+
+                double N_Aprime_err = 0;
+                double N_Bprime_err = 0;
+                double N_Cprime_err = 0;
+                double N_Dprime_err = 0;
+
+                if (WeightSumError) {
+                    N_Aprime_err = th1d_ABCD_validation->GetBinError(1);
+                    N_Bprime_err = th1d_ABCD_validation->GetBinError(2);
+                    N_Cprime_err = th1d_ABCD_validation->GetBinError(3);
+                    N_Dprime_err = th1d_ABCD_validation->GetBinError(4);
+                }
+                else {
+                    N_Aprime_err = std::sqrt(N_Aprime);
+                    N_Bprime_err = std::sqrt(N_Bprime);
+                    N_Cprime_err = std::sqrt(N_Cprime);
+                    N_Dprime_err = std::sqrt(N_Dprime);
+                }
+
+                if (N_Dprime == 0) {
+                    printf("[ABCDmethod] N_Dprime is 0\n");
+                    exit(1);
+                }
+
+                printf("N_A' = %lf+-%lf\n", N_Aprime, N_Aprime_err);
+                printf("N_B' = %lf+-%lf\n", N_Bprime, N_Bprime_err);
+                printf("N_C' = %lf+-%lf\n", N_Cprime, N_Cprime_err);
+                printf("N_D' = %lf+-%lf\n", N_Dprime, N_Dprime_err);
+                printf("estimated N_A' = %lf+-%lf\n", N_Bprime * (N_Cprime / N_Dprime), N_Aprime * std::sqrt((N_Bprime_err / N_Bprime) * (N_Bprime_err / N_Bprime) + (N_Cprime_err / N_Cprime) * (N_Cprime_err / N_Cprime) + (N_Dprime_err / N_Dprime) * (N_Dprime_err / N_Dprime)));
+            }
+
+            delete th1d_ABCD;
+            if (validation) { delete th1d_ABCD_validation; }
+        }
+
+    };
+
 }
 
 #endif 

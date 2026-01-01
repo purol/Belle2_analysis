@@ -119,6 +119,8 @@ public:
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
     void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
     void PrintEvent(std::vector<std::string> print_variables_);
+    void ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_ = true);
+    void ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_ = true);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -362,6 +364,16 @@ void Loader::FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_
 
 void Loader::PrintEvent(std::vector<std::string> print_variables_) {
     Module::Module* temp_module = new Module::PrintEvent(print_variables_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_) {
+    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, WeightSumError_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_) {
+    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, region_Aprime_, region_Bprime_, region_Cprime_, region_Dprime_, WeightSumError_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 
