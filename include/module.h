@@ -258,6 +258,7 @@ namespace Module {
     private:
         std::string cut_string;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -267,11 +268,12 @@ namespace Module {
 
         void Start() {
             replaced_expr = replaceVariables(cut_string, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 if (result < 0.5) {
                     data->erase(iter);
                 }
@@ -414,6 +416,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::string expression;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::string png_name;
 
@@ -434,6 +437,7 @@ namespace Module {
 
             // change variable name into placeholder
             replaced_expr = replaceVariables(expression, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             // if range is determined, make histogram first
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
@@ -444,7 +448,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(result);
@@ -536,8 +540,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::string x_expression;
         std::string x_replaced_expr;
+        std::vector<Token> x_postfix_expr;
         std::string y_expression;
         std::string y_replaced_expr;
+        std::vector<Token> y_postfix_expr;
 
         std::string png_name;
         std::string draw_option;
@@ -559,6 +565,8 @@ namespace Module {
             // change variable name into placeholder
             x_replaced_expr = replaceVariables(x_expression, &variable_names);
             y_replaced_expr = replaceVariables(y_expression, &variable_names);
+            x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
+            y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
 
             // if range is determined, make histogram first
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max()) && (y_low != std::numeric_limits<double>::max()) && (y_high != std::numeric_limits<double>::max())) {
@@ -569,8 +577,8 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
-                double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
+                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
+                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(x_result);
@@ -886,6 +894,7 @@ namespace Module {
         std::vector<int> event_variable_index_list;
 
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -946,6 +955,7 @@ namespace Module {
             }
 
             replaced_expr = replaceVariables(equation, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
         int Process(std::vector<Data>* data) override {
@@ -1024,7 +1034,7 @@ namespace Module {
                 }
 
                 // get BCS variable
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 
                 // check the BCS criteria
                 if (criteria == "HIGHEST") {
@@ -1382,6 +1392,7 @@ namespace Module {
     private:
         std::string equation;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
@@ -1432,6 +1443,7 @@ namespace Module {
         void Start() {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
                 printf("signal should be defined. Use `SetSignal`\n");
@@ -1479,7 +1491,7 @@ namespace Module {
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -1587,6 +1599,7 @@ namespace Module {
     private:
         std::string equation;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
@@ -1641,6 +1654,7 @@ namespace Module {
         void Start() {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
                 printf("signal should be defined. Use `SetSignal`\n");
@@ -1688,7 +1702,7 @@ namespace Module {
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -1798,7 +1812,7 @@ namespace Module {
          * scan_condition: equation, min, max, bin
          */
         std::vector<std::tuple<const char*, double, double, int>> scan_conditions;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         /*
          * When preselection_equation_x is satisfied, equation_x is used to calculate PunziFOM.
@@ -1809,9 +1823,11 @@ namespace Module {
          */
         std::string preselection_equation_x;
         std::string preselection_replaced_expr_x;
+        std::vector<Token> postfix_expr_x;
 
         std::string preselection_equation_y;
         std::string preselection_replaced_expr_y;
+        std::vector<Token> postfix_expr_y;
 
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
@@ -1864,10 +1880,13 @@ namespace Module {
                 const char* equation = std::get<0>(*iter);
 
                 std::string replaced_expr = replaceVariables(std::string(equation), &variable_names);
-                replaced_exprs.push_back(replaced_expr);
+                std::vector<Token> postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
+                postfix_exprs.push_back(postfix_expr);
             }
             preselection_replaced_expr_x = replaceVariables(preselection_equation_x, &variable_names);
             preselection_replaced_expr_y = replaceVariables(preselection_equation_y, &variable_names);
+            postfix_expr_x = PostfixExpression(preselection_replaced_expr_x, &VariableTypes);
+            postfix_expr_y = PostfixExpression(preselection_replaced_expr_y, &VariableTypes);
 
             if (scan_conditions.size() != 2) {
                 printf("Draw2DPunziFOM requires 2 element. Currently there are %d element(s)\n", scan_conditions.size());
@@ -1939,10 +1958,10 @@ namespace Module {
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result_preselection_x = evaluateExpression(preselection_replaced_expr_x, iter->variable, &VariableTypes);
-                double result_preselection_y = evaluateExpression(preselection_replaced_expr_y, iter->variable, &VariableTypes);
-                double result_x = evaluateExpression(replaced_exprs.at(0), iter->variable, &VariableTypes);
-                double result_y = evaluateExpression(replaced_exprs.at(1), iter->variable, &VariableTypes);
+                double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
+                double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
+                double result_x = EvaluatePostfixExpression(postfix_exprs.at(0), iter->variable, &VariableTypes);
+                double result_y = EvaluatePostfixExpression(postfix_exprs.at(1), iter->variable, &VariableTypes);
 
                 int first_bin_x = -1;
                 if (result_x < MIN_x) first_bin_x = -1;
@@ -2081,6 +2100,7 @@ namespace Module {
     private:
         std::string equation;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
@@ -2124,6 +2144,7 @@ namespace Module {
         void Start() {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
                 printf("signal should be defined. Use `SetSignal`\n");
@@ -2173,7 +2194,7 @@ namespace Module {
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -2257,6 +2278,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::string expression;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::string png_name;
 
@@ -2335,6 +2357,7 @@ namespace Module {
 
             // change variable name into placeholder
             replaced_expr = replaceVariables(expression, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
                 std::string hist_name = generateRandomString(12);
@@ -2357,7 +2380,7 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
 
                     if (stack_hist == nullptr) {
@@ -2673,13 +2696,15 @@ namespace Module {
     class FastBDTTrain : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::string Signal_equation;
         std::string Signal_replaced_expr;
+        std::vector<Token> Signal_postfix_expr;
 
         std::string Background_equation;
         std::string Background_replaced_expr;
+        std::vector<Token> Background_postfix_expr;
 
         std::vector<std::string> Signal_label_list;
         std::vector<std::string> Background_label_list;
@@ -2737,10 +2762,13 @@ namespace Module {
 
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), &variable_names));
+                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
             Signal_replaced_expr = replaceVariables(Signal_equation, &variable_names);
             Background_replaced_expr = replaceVariables(Background_equation, &variable_names);
+            Signal_postfix_expr = PostfixExpression(Signal_replaced_expr, &VariableTypes);
+            Background_postfix_expr = PostfixExpression(Background_replaced_expr, &VariableTypes);
 
             // set hyperparmater
             if (hyperparameters.find("NTrees") == hyperparameters.end()) hyperparameters["NTrees"] = 100;
@@ -2753,11 +2781,11 @@ namespace Module {
             classifier.SetDepth(static_cast<unsigned int>(hyperparameters["Depth"]));
             classifier.SetShrinkage(static_cast<double>(hyperparameters["Shrinkage"]));
             classifier.SetSubsample(static_cast<double>(hyperparameters["Subsample"]));
-            std::vector<unsigned int> binning(replaced_exprs.size(), static_cast<unsigned int>(hyperparameters["Binning"]));
+            std::vector<unsigned int> binning(postfix_exprs.size(), static_cast<unsigned int>(hyperparameters["Binning"]));
             classifier.SetBinning(binning);
 
             // malloc input variables
-            InputVariable = new std::vector<float>[replaced_exprs.size()];
+            InputVariable = new std::vector<float>[postfix_exprs.size()];
         }
 
         int Process(std::vector<Data>* data) {
@@ -2770,13 +2798,13 @@ namespace Module {
                 if (Signal_label_set.find(iter->label) != Signal_label_set.end()) {
                     if (Signal_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = evaluateExpression(Signal_replaced_expr, iter->variable, &VariableTypes);
+                        preselection_result = EvaluatePostfixExpression(Signal_postfix_expr, iter->variable, &VariableTypes);
                     }
                 }
                 else if (Background_label_set.find(iter->label) != Background_label_set.end()) {
                     if (Background_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = evaluateExpression(Background_replaced_expr, iter->variable, &VariableTypes);
+                        preselection_result = EvaluatePostfixExpression(Background_postfix_expr, iter->variable, &VariableTypes);
                     }
                 }
                 else {
@@ -2784,8 +2812,8 @@ namespace Module {
                 }
 
                 if (preselection_result > 0.5) { // put input variables
-                    for (int i = 0; i < replaced_exprs.size(); i++) {
-                        double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                    for (int i = 0; i < postfix_exprs.size(); i++) {
+                        double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                         InputVariable[i].push_back(result);
                     }
 
@@ -2827,7 +2855,7 @@ namespace Module {
             }
 
             // fill
-            for (int i = 0; i < replaced_exprs.size(); i++) {
+            for (int i = 0; i < postfix_exprs.size(); i++) {
                 InputVariables.push_back(InputVariable[i]);
             }
 
@@ -2847,7 +2875,7 @@ namespace Module {
     class FastBDTApplication : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -2862,7 +2890,8 @@ namespace Module {
         FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
 
             // check there is the same branch name or not
@@ -2895,8 +2924,8 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<float> inputs;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     inputs.push_back(result);
                 }
 
@@ -3102,6 +3131,7 @@ namespace Module {
     private:
         std::string equation;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3113,6 +3143,7 @@ namespace Module {
         DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, variable_names_);
+            postfix_expr = PostfixExpression(replaced_expr, VariableTypes_);
 
             // check there is the same branch name or not
             if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
@@ -3139,7 +3170,7 @@ namespace Module {
 
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 iter->variable.push_back(static_cast<double>(result));
 
@@ -3157,7 +3188,7 @@ namespace Module {
     class ConditionalPairDefineNewVariable : public Module {
     private:
         std::map<std::string, std::string> condition_equation__criteria_equation_list;
-        std::map<std::string, std::string> condition_replaced_expr__criteria_replaced_expr_list;
+        std::map<std::vector<Token>, std::vector<Token>> condition_postfix_expr__criteria_postfix_expr_list;
 
         int condition_order; // start from 0. 0 means highest
 
@@ -3174,7 +3205,7 @@ namespace Module {
                 std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
                 std::string criteria_replaced_expr = replaceVariables(iter_eq->second, variable_names_);
 
-                condition_replaced_expr__criteria_replaced_expr_list.insert(std::make_pair(condition_replaced_expr, criteria_replaced_expr));
+                condition_postfix_expr__criteria_postfix_expr_list.insert(std::make_pair(PostfixExpression(condition_replaced_expr, VariableTypes_), PostfixExpression(criteria_replaced_expr, VariableTypes_)));
             }
 
             // check `condition_order` is valid
@@ -3215,12 +3246,12 @@ namespace Module {
                 double condition_result = -1;
                 std::vector<double> condition_results;
                 double criteria_result = std::numeric_limits<double>::max();
-                std::vector<std::string> criteria_replaced_exprs;
+                std::vector<std::string> criteria_postfix_exprs;
 
-                for (std::map<std::string, std::string>::iterator iter_eq = condition_replaced_expr__criteria_replaced_expr_list.begin(); iter_eq != condition_replaced_expr__criteria_replaced_expr_list.end(); ++iter_eq) {
-                    double temp_ = evaluateExpression(iter_eq->first, iter->variable, &VariableTypes);
+                for (std::map<std::vector<Token>, std::vector<Token>>::iterator iter_eq = condition_postfix_expr__criteria_postfix_expr_list.begin(); iter_eq != condition_postfix_expr__criteria_postfix_expr_list.end(); ++iter_eq) {
+                    double temp_ = EvaluatePostfixExpression(iter_eq->first, iter->variable, &VariableTypes);
                     condition_results.push_back(temp_);
-                    criteria_replaced_exprs.push_back(iter_eq->second);
+                    criteria_postfix_exprs.push_back(iter_eq->second);
                 }
 
                 std::vector<double> temp_condition_results = condition_results;
@@ -3233,7 +3264,7 @@ namespace Module {
                 std::vector<double>::iterator iter_condition_results = std::find(condition_results.begin(), condition_results.end(), condition_result);
                 std::size_t index = std::distance(condition_results.begin(), iter_condition_results);
 
-                criteria_result = evaluateExpression(criteria_replaced_exprs.at(index), iter->variable, &VariableTypes);
+                criteria_result = EvaluatePostfixExpression(criteria_postfix_exprs.at(index), iter->variable, &VariableTypes);
 
                 iter->variable.push_back(static_cast<double>(criteria_result));
 
@@ -3251,7 +3282,7 @@ namespace Module {
     class GetAverage : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3262,7 +3293,8 @@ namespace Module {
         GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
             // check there is the same branch name or not
@@ -3291,11 +3323,11 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double avg = 0;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     avg = avg + result;
                 }
-                avg = avg / replaced_exprs.size();
+                avg = avg / postfix_exprs.size();
 
                 iter->variable.push_back(avg);
 
@@ -3313,7 +3345,7 @@ namespace Module {
     class GetStdDev : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3324,7 +3356,8 @@ namespace Module {
         GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
             // check there is the same branch name or not
@@ -3353,18 +3386,18 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double avg = 0;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     avg = avg + result;
                 }
-                avg = avg / replaced_exprs.size();
+                avg = avg / postfix_exprs.size();
 
                 double std = 0;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     std = std + (result - avg) * (result - avg);
                 }
-                std = std / replaced_exprs.size();
+                std = std / postfix_exprs.size();
                 std = std::sqrt(std);
 
                 iter->variable.push_back(std);
@@ -3383,7 +3416,7 @@ namespace Module {
     class GetDiff : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3396,7 +3429,8 @@ namespace Module {
         GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
             // check there is the same branch name or not
@@ -3405,7 +3439,7 @@ namespace Module {
                 exit(1);
             }
 
-            int N_comb = replaced_exprs.size() * (replaced_exprs.size() - 1) / 2;
+            int N_comb = postfix_exprs.size() * (postfix_exprs.size() - 1) / 2;
             if ((order < 0) || (order > (N_comb - 1))) {
                 printf("[GetDiff] order should be within [%d,%d]\n", 0, N_comb - 1);
                 exit(1);
@@ -3431,16 +3465,16 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<double> inputs;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     inputs.push_back(result);
                 }
 
                 std::vector<double> Diffs;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result_i = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
-                    for (int j = i + 1; j < replaced_exprs.size(); j++) {
-                        double result_j = evaluateExpression(replaced_exprs.at(j), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result_i = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    for (int j = i + 1; j < postfix_exprs.size(); j++) {
+                        double result_j = EvaluatePostfixExpression(postfix_exprs.at(j), iter->variable, &VariableTypes);
                         Diffs.push_back(std::abs(result_i - result_j));
                     }
                 }
@@ -3463,7 +3497,7 @@ namespace Module {
     class GetAdd : public Module {
     private:
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3476,7 +3510,8 @@ namespace Module {
         GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(equations.at(i), variable_names_));
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
             // check there is the same branch name or not
@@ -3485,7 +3520,7 @@ namespace Module {
                 exit(1);
             }
 
-            int N_comb = replaced_exprs.size() * (replaced_exprs.size() - 1) / 2;
+            int N_comb = postfix_exprs.size() * (postfix_exprs.size() - 1) / 2;
             if ((order < 0) || (order > (N_comb - 1))) {
                 printf("[GetAdd] order should be within [%d,%d]\n", 0, N_comb - 1);
                 exit(1);
@@ -3511,16 +3546,16 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<double> inputs;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     inputs.push_back(result);
                 }
 
                 std::vector<double> Adds;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result_i = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
-                    for (int j = i + 1; j < replaced_exprs.size(); j++) {
-                        double result_j = evaluateExpression(replaced_exprs.at(j), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result_i = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    for (int j = i + 1; j < postfix_exprs.size(); j++) {
+                        double result_j = EvaluatePostfixExpression(postfix_exprs.at(j), iter->variable, &VariableTypes);
                         Adds.push_back(result_i + result_j);
                     }
                 }
@@ -3550,7 +3585,7 @@ namespace Module {
         std::vector<RooRealVar*> realvars;
 
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3562,20 +3597,20 @@ namespace Module {
             for (int i = 0; i < equations.size(); i++) {
                 std::string equation = equations.at(i);
                 std::string replaced_expr = replaceVariables(equation, &variable_names);
-                replaced_exprs.push_back(replaced_expr);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
 
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    std::string replaced_expr = replaced_exprs.at(i);
-                    double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    std::vector<Token> postfix_expr = postfix_exprs.at(i);
+                    double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                     *(realvars.at(i)) = result;
                 }
 
                 RooArgSet temp_;
-                for (int i = 0; i < replaced_exprs.size(); i++) temp_.add(*(realvars.at(i)));
+                for (int i = 0; i < postfix_exprs.size(); i++) temp_.add(*(realvars.at(i)));
 
                 dataset->add(temp_, ObtainWeight(iter, variable_names));
 
@@ -3599,9 +3634,11 @@ namespace Module {
 
         std::string equation_x;
         std::string replaced_expr_x;
+        std::vector<Token> postfix_expr_x;
 
         std::string equation_y;
         std::string replaced_expr_y;
+        std::vector<Token> postfix_expr_y;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3612,11 +3649,13 @@ namespace Module {
         void Start() {
             replaced_expr_x = replaceVariables(equation_x, &variable_names);
             replaced_expr_y = replaceVariables(equation_y, &variable_names);
+            postfix_expr_x = PostfixExpression(replaced_expr_x, &VariableTypes);
+            postfix_expr_y = PostfixExpression(replaced_expr_y, &VariableTypes);
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result_x = evaluateExpression(replaced_expr_x, iter->variable, &VariableTypes);
-                double result_y = evaluateExpression(replaced_expr_y, iter->variable, &VariableTypes);
+                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
+                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
 
                 tprofile->Fill(result_x, result_y, ObtainWeight(iter, variable_names));
 
@@ -3637,6 +3676,7 @@ namespace Module {
 
         std::string equation;
         std::string replaced_expr;
+        std::vector<Token> postfix_expr;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3646,10 +3686,11 @@ namespace Module {
         ~FillTH1D() {}
         void Start() {
             replaced_expr = replaceVariables(equation, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 th1d->Fill(result, ObtainWeight(iter, variable_names));
 
@@ -3670,7 +3711,7 @@ namespace Module {
         double (*custom_function)(std::vector<double>);
 
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3681,14 +3722,14 @@ namespace Module {
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
-                replaced_exprs.push_back(replaced_expr);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     results.push_back(result);
                 }
 
@@ -3712,8 +3753,10 @@ namespace Module {
 
         std::string x_expression;
         std::string x_replaced_expr;
+        std::vector<Token> x_postfix_expr;
         std::string y_expression;
         std::string y_replaced_expr;
+        std::vector<Token> y_postfix_expr;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3724,11 +3767,13 @@ namespace Module {
         void Start() {
             x_replaced_expr = replaceVariables(x_expression, &variable_names);
             y_replaced_expr = replaceVariables(y_expression, &variable_names);
+            x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
+            y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double x_result = evaluateExpression(x_replaced_expr, iter->variable, &VariableTypes);
-                double y_result = evaluateExpression(y_replaced_expr, iter->variable, &VariableTypes);
+                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
+                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
                 th2d->Fill(x_result, y_result, ObtainWeight(iter, variable_names));
 
@@ -3750,7 +3795,7 @@ namespace Module {
         double (*y_custom_function)(std::vector<double>);
 
         std::vector<std::string> equations;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -3761,14 +3806,14 @@ namespace Module {
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
-                replaced_exprs.push_back(replaced_expr);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     results.push_back(result);
                 }
 
@@ -3786,7 +3831,7 @@ namespace Module {
     class PrintEvent : public Module {
     private:
         std::vector<std::string> printed_values;
-        std::vector<std::string> replaced_exprs;
+        std::vector<std::vector<Token>> postfix_exprs;
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -3797,7 +3842,8 @@ namespace Module {
         void Start() {
             // change variable name into placeholder
             for (int i = 0; i < printed_values.size(); i++) {
-                replaced_exprs.push_back(replaceVariables(printed_values.at(i), &variable_names));
+                std::string replaced_expr = replaceVariables(printed_values.at(i), &variable_names);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
 
@@ -3805,13 +3851,13 @@ namespace Module {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
 
-                for (int i = 0; i < replaced_exprs.size(); i++) {
-                    double result = evaluateExpression(replaced_exprs.at(i), iter->variable, &VariableTypes);
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
                     results.push_back(result);
                 }
 
                 printf("===================================\n");
-                for (int i = 0; i < replaced_exprs.size(); i++) {
+                for (int i = 0; i < postfix_exprs.size(); i++) {
                     printf("%s: %lf\n", printed_values.at(i).c_str(), results.at(i));
                 }
                 printf("===================================\n");
@@ -3836,22 +3882,30 @@ namespace Module {
         TH1D* th1d_ABCD;
         std::string expression_A;
         std::string replaced_expr_A;
+        std::vector<Token> postfix_expr_A;
         std::string expression_B;
         std::string replaced_expr_B;
+        std::vector<Token> postfix_expr_B;
         std::string expression_C;
         std::string replaced_expr_C;
+        std::vector<Token> postfix_expr_C;
         std::string expression_D;
         std::string replaced_expr_D;
+        std::vector<Token> postfix_expr_D;
 
         TH1D* th1d_ABCD_validation;
         std::string expression_Aprime;
         std::string replaced_expr_Aprime;
+        std::vector<Token> postfix_expr_Aprime;
         std::string expression_Bprime;
         std::string replaced_expr_Bprime;
+        std::vector<Token> postfix_expr_Bprime;
         std::string expression_Cprime;
         std::string replaced_expr_Cprime;
+        std::vector<Token> postfix_expr_Cprime;
         std::string expression_Dprime;
         std::string replaced_expr_Dprime;
+        std::vector<Token> postfix_expr_Dprime;
 
         bool WeightSumError;
         bool validation;
@@ -3867,12 +3921,20 @@ namespace Module {
             replaced_expr_B = replaceVariables(expression_B, &variable_names);
             replaced_expr_C = replaceVariables(expression_C, &variable_names);
             replaced_expr_D = replaceVariables(expression_D, &variable_names);
+            postfix_expr_A = PostfixExpression(replaced_expr_A, &VariableTypes);
+            postfix_expr_B = PostfixExpression(replaced_expr_B, &VariableTypes);
+            postfix_expr_C = PostfixExpression(replaced_expr_C, &VariableTypes);
+            postfix_expr_D = PostfixExpression(replaced_expr_D, &VariableTypes);
 
             if (validation) {
                 replaced_expr_Aprime = replaceVariables(expression_Aprime, &variable_names);
                 replaced_expr_Bprime = replaceVariables(expression_Bprime, &variable_names);
                 replaced_expr_Cprime = replaceVariables(expression_Cprime, &variable_names);
                 replaced_expr_Dprime = replaceVariables(expression_Dprime, &variable_names);
+                postfix_expr_Aprime = PostfixExpression(replaced_expr_Aprime, &VariableTypes);
+                postfix_expr_Bprime = PostfixExpression(replaced_expr_Bprime, &VariableTypes);
+                postfix_expr_Cprime = PostfixExpression(replaced_expr_Cprime, &VariableTypes);
+                postfix_expr_Dprime = PostfixExpression(replaced_expr_Dprime, &VariableTypes);
             }
 
             // create histogram
@@ -3887,29 +3949,29 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = evaluateExpression(replaced_expr_A, iter->variable, &VariableTypes);
+                double result = PostfixExpression(postfix_expr_A, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(0.5, ObtainWeight(iter, variable_names));
 
-                result = evaluateExpression(replaced_expr_B, iter->variable, &VariableTypes);
+                result = PostfixExpression(postfix_expr_B, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(1.5, ObtainWeight(iter, variable_names));
 
-                result = evaluateExpression(replaced_expr_C, iter->variable, &VariableTypes);
+                result = PostfixExpression(postfix_expr_C, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(2.5, ObtainWeight(iter, variable_names));
 
-                result = evaluateExpression(replaced_expr_D, iter->variable, &VariableTypes);
+                result = PostfixExpression(postfix_expr_D, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(3.5, ObtainWeight(iter, variable_names));
 
                 if (validation) {
-                    result = evaluateExpression(replaced_expr_Aprime, iter->variable, &VariableTypes);
+                    result = PostfixExpression(postfix_expr_Aprime, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(0.5, ObtainWeight(iter, variable_names));
 
-                    result = evaluateExpression(replaced_expr_Bprime, iter->variable, &VariableTypes);
+                    result = PostfixExpression(postfix_expr_Bprime, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(1.5, ObtainWeight(iter, variable_names));
 
-                    result = evaluateExpression(replaced_expr_Cprime, iter->variable, &VariableTypes);
+                    result = PostfixExpression(postfix_expr_Cprime, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(2.5, ObtainWeight(iter, variable_names));
 
-                    result = evaluateExpression(replaced_expr_Dprime, iter->variable, &VariableTypes);
+                    result = PostfixExpression(postfix_expr_Dprime, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(3.5, ObtainWeight(iter, variable_names));
                 }
 

@@ -5,286 +5,94 @@
 #include <stack>
 #include <sstream>
 
-double applyOp(double a, double b, const std::string& op) {
-    if (op == "+") return (a + b);
-    else if (op == "-") return (a - b);
-    else if (op == "*") return (a * b);
-    else if (op == "/") return (a / b);
-    else if (op == "^") return std::pow(a, b);
-    else if (op == "<") {
+enum OpType {
+    Value,      // Literal number (e.g., 3.14)
+    Variable,   // Variable Index
+    Add, Sub, Mul, Div, Pow,
+    GT, LT, GE, LE, EQ, NE,
+    And, Or,
+    UnaryMinus, UnaryPlus,
+    Openparenthesis, Closeparenthesis
+};
+
+struct Token {
+    OpType type;
+    double value; // Used if type == Value
+    int index;    // Used if type == Variable
+};
+
+int precedence(OpType op) {
+    switch (op) {
+    case Or: return 1;
+    case And: return 2;
+    case EQ: case NE: return 3;
+    case LT: case LE: case GT: case GE: return 4;
+    case Add: case Sub: return 5;
+    case Mul: case Div: return 6;
+    case Pow: return 7;
+    case UnaryMinus: case UnaryPlus: return 8;
+    default: return 0;
+    }
+}
+
+double applyOp(double a, double b, const OpType op) {
+    switch (op) {
+    case Add: return (a + b);
+    case Sub: return (a - b);
+    case Mul: return (a * b);
+    case Div: return (a / b);
+    case Pow: return std::pow(a, b);
+    case LT: {
         if (a < b) return 1.0;
         else return 0.0;
     }
-    else if (op == ">") {
+    case GT: {
         if (a > b) return 1.0;
         else return 0.0;
     }
-    else if (op == "<=") {
+    case LE: {
         if (a <= b) return 1.0;
         else return 0.0;
     }
-    else if (op == ">=") {
+    case GE: {
         if (a >= b) return 1.0;
         else return 0.0;
     }
-    else if (op == "==") {
+    case EQ: {
         if (a == b) return 1.0;
         else return 0.0;
     }
-    else if (op == "!=") {
+    case NE: {
         if (a != b) return 1.0;
         else return 0.0;
     }
-    else if (op == "&&") {
+    case And: {
         if ((a != 0) && (b != 0)) return 1.0;
         else return 0.0;
     }
-    else if (op == "||") {
+    case Or: {
         if ((a != 0) || (b != 0)) return 1.0;
         else return 0.0;
     }
-    else {
-        printf("[applyOp] unknown operator: %s\n", op.c_str());
+    default: {
+        printf("[applyOp] unknown operator\n");
         exit(1);
         return 1;
     }
+    }
 }
 
-double applyOp(double a, const std::string& op) {
-    if (op == "\x03") return -a;
-    else if (op == "\x04") return a;
-    else {
-        printf("[applyOp] unknown operator: %s\n", op.c_str());
+double applyOp(double a, const OpType op) {
+
+    switch (op) {
+    case UnaryMinus: return -a;
+    case UnaryPlus: return a;
+    default: {
+        printf("[applyOp] unknown operator\n");
         exit(1);
         return 1;
     }
-}
-
-int precedence(const std::string& op) {
-    if (op == "||") return 1;
-    if (op == "&&") return 2;
-    if (op == "==" || op == "!=") return 3;
-    if (op == "<" || op == "<=" || op == ">" || op == ">=") return 4;
-    if (op == "+" || op == "-") return 5;
-    if (op == "*" || op == "/") return 6;
-    if (op == "^") return 7;
-    if (op == "\x03") return 8; // minus unary operator
-    if (op == "\x04") return 9; // plus unary operator
-    return 0;
-}
-
-double evaluateExpression(const std::string& replaced_expr_, const std::vector<std::variant<int, unsigned int, float, double, std::string*>> variables_, const std::vector<std::string>* VariableTypes_) {
-    std::istringstream iss(replaced_expr_);
-    std::stack<double> values;
-    std::stack<std::string> ops;
-
-    // previous token is needed to check unary operator
-    char previous_token;
-    char token;
-    while (iss >> token) {
-        // check it is unary operator or not
-        if (token == '-') {
-            if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is subtraction
-            else token = '\x03'; // it is unary
-        }
-        else if (token == '+') {
-            if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is addition
-            else token = '\x04'; // it is unary
-        }
-
-        if (std::isdigit(token) || (token == '.')) { // it is number
-            if (token == '.') {
-                char next_token;
-                iss >> next_token;
-                if (std::isdigit(next_token)) {
-                    iss.putback(next_token);
-                }
-                else {
-                    printf("unexpected `.` character\n");
-                    exit(1);
-                }
-            }
-
-            iss.putback(token);
-            double value;
-            iss >> value;
-            values.push(value);
-
-        }
-        else if (token == '\x01') { // it is placeholder
-
-            int index;
-            iss >> index;
-
-            if (VariableTypes_->at(index) == "Double_t") {
-                values.push((double)std::get<double>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "Int_t") {
-                values.push((double)std::get<int>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "UInt_t") {
-                values.push((double)std::get<unsigned int>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "Float_t") {
-                values.push((double)std::get<float>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "string") {
-                printf("[evaluateExpression] string variable cannot be used in equations\n");
-                exit(1);
-            }
-            else {
-                printf("unexpected data type\n");
-                exit(1);
-            }
-
-            iss >> token;
-
-            if (token != '\x02') {
-                printf("placeholder is wrong\n");
-                exit(1);
-            }
-
-        }
-        else if (token == '(') {
-            ops.push(std::string(1, token));
-        }
-        else if (token == ')') {
-            while (!ops.empty() && ops.top() != '(') {
-                if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
-                    double b = values.top(); values.pop();
-                    double a = values.top(); values.pop();
-                    std::string op = ops.top(); ops.pop();
-                    values.push(applyOp(a, b, op));
-                }
-                else {
-                    double a = values.top(); values.pop();
-                    std::string op = ops.top(); ops.pop();
-                    values.push(applyOp(a, op));
-                }
-
-                if (ops.empty()) {
-                    printf("cannot find `(`\n");
-                    exit(1);
-                }
-            }
-            ops.pop();
-        }
-        else if ((std::string("+-*/^<>=!&|") + std::string("\x03") + std::string("\x04")).find(token) != std::string::npos) {
-            std::string temp_operator;
-
-            switch (token) {
-            case '+':
-            case '-':
-            case '*':
-            case '/':
-            case '^':
-            {
-                temp_operator = std::string(1, token);
-                break;
-            }
-            case '<':
-            case '>':
-            {
-                char next_token;
-                iss >> next_token;
-                if (next_token != '=') {
-                    temp_operator = std::string(1, token);
-                    iss.putback(next_token);
-                }
-                else {
-                    temp_operator = std::string(1, token) + std::string(1, next_token);
-                }
-                break;
-            }
-            case '=':
-            case '!':
-            {
-                char next_token;
-                iss >> next_token;
-                if (next_token != '=') {
-                    printf("[evaluateExpression] unknown operator: %c\n", token);
-                    exit(1);
-                }
-                else {
-                    temp_operator = std::string(1, token) + std::string(1, next_token);
-                }
-                break;
-            }
-            case '&':
-            case '|':
-            {
-                char next_token;
-                iss >> next_token;
-                if (next_token != token) {
-                    printf("[evaluateExpression] unknown operator: %c\n", token);
-                    exit(1);
-                }
-                else {
-                    temp_operator = std::string(1, token) + std::string(1, next_token);
-                }
-                break;
-            }
-            case '\x03':
-            case '\x04':
-            {
-                temp_operator = std::string(1, token);
-                break;
-            }
-            }
-
-            while (!ops.empty() && (precedence(ops.top()) >= precedence(temp_operator))) {
-                if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
-                    double b = values.top(); values.pop();
-                    double a = values.top(); values.pop();
-                    std::string op = ops.top(); ops.pop();
-                    values.push(applyOp(a, b, op));
-                }
-                else {
-                    double a = values.top(); values.pop();
-                    std::string op = ops.top(); ops.pop();
-                    values.push(applyOp(a, op));
-                }
-            }
-            ops.push(temp_operator);
-        }
-        else {
-            printf("unknown token: %c\n", token);
-            exit(1);
-        }
-
-        previous_token = token;
     }
-
-    while (!ops.empty()) {
-        if ((ops.top() != '\x03') && (ops.top() != '\x04')) {
-            if (values.size() < 2) {
-                printf("equation expression is wrong. Even though there is operator, the remaining number is not enough.\n");
-                exit(1);
-            }
-
-            double b = values.top(); values.pop();
-            double a = values.top(); values.pop();
-            std::string op = ops.top(); ops.pop();
-            values.push(applyOp(a, b, op));
-        }
-        else {
-            if (values.size() < 1) {
-                printf("equation expression is wrong. Even though there is operator, the remaining number is not enough.\n");
-                exit(1);
-            }
-
-            double a = values.top(); values.pop();
-            std::string op = ops.top(); ops.pop();
-            values.push(applyOp(a, op));
-        }
-    }
-
-    if (values.size() != 1) {
-        printf("equation expression is wrong. The number of remaining number is not equal to 1.\n");
-        exit(1);
-    }
-
-    return values.top();
 }
 
 std::string replaceVariables(const std::string& expression, const std::vector<std::string>* var_name) {
@@ -325,6 +133,256 @@ std::string replaceVariables(const std::string& expression, const std::vector<st
     }
 
     return replaced_expr;
+}
+
+std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const std::vector<std::string>* VariableTypes_) {
+    std::istringstream iss(replaced_expr_);
+    std::vector<Token> output;
+    std::stack<OpType> ops;
+
+    // previous token is needed to check unary operator
+    char previous_token = '\0';
+    char token;
+    while (iss >> token) {
+        // check it is unary operator or not
+        if (token == '-') {
+            if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is subtraction
+            else token = '\x03'; // it is unary
+        }
+        else if (token == '+') {
+            if (std::isdigit(previous_token) || (previous_token == ')') || (previous_token == '\x02')) {} // it is addition
+            else token = '\x04'; // it is unary
+        }
+
+        if (std::isdigit(token) || (token == '.')) { // it is number
+            if (token == '.') {
+                char next_token;
+                iss >> next_token;
+                if (std::isdigit(next_token)) {
+                    iss.putback(next_token);
+                }
+                else {
+                    printf("unexpected `.` character\n");
+                    exit(1);
+                }
+            }
+
+            iss.putback(token);
+            double value;
+            iss >> value;
+            output.push_back({ Value, value, -1});
+
+        }
+        else if (token == '\x01') { // it is placeholder
+
+            int index;
+            iss >> index;
+
+            if (VariableTypes_->at(index) == "Double_t") {}
+            else if (VariableTypes_->at(index) == "Int_t") {}
+            else if (VariableTypes_->at(index) == "UInt_t") {}
+            else if (VariableTypes_->at(index) == "Float_t") {}
+            else if (VariableTypes_->at(index) == "string") {
+                printf("[evaluateExpression] string variable cannot be used in equations\n");
+                exit(1);
+            }
+            else {
+                printf("unexpected data type\n");
+                exit(1);
+            }
+
+            output.push_back({ Variable, -1, index });
+
+            iss >> token;
+
+            if (token != '\x02') {
+                printf("placeholder is wrong\n");
+                exit(1);
+            }
+
+        }
+        else if (token == '(') {
+            ops.push(Openparenthesis);
+        }
+        else if (token == ')') {
+            while (!ops.empty() && ops.top() != Openparenthesis) {
+                output.push_back({ ops.top(), -1, -1 });
+                ops.pop();
+
+                if (ops.empty()) {
+                    printf("cannot find `(`\n");
+                    exit(1);
+                }
+            }
+            ops.pop();
+        }
+        else if ((std::string("+-*/^<>=!&|") + std::string("\x03") + std::string("\x04")).find(token) != std::string::npos) {
+            OpType current_op;
+
+            switch (token) {
+            case '+': current_op = Add; break;
+            case '-': current_op = Sub; break;
+            case '*': current_op = Mul; break;
+            case '/': current_op = Div; break;
+            case '^': current_op = Pow; break;
+            case '<':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != '=') {
+                    current_op = LT;
+                    iss.putback(next_token);
+                }
+                else current_op = LE;
+                break;
+            }
+            case '>':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != '=') {
+                    current_op = GT;
+                    iss.putback(next_token);
+                }
+                else current_op = GE;
+                break;
+            }
+            case '=':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != '=') {
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
+                    exit(1);
+                }
+                else current_op = EQ;
+                break;
+            }
+            case '!':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != '=') {
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
+                    exit(1);
+                }
+                else current_op = NE;
+                break;
+            }
+            case '&':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != token) {
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
+                    exit(1);
+                }
+                else current_op = And;
+                break;
+            }
+            case '|':
+            {
+                char next_token;
+                iss >> next_token;
+                if (next_token != token) {
+                    printf("[evaluateExpression] unknown operator: %c\n", token);
+                    exit(1);
+                }
+                else current_op = Or;
+                break;
+            }
+            case '\x03': current_op = UnaryMinus; break;
+            case '\x04': current_op = UnaryPlus; break;
+            }
+
+            while (!ops.empty() && (precedence(ops.top()) >= precedence(current_op)) && (ops.top() != Openparenthesis)) {
+
+                // unary is right-associative, do not pop
+                if (((current_op == UnaryMinus) || (current_op == UnaryPlus)) && (precedence(ops.top()) == precedence(current_op))) break;
+
+                // power is right-associative, do not pop
+                if ((current_op == Pow) && (precedence(ops.top()) == precedence(current_op))) break;
+
+                output.push_back({ ops.top(), -1, -1 });
+                ops.pop();
+            }
+            ops.push(current_op);
+        }
+        else {
+            printf("unknown token: %c\n", token);
+            exit(1);
+        }
+
+        previous_token = token;
+    }
+
+    while (!ops.empty()) {
+        output.push_back({ ops.top(), -1, -1 });
+        ops.pop();
+    }
+
+    return output;
+}
+
+double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& variables_, const std::vector<std::string>* VariableTypes_) {
+    std::stack<double> values;
+
+    for (int i = 0; i < postfix_expr_.size(); i++) {
+        Token temp_token = postfix_expr_.at(i);
+
+        if (temp_token.type == Value) {
+            values.push(temp_token.value);
+        }
+        else if (temp_token.type == Variable) {
+            int index = temp_token.index;
+
+            if (VariableTypes_->at(index) == "Double_t") {
+                values.push((double)std::get<double>(variables_.at(index)));
+            }
+            else if (VariableTypes_->at(index) == "Int_t") {
+                values.push((double)std::get<int>(variables_.at(index)));
+            }
+            else if (VariableTypes_->at(index) == "UInt_t") {
+                values.push((double)std::get<unsigned int>(variables_.at(index)));
+            }
+            else if (VariableTypes_->at(index) == "Float_t") {
+                values.push((double)std::get<float>(variables_.at(index)));
+            }
+            else if (VariableTypes_->at(index) == "string") {
+                printf("[evaluateExpression] string variable cannot be used in equations\n");
+                exit(1);
+            }
+            else {
+                printf("unexpected data type\n");
+                exit(1);
+            }
+        }
+        else if ((temp_token.type == UnaryMinus) || (temp_token.type == UnaryPlus)) {
+            if (values.size() == 0) {
+                printf("[EvaluatePostfixExpression] there is no number when unary operator comes\n");
+                exit(1);
+            }
+            double a = values.top(); values.pop();
+            values.push(applyOp(a, temp_token.type));
+        }
+        else {
+            if (values.size() < 2) {
+                printf("[EvaluatePostfixExpression] there is only %d number when binary operator comes\n", values.size());
+                exit(1);
+            }
+            double b = values.top(); values.pop();
+            double a = values.top(); values.pop();
+            values.push(applyOp(a, b, temp_token.type));
+        }
+    }
+
+    if (values.size() != 1) {
+        printf("[EvaluatePostfixExpression] size of values is %d\n", values.size());
+        exit(1);
+    }
+
+    return values.top();
+
 }
 
 #endif 
