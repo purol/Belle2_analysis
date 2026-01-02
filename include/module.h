@@ -2891,7 +2891,7 @@ namespace Module {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
-                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
             // check there is the same branch name or not
