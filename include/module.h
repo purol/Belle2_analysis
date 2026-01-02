@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <fstream>
+#include <memory>
 
 #include "data.h"
 #include "string_equation.h"
@@ -306,11 +307,13 @@ namespace Module {
         // event variable history
         std::set<std::vector<std::variant<int, unsigned int, float, double, std::string*>>, CompareHistory> history_event_variable;
 
+        std::shared_ptr<std::vector<double>> output_handle;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
     public:
-        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), Nevt(0), Ncandidate(0){}
+        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
         void Start() override {
@@ -399,6 +402,11 @@ namespace Module {
             printf("%s\n", print_string.c_str());
             printf("Number of event: %lf\n", Nevt);
             printf("Number of candidate: %lf\n", Ncandidate);
+
+            output_handle->clear();
+
+            output_handle->push_back(Nevt);
+            output_handle->push_back(Ncandidate);
         }
     };
 
@@ -1419,6 +1427,8 @@ namespace Module {
         double* NBKGs_cumulative;
         double* FOMs;
 
+        std::shared_ptr<std::vector<double>> output_handle;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -1426,14 +1436,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1573,6 +1583,14 @@ namespace Module {
             printf("NSIG: %lf\n", NSIGs_cumulative[OptimizedIndex]);
             printf("NBKG: %lf\n", NBKGs_cumulative[OptimizedIndex]);
 
+            output_handle->clear();
+
+            output_handle->push_back((double)rank);
+            output_handle->push_back(OptimizedFOM);
+            output_handle->push_back(Cuts[OptimizedIndex]);
+            output_handle->push_back(NSIGs_cumulative[OptimizedIndex]);
+            output_handle->push_back(NBKGs_cumulative[OptimizedIndex]);
+
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
 
@@ -1630,6 +1648,8 @@ namespace Module {
         double NSIG_initial;
         double alpha;
 
+        std::shared_ptr<std::vector<double>> output_handle;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -1637,14 +1657,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1783,6 +1803,14 @@ namespace Module {
             printf("NSIG: %lf\n", NSIGs_cumulative[OptimizedIndex]);
             printf("NBKG: %lf\n", NBKGs_cumulative[OptimizedIndex]);
 
+            output_handle->clear();
+
+            output_handle->push_back((double)rank);
+            output_handle->push_back(OptimizedFOM);
+            output_handle->push_back(Cuts[OptimizedIndex]);
+            output_handle->push_back(NSIGs_cumulative[OptimizedIndex]);
+            output_handle->push_back(NBKGs_cumulative[OptimizedIndex]);
+
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
 
@@ -1856,6 +1884,8 @@ namespace Module {
         double NSIG_initial;
         double alpha;
 
+        std::shared_ptr<std::vector<double>> output_handle;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -1863,11 +1893,11 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -2062,6 +2092,14 @@ namespace Module {
             printf("NSIG: %lf\n", NSIGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
             printf("NBKG: %lf\n", NBKGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
 
+            output_handle->clear();
+
+            output_handle->push_back(MaximumFOM);
+            output_handle->push_back(Cuts_x[MaximumIndex_x][MaximumIndex_y]);
+            output_handle->push_back(Cuts_y[MaximumIndex_x][MaximumIndex_y]);
+            output_handle->push_back(NSIGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
+            output_handle->push_back(NBKGs_cumulative[MaximumIndex_x][MaximumIndex_y]);
+
             // draw FOM plot
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
 
@@ -2123,6 +2161,8 @@ namespace Module {
         double NSIGs_total;
         double NBKGs_total;
 
+        std::shared_ptr<double> output_handle;
+
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
 
@@ -2131,7 +2171,7 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             // just 100
             NBin = 100;
 
@@ -2251,6 +2291,8 @@ namespace Module {
             FILE* fp = fopen(output_name.c_str(), write_option.c_str());
             fprintf(fp, "%lf ", AUC);
             fclose(fp);
+
+            (*output_handle) = AUC;
 
             free(Cuts);
             free(NSIGs);
@@ -3910,9 +3952,11 @@ namespace Module {
         bool WeightSumError;
         bool validation;
 
+        std::shared_ptr<std::vector<double>> output_handle;
+
     public:
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
 
         ~ABCDmethod() {}
 
@@ -4016,6 +4060,19 @@ namespace Module {
             printf("N_D = %lf+-%lf\n", N_D, N_D_err);
             printf("estimated N_A = %lf+-%lf\n", N_B * (N_C / N_D), N_A * std::sqrt((N_B_err / N_B) * (N_B_err / N_B) + (N_C_err / N_C) * (N_C_err / N_C) + (N_D_err / N_D) * (N_D_err / N_D)));
 
+            output_handle->clear();
+
+            output_handle->push_back(N_A);
+            output_handle->push_back(N_A_err);
+            output_handle->push_back(N_B);
+            output_handle->push_back(N_B_err);
+            output_handle->push_back(N_C);
+            output_handle->push_back(N_C_err);
+            output_handle->push_back(N_D);
+            output_handle->push_back(N_D_err);
+            output_handle->push_back(N_B * (N_C / N_D));
+            output_handle->push_back(N_A * std::sqrt((N_B_err / N_B) * (N_B_err / N_B) + (N_C_err / N_C) * (N_C_err / N_C) + (N_D_err / N_D) * (N_D_err / N_D)));
+
             if (validation) {
                 double N_Aprime = th1d_ABCD_validation->GetBinContent(1);
                 double N_Bprime = th1d_ABCD_validation->GetBinContent(2);
@@ -4050,6 +4107,17 @@ namespace Module {
                 printf("N_C' = %lf+-%lf\n", N_Cprime, N_Cprime_err);
                 printf("N_D' = %lf+-%lf\n", N_Dprime, N_Dprime_err);
                 printf("estimated N_A' = %lf+-%lf\n", N_Bprime * (N_Cprime / N_Dprime), N_Aprime * std::sqrt((N_Bprime_err / N_Bprime) * (N_Bprime_err / N_Bprime) + (N_Cprime_err / N_Cprime) * (N_Cprime_err / N_Cprime) + (N_Dprime_err / N_Dprime) * (N_Dprime_err / N_Dprime)));
+
+                output_handle->push_back(N_Aprime);
+                output_handle->push_back(N_Aprime_err);
+                output_handle->push_back(N_Bprime);
+                output_handle->push_back(N_Bprime_err);
+                output_handle->push_back(N_Cprime);
+                output_handle->push_back(N_Cprime_err);
+                output_handle->push_back(N_Dprime);
+                output_handle->push_back(N_Dprime_err);
+                output_handle->push_back(N_Bprime * (N_Cprime / N_Dprime));
+                output_handle->push_back(N_Aprime * std::sqrt((N_Bprime_err / N_Bprime) * (N_Bprime_err / N_Bprime) + (N_Cprime_err / N_Cprime) * (N_Cprime_err / N_Cprime) + (N_Dprime_err / N_Dprime) * (N_Dprime_err / N_Dprime)));
             }
 
             delete th1d_ABCD;

@@ -5,6 +5,7 @@
 #include <vector>
 #include <variant>
 #include <tuple>
+#include <memory>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -79,7 +80,7 @@ public:
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void Cut(const char* cut_string_);
-    void PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    std::shared_ptr<std::vector<double>> PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_);
     void DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_);
@@ -96,13 +97,13 @@ public:
     void RandomBCS(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
-    void DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
-    void DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_);
-    void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
-    void DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_);
-    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
-    void Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_);
-    void CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
+    std::shared_ptr<std::vector<double>> DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
+    std::shared_ptr<std::vector<double>> DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_);
+    std::shared_ptr<std::vector<double>> DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
+    std::shared_ptr<std::vector<double>> DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_);
+    std::shared_ptr<std::vector<double>> Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
+    std::shared_ptr<std::vector<double>> Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_);
+    std::shared_ptr<double> CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_);
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
@@ -119,8 +120,8 @@ public:
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
     void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
     void PrintEvent(std::vector<std::string> print_variables_);
-    void ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_ = true);
-    void ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_ = true);
+    std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_ = true);
+    std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_ = true);
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -167,9 +168,11 @@ void Loader::Cut(const char* cut_string_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_) {
-    Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_, &variable_names, &VariableTypes);
+std::shared_ptr<std::vector<double>> Loader::PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
+    Module::Module* temp_module = new Module::PrintInformation(print_string_, Event_variable_list_, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
 void Loader::DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_) {
@@ -252,39 +255,53 @@ void Loader::RandomEventSelection(int split_num_, int selected_index_, const std
     Modules.push_back(temp_module);
 }
 
-void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_) {
+std::shared_ptr<std::vector<double>> Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, preselection_x_, preselection_y_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_) {
-    Module::Module* temp_module = new Module::CalculateAUC(equation_, MIN_, MAX_, output_name_, write_option_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+std::shared_ptr<double> Loader::CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_) {
+    std::shared_ptr<double> temp_ptr = std::make_shared<double>();
+    Module::Module* temp_module = new Module::CalculateAUC(equation_, MIN_, MAX_, output_name_, write_option_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
 void Loader::FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_) {
@@ -367,14 +384,18 @@ void Loader::PrintEvent(std::vector<std::string> print_variables_) {
     Modules.push_back(temp_module);
 }
 
-void Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_) {
-    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, WeightSumError_, &variable_names, &VariableTypes);
+std::shared_ptr<std::vector<double>> Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
+    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, WeightSumError_, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
-void Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_) {
-    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, region_Aprime_, region_Bprime_, region_Cprime_, region_Dprime_, WeightSumError_, &variable_names, &VariableTypes);
+std::shared_ptr<std::vector<double>> Loader::ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
+    Module::Module* temp_module = new Module::ABCDmethod(region_A_, region_B_, region_C_, region_D_, region_Aprime_, region_Bprime_, region_Cprime_, region_Dprime_, WeightSumError_, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
+    return temp_ptr;
 }
 
 void Loader::InsertCustomizedModule(Module::Module* module_) {
