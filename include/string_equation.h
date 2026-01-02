@@ -5,7 +5,7 @@
 #include <stack>
 #include <sstream>
 
-enum OpType {
+enum class OpType {
     Value,      // Literal number (e.g., 3.14)
     Variable,   // Variable Index
     Add, Sub, Mul, Div, Pow,
@@ -23,54 +23,54 @@ struct Token {
 
 int precedence(OpType op) {
     switch (op) {
-    case Or: return 1;
-    case And: return 2;
-    case EQ: case NE: return 3;
-    case LT: case LE: case GT: case GE: return 4;
-    case Add: case Sub: return 5;
-    case Mul: case Div: return 6;
-    case Pow: return 7;
-    case UnaryMinus: case UnaryPlus: return 8;
+    case OpType::Or: return 1;
+    case OpType::And: return 2;
+    case OpType::EQ: case OpType::NE: return 3;
+    case OpType::LT: case OpType::LE: case OpType::GT: case OpType::GE: return 4;
+    case OpType::Add: case OpType::Sub: return 5;
+    case OpType::Mul: case OpType::Div: return 6;
+    case OpType::Pow: return 7;
+    case OpType::UnaryMinus: case OpType::UnaryPlus: return 8;
     default: return 0;
     }
 }
 
 double applyOp(double a, double b, const OpType op) {
     switch (op) {
-    case Add: return (a + b);
-    case Sub: return (a - b);
-    case Mul: return (a * b);
-    case Div: return (a / b);
-    case Pow: return std::pow(a, b);
-    case LT: {
+    case OpType::Add: return (a + b);
+    case OpType::Sub: return (a - b);
+    case OpType::Mul: return (a * b);
+    case OpType::Div: return (a / b);
+    case OpType::Pow: return std::pow(a, b);
+    case OpType::LT: {
         if (a < b) return 1.0;
         else return 0.0;
     }
-    case GT: {
+    case OpType::GT: {
         if (a > b) return 1.0;
         else return 0.0;
     }
-    case LE: {
+    case OpType::LE: {
         if (a <= b) return 1.0;
         else return 0.0;
     }
-    case GE: {
+    case OpType::GE: {
         if (a >= b) return 1.0;
         else return 0.0;
     }
-    case EQ: {
+    case OpType::EQ: {
         if (a == b) return 1.0;
         else return 0.0;
     }
-    case NE: {
+    case OpType::NE: {
         if (a != b) return 1.0;
         else return 0.0;
     }
-    case And: {
+    case OpType::And: {
         if ((a != 0) && (b != 0)) return 1.0;
         else return 0.0;
     }
-    case Or: {
+    case OpType::Or: {
         if ((a != 0) || (b != 0)) return 1.0;
         else return 0.0;
     }
@@ -85,8 +85,8 @@ double applyOp(double a, double b, const OpType op) {
 double applyOp(double a, const OpType op) {
 
     switch (op) {
-    case UnaryMinus: return -a;
-    case UnaryPlus: return a;
+    case OpType::UnaryMinus: return -a;
+    case OpType::UnaryPlus: return a;
     default: {
         printf("[applyOp] unknown operator\n");
         exit(1);
@@ -170,7 +170,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
             iss.putback(token);
             double value;
             iss >> value;
-            output.push_back({ Value, value, -1});
+            output.push_back({ OpType::Value, value, -1});
 
         }
         else if (token == '\x01') { // it is placeholder
@@ -191,7 +191,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                 exit(1);
             }
 
-            output.push_back({ Variable, -1, index });
+            output.push_back({ OpType::Variable, -1, index });
 
             iss >> token;
 
@@ -202,10 +202,10 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
 
         }
         else if (token == '(') {
-            ops.push(Openparenthesis);
+            ops.push(OpType::Openparenthesis);
         }
         else if (token == ')') {
-            while (!ops.empty() && ops.top() != Openparenthesis) {
+            while (!ops.empty() && ops.top() != OpType::Openparenthesis) {
                 output.push_back({ ops.top(), -1, -1 });
                 ops.pop();
 
@@ -220,20 +220,20 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
             OpType current_op;
 
             switch (token) {
-            case '+': current_op = Add; break;
-            case '-': current_op = Sub; break;
-            case '*': current_op = Mul; break;
-            case '/': current_op = Div; break;
-            case '^': current_op = Pow; break;
+            case '+': current_op = OpType::Add; break;
+            case '-': current_op = OpType::Sub; break;
+            case '*': current_op = OpType::Mul; break;
+            case '/': current_op = OpType::Div; break;
+            case '^': current_op = OpType::Pow; break;
             case '<':
             {
                 char next_token;
                 iss >> next_token;
                 if (next_token != '=') {
-                    current_op = LT;
+                    current_op = OpType::LT;
                     iss.putback(next_token);
                 }
-                else current_op = LE;
+                else current_op = OpType::LE;
                 break;
             }
             case '>':
@@ -241,10 +241,10 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                 char next_token;
                 iss >> next_token;
                 if (next_token != '=') {
-                    current_op = GT;
+                    current_op = OpType::GT;
                     iss.putback(next_token);
                 }
-                else current_op = GE;
+                else current_op = OpType::GE;
                 break;
             }
             case '=':
@@ -255,7 +255,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                     printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
-                else current_op = EQ;
+                else current_op = OpType::EQ;
                 break;
             }
             case '!':
@@ -266,7 +266,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                     printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
-                else current_op = NE;
+                else current_op = OpType::NE;
                 break;
             }
             case '&':
@@ -277,7 +277,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                     printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
-                else current_op = And;
+                else current_op = OpType::And;
                 break;
             }
             case '|':
@@ -288,20 +288,20 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                     printf("[evaluateExpression] unknown operator: %c\n", token);
                     exit(1);
                 }
-                else current_op = Or;
+                else current_op = OpType::Or;
                 break;
             }
-            case '\x03': current_op = UnaryMinus; break;
-            case '\x04': current_op = UnaryPlus; break;
+            case '\x03': current_op = OpType::UnaryMinus; break;
+            case '\x04': current_op = OpType::UnaryPlus; break;
             }
 
-            while (!ops.empty() && (precedence(ops.top()) >= precedence(current_op)) && (ops.top() != Openparenthesis)) {
+            while (!ops.empty() && (precedence(ops.top()) >= precedence(current_op)) && (ops.top() != OpType::Openparenthesis)) {
 
                 // unary is right-associative, do not pop
-                if (((current_op == UnaryMinus) || (current_op == UnaryPlus)) && (precedence(ops.top()) == precedence(current_op))) break;
+                if (((current_op == OpType::UnaryMinus) || (current_op == OpType::UnaryPlus)) && (precedence(ops.top()) == precedence(current_op))) break;
 
                 // power is right-associative, do not pop
-                if ((current_op == Pow) && (precedence(ops.top()) == precedence(current_op))) break;
+                if ((current_op == OpType::Pow) && (precedence(ops.top()) == precedence(current_op))) break;
 
                 output.push_back({ ops.top(), -1, -1 });
                 ops.pop();
@@ -330,10 +330,10 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
     for (int i = 0; i < postfix_expr_.size(); i++) {
         Token temp_token = postfix_expr_.at(i);
 
-        if (temp_token.type == Value) {
+        if (temp_token.type == OpType::Value) {
             values.push(temp_token.value);
         }
-        else if (temp_token.type == Variable) {
+        else if (temp_token.type == OpType::Variable) {
             int index = temp_token.index;
 
             if (VariableTypes_->at(index) == "Double_t") {
@@ -357,7 +357,7 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
                 exit(1);
             }
         }
-        else if ((temp_token.type == UnaryMinus) || (temp_token.type == UnaryPlus)) {
+        else if ((temp_token.type == OpType::UnaryMinus) || (temp_token.type == OpType::UnaryPlus)) {
             if (values.size() == 0) {
                 printf("[EvaluatePostfixExpression] there is no number when unary operator comes\n");
                 exit(1);

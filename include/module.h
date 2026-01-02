@@ -3188,7 +3188,7 @@ namespace Module {
     class ConditionalPairDefineNewVariable : public Module {
     private:
         std::map<std::string, std::string> condition_equation__criteria_equation_list;
-        std::map<std::vector<Token>, std::vector<Token>> condition_postfix_expr__criteria_postfix_expr_list;
+        std::vector<std::pair<std::vector<Token>, std::vector<Token>>> condition_postfix_expr__criteria_postfix_expr_list;
 
         int condition_order; // start from 0. 0 means highest
 
@@ -3205,7 +3205,7 @@ namespace Module {
                 std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
                 std::string criteria_replaced_expr = replaceVariables(iter_eq->second, variable_names_);
 
-                condition_postfix_expr__criteria_postfix_expr_list.insert(std::make_pair(PostfixExpression(condition_replaced_expr, VariableTypes_), PostfixExpression(criteria_replaced_expr, VariableTypes_)));
+                condition_postfix_expr__criteria_postfix_expr_list.push_back(std::make_pair(PostfixExpression(condition_replaced_expr, VariableTypes_), PostfixExpression(criteria_replaced_expr, VariableTypes_)));
             }
 
             // check `condition_order` is valid
@@ -3246,9 +3246,9 @@ namespace Module {
                 double condition_result = -1;
                 std::vector<double> condition_results;
                 double criteria_result = std::numeric_limits<double>::max();
-                std::vector<std::string> criteria_postfix_exprs;
+                std::vector<std::vector<Token>> criteria_postfix_exprs;
 
-                for (std::map<std::vector<Token>, std::vector<Token>>::iterator iter_eq = condition_postfix_expr__criteria_postfix_expr_list.begin(); iter_eq != condition_postfix_expr__criteria_postfix_expr_list.end(); ++iter_eq) {
+                for (std::vector<std::pair<std::vector<Token>, std::vector<Token>>>::iterator iter_eq = condition_postfix_expr__criteria_postfix_expr_list.begin(); iter_eq != condition_postfix_expr__criteria_postfix_expr_list.end(); ++iter_eq) {
                     double temp_ = EvaluatePostfixExpression(iter_eq->first, iter->variable, &VariableTypes);
                     condition_results.push_back(temp_);
                     criteria_postfix_exprs.push_back(iter_eq->second);
@@ -3949,29 +3949,29 @@ namespace Module {
 
         int Process(std::vector<Data>* data) override {
             for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = PostfixExpression(postfix_expr_A, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(0.5, ObtainWeight(iter, variable_names));
 
-                result = PostfixExpression(postfix_expr_B, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_B, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(1.5, ObtainWeight(iter, variable_names));
 
-                result = PostfixExpression(postfix_expr_C, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_C, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(2.5, ObtainWeight(iter, variable_names));
 
-                result = PostfixExpression(postfix_expr_D, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_D, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(3.5, ObtainWeight(iter, variable_names));
 
                 if (validation) {
-                    result = PostfixExpression(postfix_expr_Aprime, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Aprime, iter->variable, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(0.5, ObtainWeight(iter, variable_names));
 
-                    result = PostfixExpression(postfix_expr_Bprime, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Bprime, iter->variable, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(1.5, ObtainWeight(iter, variable_names));
 
-                    result = PostfixExpression(postfix_expr_Cprime, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Cprime, iter->variable, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(2.5, ObtainWeight(iter, variable_names));
 
-                    result = PostfixExpression(postfix_expr_Dprime, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Dprime, iter->variable, &VariableTypes);
                     if (result > 0.5) th1d_ABCD_validation->Fill(3.5, ObtainWeight(iter, variable_names));
                 }
 
