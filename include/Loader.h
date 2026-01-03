@@ -271,28 +271,28 @@ std::shared_ptr<std::vector<double>> Loader::DrawFOM(const char* expression_, do
 
 std::shared_ptr<std::vector<double>> Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
 
 std::shared_ptr<std::vector<double>> Loader::DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawPunziFOM(equation_, MIN_, MAX_, NBin_, NSIG_initial_, alpha_, rank_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
 
 std::shared_ptr<std::vector<double>> Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
 
 std::shared_ptr<std::vector<double>> Loader::Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, preselection_x_, preselection_y_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::Draw2DPunziFOM(scan_conditions_, preselection_x_, preselection_y_, NSIG_initial_, alpha_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
