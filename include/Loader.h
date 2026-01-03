@@ -257,14 +257,14 @@ void Loader::RandomEventSelection(int split_num_, int selected_index_, const std
 
 std::shared_ptr<std::vector<double>> Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
 
 std::shared_ptr<std::vector<double>> Loader::DrawFOM(const char* expression_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_) {
     std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
-    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, rank_, png_name_, Signal_label_list, Background_label_list, &variable_names, &VariableTypes);
+    Module::Module* temp_module = new Module::DrawFOM(expression_, MIN_, MAX_, NBin_, rank_, png_name_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
     return temp_ptr;
 }
