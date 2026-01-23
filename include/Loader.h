@@ -165,7 +165,7 @@ void Loader::Load(const char* dirname_, const char* including_string_, const cha
 }
 
 void Loader::LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_) {
-    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, cut_string_ , &DataStructureDefined, &variable_names, &VariableTypes, TTree_name.c_str());
+    Module::Module* temp_module = new Module::LoadWithCut(dirname_, including_string_, label_, cut_string_ , &DataStructureDefined, &variable_names, &VariableTypes, TTree_name.c_str());
     Modules.push_back(temp_module);
 }
 
