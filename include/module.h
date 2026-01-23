@@ -255,6 +255,161 @@ namespace Module {
         void End() override {}
     };
 
+    class LoadWithCut : public Module {
+    private:
+        std::vector<std::string> filename;
+        std::string dirname;
+        int Nentry;
+        int Currententry;
+        std::string label;
+
+        // temporary variable to extract data from branch
+        std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
+
+        std::string cut_string;
+        std::string replaced_expr;
+        std::vector<Token> postfix_expr;
+
+        bool* DataStructureDefined;
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::string TTree_name;
+    public:
+        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), TTree_name(TTree_name_) {
+            // load file list and initialize entry counter
+            load_files(dirname.c_str(), &filename, including_string_);
+            Nentry = filename.size();
+            Currententry = 0;
+
+            // check data structure
+            for (int i = 0; i < Nentry; i++) {
+                TFile* input_file = new TFile((dirname + std::string("/") + filename.at(i)).c_str(), "read");
+
+                // read tree
+                TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
+
+                // read list of branches
+                TObjArray* temp_branchList = temp_tree->GetListOfBranches();
+
+                // read/check name of branches and their type
+                if ((*DataStructureDefined) == false) {
+                    for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                        const char* temp_branch_name = temp_branchList->At(j)->GetName();
+                        const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
+
+                        variable_names_->push_back(temp_branch_name);
+                        VariableTypes_->push_back(std::string(TypeName));
+                    }
+                    (*DataStructureDefined) = true;
+                }
+                else {
+                    for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                        const char* temp_branch_name = temp_branchList->At(j)->GetName();
+                        const char* TypeName = temp_tree->FindLeaf(temp_branch_name)->GetTypeName();
+
+                        if (variable_names_->at(j) != std::string(temp_branch_name)) {
+                            printf("variable name is different: %s %s\n", variable_names_->at(j).c_str(), temp_branch_name);
+                            exit(1);
+                        }
+                        else if (VariableTypes_->at(j) != std::string(TypeName)) {
+                            printf("type is different: %s %s\n", VariableTypes_->at(j).c_str(), TypeName);
+                            exit(1);
+                        }
+                    }
+                }
+
+                input_file->Close();
+                delete input_file;
+            }
+
+            // copy variable name and variable type
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+        }
+        ~LoadWithCut() {}
+
+        void Start() override {
+            // fill `temp_variable` by dummy value. It is to set variable type beforehand.
+            for (int i = 0; i < VariableTypes.size(); i++) {
+                if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
+                    temp_variable.push_back(static_cast<double>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(i).c_str(), "Int_t") == 0) {
+                    temp_variable.push_back(static_cast<int>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(i).c_str(), "UInt_t") == 0) {
+                    temp_variable.push_back(static_cast<unsigned int>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(i).c_str(), "Float_t") == 0) {
+                    temp_variable.push_back(static_cast<float>(0.0));
+                }
+                else if (strcmp(VariableTypes.at(i).c_str(), "string") == 0) {
+                    temp_variable.push_back(static_cast<std::string*>(nullptr));
+                }
+                else {
+                    printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
+                    exit(1);
+                }
+            }
+
+            replaced_expr = replaceVariables(cut_string, &variable_names);
+            postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
+        }
+
+        int Process(std::vector<Data>* data) override {
+            // read Currententry'th file. If there is not file to read, just return 1
+            if (Currententry == Nentry) return 1;
+
+            // if there is remaining data, do not extract additional one
+            if (data->empty() == false) return 0;
+
+            // read file
+            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
+            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
+
+            // read tree
+            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
+
+            // set branch addresses
+            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                }
+                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
+                }
+            }
+
+            // fill Data vector
+            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
+                temp_tree->GetEntry(j);
+
+                double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
+
+                if (result > 0.5) {
+                    Data temp = { temp_variable, label, filename.at(Currententry) };
+                    data->push_back(temp);
+                }
+            }
+
+            input_file->Close();
+            delete input_file;
+            Currententry++;
+            return 0;
+        }
+
+        void End() override {}
+    };
+
     class Cut : public Module {
     private:
         std::string cut_string;

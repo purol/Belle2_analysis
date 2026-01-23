@@ -79,6 +79,7 @@ public:
     void SetBackground(std::vector<std::string> labels_);
 
     void Load(const char* dirname_, const char* including_string_, const char* label_);
+    void LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_);
     void Cut(const char* cut_string_);
     std::shared_ptr<std::vector<double>> PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
@@ -160,6 +161,11 @@ void Loader::SetBackground(std::vector<std::string> labels_) {
 
 void Loader::Load(const char* dirname_, const char* including_string_, const char* label_) {
     Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes, TTree_name.c_str());
+    Modules.push_back(temp_module);
+}
+
+void Loader::LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_) {
+    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, cut_string_ , &DataStructureDefined, &variable_names, &VariableTypes, TTree_name.c_str());
     Modules.push_back(temp_module);
 }
 
