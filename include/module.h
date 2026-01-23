@@ -273,13 +273,19 @@ namespace Module {
         }
 
         int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
-                if (result < 0.5) {
-                    data->erase(iter);
+            // Use std::stable_partition. 
+            // It reorders 'data' so that elements where the lambda returns 'true' come first.
+            // It returns an iterator to the first 'bad' element.
+            std::vector<Data>::iterator it_end_of_good = std::stable_partition(data->begin(), data->end(),
+                [&](const Data& d) {
+                    // Return true to KEEP the event
+                    double result = EvaluatePostfixExpression(postfix_expr, d.variable, &VariableTypes);
+                    return result > 0.5;
                 }
-                else ++iter;
-            }
+            );
+
+            // Erase everything from the first bad element to the end
+            data->erase(it_end_of_good, data->end());
 
             return 1;
         }
