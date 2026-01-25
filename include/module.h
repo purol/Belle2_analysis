@@ -2,6 +2,7 @@
 #define MODULE_H
 
 #include <vector>
+#include <deque>
 #include <string>
 #include <unordered_set>
 #include <algorithm>
@@ -76,14 +77,14 @@ struct CompareHistory {
 /*
 * reserved function which always return 1.0
 */
-double reserve_function(std::vector<Data>::iterator data_, std::vector<std::string> variable_names_) {
+double reserve_function(std::deque<Data>::iterator data_, std::vector<std::string> variable_names_) {
     return 1.0;
 }
 
 /*
 * global function pointer. This can be modified outside module.h
 */
-double (*ObtainWeight)(std::vector<Data>::iterator, std::vector<std::string>) = reserve_function;
+double (*ObtainWeight)(std::deque<Data>::iterator, std::vector<std::string>) = reserve_function;
 
 namespace Module {
 
@@ -104,7 +105,7 @@ namespace Module {
         * return: For `Load` module, if it cannot read ROOT file, because there is no more file to read, it is 1. Otherwise, it is 0.
         * For other all modules, it is always 1.
         */
-        virtual int Process(std::vector<Data>* data) = 0;
+        virtual int Process(std::deque<Data>* data) = 0;
         /*
         * `End` function is called after all ROOT files are read. It is called only once.
         */
@@ -205,7 +206,7 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
             // read Currententry'th file. If there is not file to read, just return 1
             if (Currententry == Nentry) return 1;
 
@@ -356,7 +357,7 @@ namespace Module {
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
             // read Currententry'th file. If there is not file to read, just return 1
             if (Currententry == Nentry) return 1;
 
@@ -427,11 +428,11 @@ namespace Module {
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
             // Use std::stable_partition. 
             // It reorders 'data' so that elements where the lambda returns 'true' come first.
             // It returns an iterator to the first 'bad' element.
-            std::vector<Data>::iterator it_end_of_good = std::stable_partition(data->begin(), data->end(),
+            std::deque<Data>::iterator it_end_of_good = std::stable_partition(data->begin(), data->end(),
                 [&](const Data& d) {
                     // Return true to KEEP the event
                     double result = EvaluatePostfixExpression(postfix_expr, d.variable, &VariableTypes);
@@ -517,8 +518,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -615,8 +616,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
@@ -744,8 +745,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
@@ -876,7 +877,7 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
 
             std::string filename;
             std::string basename;
@@ -1023,8 +1024,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 temp_file->cd();
                 temp_variable = iter->variable;
                 temp_tree->Fill();
@@ -1127,11 +1128,11 @@ namespace Module {
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
 
             // It is temporary data to save Data before/after BCS is done.
-            std::vector<Data> temp_data;
-            std::vector<Data> temp_data_after_BCS;
+            std::deque<Data> temp_data;
+            std::deque<Data> temp_data_after_BCS;
 
             // initialize extreme value/index
             double extreme_value;
@@ -1144,10 +1145,10 @@ namespace Module {
             std::vector<int> selected_indices;
 
             // initialization flag previous event variable
-            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
+            bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -1327,7 +1328,7 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
 
             // Convert the string to a size_t hash value
             std::hash<std::string> hasher;
@@ -1340,18 +1341,18 @@ namespace Module {
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after BCS is done.
-            std::vector<Data> temp_data;
-            std::vector<Data> temp_data_after_BCS;
+            std::deque<Data> temp_data;
+            std::deque<Data> temp_data_after_BCS;
 
             // initialize extreme value/index
             double extreme_value = -std::numeric_limits<double>::max();
             std::vector<int> selected_indices;
 
             // initialization flag previous event variable
-            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
+            bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -1510,8 +1511,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -1658,9 +1659,9 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -1879,9 +1880,9 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2145,9 +2146,9 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
@@ -2391,9 +2392,9 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2409,7 +2410,7 @@ namespace Module {
                 ++iter;
             }
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
                 if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
 
@@ -2581,8 +2582,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
 
@@ -2991,9 +2992,9 @@ namespace Module {
             InputVariable = new std::vector<float>[postfix_exprs.size()];
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 // care about preselection first
                 double preselection_result = -1;
@@ -3122,9 +3123,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<float> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -3233,7 +3234,7 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) override {
+        int Process(std::deque<Data>* data) override {
 
             // Convert the string to a size_t hash value
             std::hash<std::string> hasher;
@@ -3246,14 +3247,14 @@ namespace Module {
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after selection is done.
-            std::vector<Data> temp_data;
-            std::vector<Data> temp_data_after_selection;
+            std::deque<Data> temp_data;
+            std::deque<Data> temp_data_after_selection;
 
             // initialization flag previous event variable
-            bool ItIsTheFirstData = true; // we erase data from std::vector<Data>. we should avoid the comparison with data->begin()
+            bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -3369,9 +3370,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -3442,9 +3443,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double condition_result = -1;
                 std::vector<double> condition_results;
@@ -3521,9 +3522,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double avg = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -3584,9 +3585,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double avg = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -3663,9 +3664,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<double> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -3744,9 +3745,9 @@ namespace Module {
 
         }
 
-        int Process(std::vector<Data>* data) {
+        int Process(std::deque<Data>* data) {
 
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 std::vector<double> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -3804,8 +3805,8 @@ namespace Module {
             }
 
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     std::vector<Token> postfix_expr = postfix_exprs.at(i);
                     double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
@@ -3855,8 +3856,8 @@ namespace Module {
             postfix_expr_x = PostfixExpression(replaced_expr_x, &VariableTypes);
             postfix_expr_y = PostfixExpression(replaced_expr_y, &VariableTypes);
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
 
@@ -3891,8 +3892,8 @@ namespace Module {
             replaced_expr = replaceVariables(equation, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 th1d->Fill(result, ObtainWeight(iter, variable_names));
@@ -3928,8 +3929,8 @@ namespace Module {
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
@@ -3973,8 +3974,8 @@ namespace Module {
             x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
             y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
@@ -4012,8 +4013,8 @@ namespace Module {
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
@@ -4050,8 +4051,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 std::vector<double> results;
 
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -4152,8 +4153,8 @@ namespace Module {
             }
         }
 
-        int Process(std::vector<Data>* data) override {
-            for (std::vector<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(0.5, ObtainWeight(iter, variable_names));
 

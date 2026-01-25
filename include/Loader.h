@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 #include <variant>
 #include <tuple>
 #include <memory>
@@ -58,7 +59,8 @@ private:
     std::vector<std::string> MC_label_list;
     std::vector<std::string> Data_label_list;
 
-    std::vector<Data> TotalData;
+    // to save memory, std::deque is used
+    std::deque<Data> TotalData;
 
 public:
     Loader(const char* TTree_name_);
