@@ -243,8 +243,18 @@ namespace Module {
             for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
                 temp_tree->GetEntry(j);
 
-                Data temp = { temp_variable, label, filename.at(Currententry) };
-                data->push_back(temp);
+                Data temp;
+
+                // assing 50 more slots to avoid vector memory spike
+                temp.variable.reserve(VariableTypes.size() + 50);
+
+                // copy from temp_variable
+                temp.variable.insert(temp.variable.end(), temp_variable.begin(), temp_variable.end());
+                temp.label = label;
+                temp.filename = filename.at(Currententry);
+
+                // use std::move to avoid copy
+                data->push_back(std::move(temp));
             }
 
             input_file->Close();
@@ -397,8 +407,18 @@ namespace Module {
                 double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
 
                 if (result > 0.5) {
-                    Data temp = { temp_variable, label, filename.at(Currententry) };
-                    data->push_back(temp);
+                    Data temp;
+
+                    // assing 50 more slots to avoid vector memory spike
+                    temp.variable.reserve(VariableTypes.size() + 50);
+
+                    // copy from temp_variable
+                    temp.variable.insert(temp.variable.end(), temp_variable.begin(), temp_variable.end());
+                    temp.label = label;
+                    temp.filename = filename.at(Currententry);
+
+                    // use std::move to avoid copy
+                    data->push_back(std::move(temp));
                 }
             }
 
