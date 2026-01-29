@@ -1178,7 +1178,7 @@ namespace Module {
             bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); iter++) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -1260,7 +1260,6 @@ namespace Module {
 
                 // get Data
                 temp_data.push_back(*iter);
-                data->erase(iter);
 
                 previous_event_variable = temp_event_variable;
 
@@ -1286,6 +1285,7 @@ namespace Module {
             }
 
             // use swap instead of copy to save computing resource
+            data->clear();
             data->swap(temp_data_after_BCS);
 
             return 1;
@@ -1382,7 +1382,7 @@ namespace Module {
             bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); iter++) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -1447,7 +1447,6 @@ namespace Module {
 
                 // get Data
                 temp_data.push_back(*iter);
-                data->erase(iter);
 
                 previous_event_variable = temp_event_variable;
 
@@ -1468,6 +1467,7 @@ namespace Module {
             }
 
             // use swap instead of copy to save computing resource
+            data->clear();
             data->swap(temp_data_after_BCS);
 
             return 1;
@@ -3284,7 +3284,7 @@ namespace Module {
             bool ItIsTheFirstData = true; // we erase data from std::deque<Data>. we should avoid the comparison with data->begin()
             std::vector<std::variant<int, unsigned int, float, double, std::string*>> previous_event_variable = temp_event_variable;
 
-            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); iter++) {
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -3332,7 +3332,6 @@ namespace Module {
 
                 // get Data
                 temp_data.push_back(*iter);
-                data->erase(iter);
 
                 previous_event_variable = temp_event_variable;
 
@@ -3353,6 +3352,7 @@ namespace Module {
             temp_data.clear();
 
             // use swap instead of copy to save computing resource
+            data->clear();
             data->swap(temp_data_after_selection);
 
             return 1;
