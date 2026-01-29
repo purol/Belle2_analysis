@@ -961,7 +961,13 @@ namespace Module {
                 }
 
                 temp_file->cd();
-                temp_variable = data->at(i).variable;
+
+                if (temp_variable.size() != data->at(i).variable.size()) {
+                    printf("Error: [PrintSeparateRootFile] size mismatch!\n");
+                    exit(1);
+                }
+                for (size_t j = 0; j < temp_variable.size(); j++) temp_variable.at(j) = data->at(i).variable.at(j);
+
                 temp_tree->Fill();
             }
 
@@ -1047,7 +1053,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 temp_file->cd();
-                temp_variable = iter->variable;
+                if (temp_variable.size() != iter->variable.size()) {
+                    printf("Error: [PrintRootFile] size mismatch!\n");
+                    exit(1);
+                }
+                for (size_t j = 0; j < temp_variable.size(); j++) temp_variable.at(j) = iter->variable.at(j);
                 temp_tree->Fill();
                 ++iter;
             }
