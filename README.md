@@ -57,4 +57,3 @@ Through the modular architecture, you can easily plug in additional operations:
 
 * **Example:** Detailed example codes are located in `./src/Analysis_main.cc`.
 * **Real-world Application:** This framework is actively used for the $\tau \to \mu \mu \mu$ [data analysis](https://github.com/purol/Belle_tau) in the Belle II experiment, processing actual large-scale collision data.
-```
