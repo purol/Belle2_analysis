@@ -111,6 +111,7 @@ public:
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_ = "");
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
     void DefineNewVariable(const char* equation_, const char* new_variable_name_);
+    void RemoveVariable(std::vector<std::string> removed_variable_names_);
     void ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_);
     void GetAverage(std::vector<std::string> equations_, const char* new_variable_name_);
     void GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_);
@@ -329,6 +330,11 @@ void Loader::FastBDTApplication(std::vector<std::string> input_variables_, const
 
 void Loader::DefineNewVariable(const char* equation_, const char* new_variable_name_) {
     Module::Module* temp_module = new Module::DefineNewVariable(equation_, new_variable_name_, &variable_names, &VariableTypes);
+    Modules.push_back(temp_module);
+}
+
+void Loader::RemoveVariable(std::vector<std::string> removed_variable_names_) {
+    Module::Module* temp_module = new Module::RemoveVariable(removed_variable_names_, &variable_names, &VariableTypes);
     Modules.push_back(temp_module);
 }
 

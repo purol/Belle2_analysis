@@ -3422,6 +3422,65 @@ namespace Module {
         }
     };
 
+    class RemoveVariable : public Module {
+    private:
+        std::vector<std::string> removed_variable_names;
+        std::vector<int> removed_index;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+
+    public:
+        RemoveVariable(std::vector<std::string> removed_variable_names_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : Module(), removed_variable_names(removed_variable_names_) {
+
+            // get index
+            for (std::string removed_variable_name : removed_variable_names) {
+                std::vector<std::string>::iterator iter = std::find(variable_names_->begin(), variable_names_->end(), removed_variable_name);
+
+                if (iter != variable_names_->end()) {
+                    removed_index.push_back(iter - variable_names_->begin());
+                }
+            }
+
+            // sort by decreasing order
+            std::sort(removed_index.begin(), removed_index.end(), std::greater<int>());
+
+            // copy variable list first, but it will not be used
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // remove variable
+            for (int idx : removed_index) {
+                variable_names_->erase(variable_names_->begin() + idx);
+                VariableTypes_->erase(VariableTypes_->begin() + idx);
+            }
+        }
+
+        ~RemoveVariable() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::deque<Data>* data) {
+
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                for (int idx : removed_index) {
+                    iter->variable.erase(iter->variable.begin() + idx);
+                }
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
     class ConditionalPairDefineNewVariable : public Module {
     private:
         std::map<std::string, std::string> condition_equation__criteria_equation_list;
