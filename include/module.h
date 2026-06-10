@@ -31,6 +31,21 @@
 #include <TH1.h>
 #include <TH2.h>
 
+// to remove duplicate elements in std::vector
+void removeDuplicates(std::vector<std::string>& labels)
+{
+    std::unordered_set<std::string> seen;
+    std::vector<std::string> unique_labels;
+
+    for (const std::string& label : labels) {
+        if (seen.insert(label).second) {
+            unique_labels.push_back(label);
+        }
+    }
+
+    labels = std::move(unique_labels);
+}
+
 // for the comparison of `std::vector<std::variant<int, unsigned int, float, double, std::string*>>`
 struct CompareHistory {
     bool operator()(const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& lhs, const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& rhs) const {
@@ -2556,6 +2571,12 @@ namespace Module {
             stack_error = nullptr;
             hist = nullptr;
             RatioorPull = nullptr;
+
+            // remove duplicated labels
+            removeDuplicates(Signal_label_list);
+            removeDuplicates(Background_label_list);
+            removeDuplicates(data_label_list);
+            removeDuplicates(MC_label_list);
 
             // actually, the first and third else-if can be written in one line. However, I write them into the two line explicitly
             if ((data_label_list.size() != 0) && (MC_label_list.size() != 0)) {}
