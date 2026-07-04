@@ -2892,7 +2892,7 @@ namespace Module {
                     legend->AddEntry(stack_hist[i], stack_label_list.at(i).c_str(), "f");
                 }
                 legend->AddEntry(stack_error, "MC stat error", "f");
-                legend->AddEntry(hist, Signal_label_list.at(0).c_str()", "f");
+                legend->AddEntry(hist, Signal_label_list.at(0).c_str(), "f");
                 legend->SetNColumns(3);
 
                 legend->SetFillStyle(0); legend->SetLineWidth(0);
