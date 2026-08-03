@@ -2,30 +2,41 @@
 #define EVENTWEIGHT_H
 
 #include "data.h"
+#include "base.h"
 #include <vector>
 #include <string>
 #include <stdio.h>
 #include <random>
+#include <algorithm>
+
+struct WeightAxis {
+    std::string name;
+    std::string min_column;
+    std::string max_column;
+};
+
+struct WeightUncertainty {
+    std::string up_column;
+    std::string down_column;
+    bool bins_correlated;
+};
 
 class EventWeight {
 private:
-    static std::mt19937 gen(std::random_device{}());
-    std::normal_distribution<double> dist{0.0, 1.0};
+    inline static std::mt19937 gen{ std::random_device{}() };
+    std::normal_distribution<double> normal_dist{0.0, 1.0};
 
     bool constWeight;
     static constexpr double DEFAULT_VALUE = 1.0;
 
-    std::vector<std::string> variable_names;
-    std::vector<std::string> variable_index; // index in Data structure
+    std::vector<std::string> variable_names; // name of variable used in EventWeight class
     std::vector<std::vector<double>> variable_min; // variable_min[bin range][variable]
-    std::vector<std::vector<double>> variable_max; // variable_min[bin range][variable]
+    std::vector<std::vector<double>> variable_max; // variable_max[bin range][variable]
     std::vector<double> nominal_weight_value;
     std::vector<double> fluctuated_weight_value;
-    std::vector<std::vector<double>> fluctuation_up; // Absolute uncertainty of weight. fluctuation_up[fluctuation type][fluctuation value]
-    std::vector<std::vector<double>> fluctuation_down; // Absolute uncertainty of weight. fluctuation_down[fluctuation type][fluctuation value]
+    std::vector<std::vector<double>> fluctuation_up; // Absolute uncertainty of weight. Should be positive. fluctuation_up[fluctuation type][fluctuation value]
+    std::vector<std::vector<double>> fluctuation_down; // Absolute uncertainty of weight. Should be positive. fluctuation_down[fluctuation type][fluctuation value]
     std::vector<bool> correlated; // correlation among bins
-
-    bool IsItAdditive;
 
     /* 
     example table:
@@ -48,46 +59,122 @@ private:
 
 public:
     EventWeight(const double constWeight_);
-    EventWeight(const char* CSV_name_, std::vector<std::string> bin_names_, std::vector<std::string> weight_name_, std::vector<std::string> fluctuation_up_names_, std::vector<std::string> fluctuation_down_names_, std::vector<bool> correlated_);
+    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_);
 
-    void NameToIndex(std::vector<std::string> variable_names_);
-    double Evaluate(const Data& data_);
+    std::vector<std::size_t> NameToIndex(const std::vector<std::string>& variable_names_);
+    double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_);
     void Fluctuate();
     void ResetToNominal();
 };
 
-EventWeight::EventWeight(const double constWeight_) : gen(rd()), constWeight(true) {
+inline EventWeight::EventWeight(const double constWeight_) : constWeight(true) {
     nominal_weight_value.push_back(constWeight_);
     fluctuated_weight_value.push_back(constWeight_);
 }
 
-void EventWeight::NameToIndex(std::vector<std::string> variable_names_){
+inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_) : constWeight(false) {
+    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"dataMCratio_sys_up", "dataMCratio_sys_down", true}});
+
+    std::vector<std::string> axis_min_column_names;
+    std::vector<std::string> axis_max_column_names;
+    std::string weight_column_name;
+    std::vector<std::string> uncer_up_column_names;
+    std::vector<std::string> uncer_down_column_names;
+
+    for (int i = 0; i < axis_columns_.size(); i++) {
+        axis_min_column_names.push_back(axis_columns_.at(i).min_column);
+        axis_max_column_names.push_back(axis_columns_.at(i).max_column);
+    }
+    weight_column_name = weight_column_;
+    for (int i = 0; i < weight_unc_columns_.size(); i++) {
+        uncer_up_column_names.push_back(weight_unc_columns_.at(i).up_column);
+        uncer_down_column_names.push_back(weight_unc_columns_.at(i).down_column);
+    }
+
+    std::vector<std::string> all_column_names;
+    all_column_names.insert(all_column_names.end(), axis_min_column_names.begin(), axis_min_column_names.end());
+    all_column_names.insert(all_column_names.end(), axis_max_column_names.begin(), axis_max_column_names.end());
+    all_column_names.push_back(weight_column_name);
+    all_column_names.insert(all_column_names.end(), uncer_up_column_names.begin(), uncer_up_column_names.end());
+    all_column_names.insert(all_column_names.end(), uncer_down_column_names.begin(), uncer_down_column_names.end());
+
+    std::vector<std::vector<double>> column_values = ReadCSVDoubleColumns(CSV_file_, all_column_names);
+    const int bin_size = column_values.at(0).size();
+    const int axis_num = axis_min_column_names.size();
+    const int uncer_num = uncer_up_column_names.size();
+
+    fluctuation_up.resize(uncer_num);
+    fluctuation_down.resize(uncer_num);
+
+    for (int bin_index = 0; bin_index < bin_size; bin_index++) {
+        std::vector<double> temp_vec;
+        for (int axis_index = 0; axis_index < axis_num; axis_index++) {
+            temp_vec.push_back(column_values.at(axis_index).at(bin_index));
+        }
+        variable_min.push_back(temp_vec);
+        temp_vec.clear();
+
+        for (int axis_index = axis_num; axis_index < (axis_num + axis_num); axis_index++) {
+            temp_vec.push_back(column_values.at(axis_index).at(bin_index));
+        }
+        variable_max.push_back(temp_vec);
+        temp_vec.clear();
+
+        nominal_weight_value.push_back(column_values.at(axis_num + axis_num).at(bin_index));
+        fluctuated_weight_value.push_back(column_values.at(axis_num + axis_num).at(bin_index));
+
+        for (int axis_index = (axis_num + axis_num + 1); axis_index < (axis_num + axis_num + 1 + uncer_num); axis_index++) {
+            fluctuation_up.at(axis_index - (axis_num + axis_num + 1)).push_back(column_values.at(axis_index).at(bin_index));
+        }
+        temp_vec.clear();
+
+        for (int axis_index = (axis_num + axis_num + 1 + uncer_num); axis_index < (axis_num + axis_num + 1 + uncer_num + uncer_num); axis_index++) {
+            fluctuation_down.at(axis_index - (axis_num + axis_num + 1 + uncer_num)).push_back(column_values.at(axis_index).at(bin_index));
+        }
+        temp_vec.clear();
+    }
+
+    for (int i = 0; i < axis_columns_.size(); i++) {
+        variable_names.push_back(axis_columns_.at(i).name);
+    }
+
+    for (int i = 0; i < weight_unc_columns_.size(); i++) {
+        correlated.push_back(weight_unc_columns_.at(i).bins_correlated);
+    }
+}
+
+inline std::vector<std::size_t> EventWeight::NameToIndex(const std::vector<std::string>& variable_names_){
+    std::vector<std::size_t> variable_indices;
+
     for(int i = 0; i < variable_names.size(); i++){
         std::string variable_name = variable_names.at(i);
         std::vector<std::string>::iterator it = std::find(variable_names_.begin(), variable_names_.end(), variable_name);
         if (it != variable_names_.end()) {
-            int index = std::distance(variable_names_.begin(), it);
-            variable_index.push_back(index);
+            std::size_t index = std::distance(variable_names_.begin(), it);
+            variable_indices.push_back(index);
         }
         else{
             printf("[EventWeight] Cannot find variable %s\n", variable_name.c_str());
             exit(1);
         }
     }
+
+    return variable_indices;
 }
 
-double EventWeight::Evaluate(const Data& data_){
+inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_){
+    /* to do: need to fix */
     if(constWeight){
         return fluctuated_weight_value.at(0);
     }
     else{
         for(int i = 0; i < fluctuated_weight_value.size(); i++){
             bool IsThisBin = true;
-            for(int j = 0; j < variable_index.size(); j++){
-                index = variable_index.at(j);
-                value_min = variable_min.at(i).at(j);
-                value_max = variable_max.at(i).at(j);
-                value = std::get<double>(data_.variable.at(index));
+            for(int j = 0; j < variable_indices_.size(); j++){
+                std::size_t index = variable_indices_.at(j);
+                double value_min = variable_min.at(i).at(j);
+                double value_max = variable_max.at(i).at(j);
+                double value = std::get<double>(data_.variable.at(index));
 
                 if((value < value_min) || (value >= value_max)){
                     IsThisBin = false;
@@ -95,20 +182,36 @@ double EventWeight::Evaluate(const Data& data_){
                 }
             }
 
-            if(IsThisBins) return fluctuated_weight_value.at(i);
+            if(IsThisBin) return fluctuated_weight_value.at(i);
         }
         return DEFAULT_VALUE;
     }
 }
 
-void EventWeight::Fluctuate(){
+inline void EventWeight::Fluctuate(){
+    ResetToNominal();
     if(constWeight) return;
-    else{
-        // to do
+    else {
+        for (int idx_fluc = 0; idx_fluc < fluctuation_up.size(); idx_fluc++) {
+            if (correlated.at(idx_fluc)) {
+                double alpha = normal_dist(gen);
+                for (int i = 0; i < nominal_weight_value.size(); i++) {
+                    if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
+                    else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
+                }
+            }
+            else {
+                for (int i = 0; i < nominal_weight_value.size(); i++) {
+                    double alpha = normal_dist(gen);
+                    if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
+                    else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
+                }
+            }
+        }
     }
 }
 
-void EventWeight::ResetToNominal(){
+inline void EventWeight::ResetToNominal(){
     for(int i = 0; i < nominal_weight_value.size(); i++){
         fluctuated_weight_value.at(i) = nominal_weight_value.at(i);
     }

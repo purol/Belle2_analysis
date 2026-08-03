@@ -3,6 +3,9 @@
 
 #include <string>
 #include <random>
+#include <vector>
+#include <fstream>
+#include <sstream>
 
 #include "TSystemDirectory.h"
 #include "TList.h"
@@ -68,6 +71,91 @@ void load_files(const char* dirname, std::vector<std::string>* names, const char
             }
         }
     }
+}
+
+std::vector<std::string> splitCSVLine(const std::string& line) {
+    std::vector<std::string> fields;
+    std::stringstream ss(line);
+    std::string field;
+
+    while (std::getline(ss, field, ',')) {
+        fields.push_back(field);
+    }
+
+    if (!line.empty() && line.back() == ',') {
+        fields.emplace_back();
+    }
+
+    return fields;
+}
+
+std::vector<std::vector<std::string>> ReadCSVColumns(const std::string& filePath, const std::vector<std::string>& columnNames) {
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        printf("[ReadCSVColumns] Cannot open %s", filePath.c_str());
+        exit(1);
+    }
+
+    std::string line;
+     
+    // read header
+    if (!std::getline(file, line)) {
+        printf("[ReadCSVColumns] %s is empty", filePath.c_str());
+        exit(1);
+    }
+    const std::vector<std::string> header = splitCSVLine(line);
+
+    std::vector<int> column_index;
+    for (std::size_t i = 0; i < columnNames.size(); i++) {
+        std::string columnName = columnNames.at(i);
+        std::vector<std::string>::iterator it = std::find(header.begin(), header.end(), columnName);
+
+        if (it != header.end()) {
+            int index = std::distance(header.begin(), it);
+            column_index.push_back(index);
+        }
+        else {
+            printf("[ReadCSVColumns] Cannot find column %s in %s", columnName.c_str(), filePath.c_str());
+            exit(1);
+        }
+    }
+
+    // read rows
+    std::vector<std::vector<std::string>> values;
+    for (std::size_t i = 0; i < columnNames.size(); i++) {
+        std::vector<std::string> temp_column;
+        values.push_back(temp_column);
+    }
+    while (std::getline(file, line)) {
+        const std::vector<std::string> content = splitCSVLine(line);
+
+        for (std::size_t i = 0; i < column_index.size(); i++) {
+            int index = column_index.at(i);
+            values.at(i).push_back(content.at(index));
+        }
+    }
+
+    return values;
+
+}
+
+std::vector<std::vector<double>> ReadCSVDoubleColumns(const std::string& filePath, const std::vector<std::string>& columnNames) {
+    const std::vector<std::vector<std::string>> stringValues = ReadCSVColumns(filePath, columnNames);
+
+    std::vector<std::vector<double>> values;
+    for (std::size_t i = 0; i < stringValues.size(); i++) {
+        std::vector<double> temp_column;
+        values.push_back(temp_column);
+    }
+
+    for (int column_index = 0; column_index < stringValues.size(); column_index++) {
+        for (int row_index = 0; row_index < stringValues.at(column_index).size(); row_index++) {
+            values.at(column_index).push_back(std::stod(stringValues.at(column_index).at(row_index)));
+        }
+    }
+
+    return values;
 }
 
 #endif 
