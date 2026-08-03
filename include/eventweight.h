@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <random>
 #include <algorithm>
+#include <map>
+#include <cstdlib>
 
 struct WeightAxis {
     std::string name;
@@ -61,7 +63,7 @@ public:
     EventWeight(const double constWeight_);
     EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_);
 
-    double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_);
+    double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
     void ResetToNominal();
 };
@@ -149,7 +151,7 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
     }
     else{
         if(variable_indices_.size() != variable_names.size()){
-            printf("[EventWeight::Evaluate] Expected %d input variables, but received %d\n", variable_indices_.size(), variable_names.size());
+            printf("[EventWeight::Evaluate] Expected %zu input variables, but received %zu\n", variable_names.size(), variable_indices_.size());
             exit(1);
         }
 
@@ -200,6 +202,52 @@ inline void EventWeight::ResetToNominal(){
     for(int i = 0; i < nominal_weight_value.size(); i++){
         fluctuated_weight_value.at(i) = nominal_weight_value.at(i);
     }
+}
+
+class EventWeights{
+private:
+    std::map<std::string, EventWeight> eventweight_map;
+
+    static EventWeights& getInstance(){
+        static EventWeights instance;
+        return instance;
+    }
+
+    void InternalRegister(const std::string& weight_name_, const EventWeight& eventweight_);
+    EventWeight* InternalGetWeight(const std::string& weight_name_);
+public:
+    static void Register(const std::string& weight_name_, const EventWeight& eventweight_);
+    static EventWeight* GetWeight(const std::string& weight_name_);
+};
+
+inline void EventWeights::InternalRegister(const std::string& weight_name_, const EventWeight& eventweight_){
+    std::map<std::string, EventWeight>::iterator it = eventweight_map.find(weight_name_);
+
+    if(it != eventweight_map.end()){
+        printf("[EventWeights::InternalRegister] weight %s already exists\n", weight_name_.c_str());
+        exit(1);
+    }
+    else eventweight_map.insert_or_assign(weight_name_, eventweight_); 
+}
+
+inline EventWeight* EventWeights::InternalGetWeight(const std::string& weight_name_){
+    std::map<std::string, EventWeight>::iterator it = eventweight_map.find(weight_name_);
+
+    if(it != eventweight_map.end()){
+        return &(it->second);
+    }
+    else{
+        printf("[EventWeights::InternalGetWeight] weight %s is not found\n", weight_name_.c_str());
+        exit(1);
+    }
+}
+
+inline void EventWeights::Register(const std::string& weight_name_, const EventWeight& eventweight_){
+    getInstance().InternalRegister(weight_name_, eventweight_);
+}
+
+inline EventWeight* EventWeights::GetWeight(const std::string& weight_name_){
+    return getInstance().InternalGetWeight(weight_name_);
 }
 
 #endif 
