@@ -29,6 +29,7 @@ private:
     std::normal_distribution<double> normal_dist{0.0, 1.0};
 
     bool constWeight;
+    bool IsThereUncertainty;
     static constexpr double DEFAULT_VALUE = 1.0;
 
     std::vector<std::string> variable_names; // name of variable used in EventWeight class
@@ -62,18 +63,21 @@ private:
 public:
     EventWeight(const double constWeight_);
     EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_);
+    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_);
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_);
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_);
 
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
     void ResetToNominal();
 };
 
-inline EventWeight::EventWeight(const double constWeight_) : constWeight(true) {
+inline EventWeight::EventWeight(const double constWeight_) : constWeight(true), IsThereUncertainty(false) {
     nominal_weight_value.push_back(constWeight_);
     fluctuated_weight_value.push_back(constWeight_);
 }
 
-inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_) : constWeight(false) {
+inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_) : constWeight(false), IsThereUncertainty(true) {
     // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"dataMCratio_sys_up", "dataMCratio_sys_down", true}});
 
     std::vector<std::string> axis_min_column_names;
@@ -144,6 +148,55 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
 }
 
+inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_) : constWeight(false), IsThereUncertainty(false) {
+    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio");
+
+    std::vector<std::string> axis_min_column_names;
+    std::vector<std::string> axis_max_column_names;
+    std::string weight_column_name;
+
+    for (int i = 0; i < axis_columns_.size(); i++) {
+        axis_min_column_names.push_back(axis_columns_.at(i).min_column);
+        axis_max_column_names.push_back(axis_columns_.at(i).max_column);
+    }
+    weight_column_name = weight_column_;
+
+    std::vector<std::string> all_column_names;
+    all_column_names.insert(all_column_names.end(), axis_min_column_names.begin(), axis_min_column_names.end());
+    all_column_names.insert(all_column_names.end(), axis_max_column_names.begin(), axis_max_column_names.end());
+    all_column_names.push_back(weight_column_name);
+
+    std::vector<std::vector<double>> column_values = ReadCSVDoubleColumns(CSV_file_, all_column_names);
+    const int bin_size = column_values.at(0).size();
+    const int axis_num = axis_min_column_names.size();
+
+    for (int bin_index = 0; bin_index < bin_size; bin_index++) {
+        std::vector<double> temp_vec;
+        for (int axis_index = 0; axis_index < axis_num; axis_index++) {
+            temp_vec.push_back(column_values.at(axis_index).at(bin_index));
+        }
+        variable_min.push_back(temp_vec);
+        temp_vec.clear();
+
+        for (int axis_index = axis_num; axis_index < (axis_num + axis_num); axis_index++) {
+            temp_vec.push_back(column_values.at(axis_index).at(bin_index));
+        }
+        variable_max.push_back(temp_vec);
+        temp_vec.clear();
+
+        nominal_weight_value.push_back(column_values.at(axis_num + axis_num).at(bin_index));
+        fluctuated_weight_value.push_back(column_values.at(axis_num + axis_num).at(bin_index));
+    }
+
+    for (int i = 0; i < axis_columns_.size(); i++) {
+        variable_names.push_back(axis_columns_.at(i).name);
+    }
+}
+
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), fluctuation_up(fluctuation_up_), fluctuation_down(fluctuation_down_), correlated(correlated_), constWeight(false), IsThereUncertainty(true) {}
+
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), constWeight(false), IsThereUncertainty(false) {}
+
 inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const {
     /* to do: need to fix */
     if(constWeight){
@@ -177,7 +230,10 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
 
 inline void EventWeight::Fluctuate(){
     ResetToNominal();
-    if(constWeight) return;
+    if(!IsThereUncertainty) {
+        printf("[EventWeight::Fluctuate] There is no uncertainty for weight. Just ignore it.\n");
+        return;
+    }
     else {
         for (int idx_fluc = 0; idx_fluc < fluctuation_up.size(); idx_fluc++) {
             if (correlated.at(idx_fluc)) {
