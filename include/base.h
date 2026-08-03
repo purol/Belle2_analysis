@@ -93,7 +93,7 @@ std::vector<std::vector<std::string>> ReadCSVColumns(const std::string& filePath
     std::ifstream file(filePath);
 
     if (!file.is_open()) {
-        printf("[ReadCSVColumns] Cannot open %s", filePath.c_str());
+        printf("[ReadCSVColumns] Cannot open %s\n", filePath.c_str());
         exit(1);
     }
 
@@ -101,7 +101,7 @@ std::vector<std::vector<std::string>> ReadCSVColumns(const std::string& filePath
      
     // read header
     if (!std::getline(file, line)) {
-        printf("[ReadCSVColumns] %s is empty", filePath.c_str());
+        printf("[ReadCSVColumns] %s is empty\n", filePath.c_str());
         exit(1);
     }
     const std::vector<std::string> header = splitCSVLine(line);
@@ -116,7 +116,7 @@ std::vector<std::vector<std::string>> ReadCSVColumns(const std::string& filePath
             column_index.push_back(index);
         }
         else {
-            printf("[ReadCSVColumns] Cannot find column %s in %s", columnName.c_str(), filePath.c_str());
+            printf("[ReadCSVColumns] Cannot find column %s in %s\n", columnName.c_str(), filePath.c_str());
             exit(1);
         }
     }

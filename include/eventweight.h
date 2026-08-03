@@ -61,7 +61,6 @@ public:
     EventWeight(const double constWeight_);
     EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_);
 
-    std::vector<std::size_t> NameToIndex(const std::vector<std::string>& variable_names_);
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_);
     void Fluctuate();
     void ResetToNominal();
@@ -143,31 +142,17 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
 }
 
-inline std::vector<std::size_t> EventWeight::NameToIndex(const std::vector<std::string>& variable_names_){
-    std::vector<std::size_t> variable_indices;
-
-    for(int i = 0; i < variable_names.size(); i++){
-        std::string variable_name = variable_names.at(i);
-        std::vector<std::string>::iterator it = std::find(variable_names_.begin(), variable_names_.end(), variable_name);
-        if (it != variable_names_.end()) {
-            std::size_t index = std::distance(variable_names_.begin(), it);
-            variable_indices.push_back(index);
-        }
-        else{
-            printf("[EventWeight] Cannot find variable %s\n", variable_name.c_str());
-            exit(1);
-        }
-    }
-
-    return variable_indices;
-}
-
-inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_){
+inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const {
     /* to do: need to fix */
     if(constWeight){
         return fluctuated_weight_value.at(0);
     }
     else{
+        if(variable_indices_.size() != variable_names.size()){
+            printf("[EventWeight::Evaluate] Expected %d input variables, but received %d\n", variable_indices_.size(), variable_names.size());
+            exit(1);
+        }
+
         for(int i = 0; i < fluctuated_weight_value.size(); i++){
             bool IsThisBin = true;
             for(int j = 0; j < variable_indices_.size(); j++){
