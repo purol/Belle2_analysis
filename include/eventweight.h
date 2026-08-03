@@ -261,6 +261,11 @@ inline void EventWeight::ResetToNominal(){
 
 class EventWeights{
 private:
+    EventWeights() = default;
+
+    EventWeights(const EventWeights&) = delete;
+    EventWeights& operator=(const EventWeights&) = delete;
+    
     std::map<std::string, EventWeight> eventweight_map;
 
     static EventWeights& getInstance(){
