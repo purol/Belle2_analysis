@@ -197,7 +197,6 @@ inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_,
 inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), constWeight(false) {}
 
 inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const {
-    /* to do: need to fix */
     if(constWeight){
         return fluctuated_weight_value.at(0);
     }
@@ -265,7 +264,7 @@ private:
 
     EventWeights(const EventWeights&) = delete;
     EventWeights& operator=(const EventWeights&) = delete;
-    
+
     std::map<std::string, EventWeight> eventweight_map;
 
     static EventWeights& getInstance(){
