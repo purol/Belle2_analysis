@@ -4487,10 +4487,43 @@ namespace Module {
     public:
         AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
-            for(int i = 0; i < variable_name_map.size(); i++){
-                std::string variable_name = variable_name_map.first;
-                /* to do */
+
+            std::vector<std::size_t> variable_indices;
+            std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
+
+            for(int i = 0; i < variable_names_eventweight.size(); i++){
+                std::string variable_name_eventweight = variable_names_eventweight.at(i);
+                bool IsFound = false;
+                std::string variable_name_Data;
+                for(int j = 0; j < variable_name_map_.size(); j++){
+                    if(variable_name_eventweight == variable_name_map_.at(j).first){
+                        variable_name_Data = variable_name_map_.at(j).second;
+                        IsFound = true
+                        break;
+                    }
+                }
+                if(!IsFound){
+                    printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
+                    exit(1);
+                }
+                else{
+                    std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
+                    if (iter != variable_names->end()) {
+                        variable_indices.push_back(iter - variable_names->begin());
+                    }
+                    else {
+                        printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
+                        exit(1);
+                    }
+                }
             }
+
+            eventweights_->push_back(eventweight);
+            variable_indices_list_.push_back(variable_indices);
+
+            // copy event weights
+            eventweights = (*eventweights_);
+            variable_indices_list = (*variable_indices_list_);
         }
         ~AddWeight() {}
 

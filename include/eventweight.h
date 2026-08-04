@@ -69,6 +69,7 @@ public:
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
     void ResetToNominal();
+    std::vector<std::string> GetVarNames();
 };
 
 inline EventWeight::EventWeight(const double constWeight_) : constWeight(true) {
@@ -307,6 +308,10 @@ inline void EventWeights::Register(const std::string& weight_name_, const EventW
 
 inline EventWeight* EventWeights::GetWeight(const std::string& weight_name_){
     return getInstance().InternalGetWeight(weight_name_);
+}
+
+inline std::vector<std::string> EventWeights::GetVarNames(){
+    return variable_names;
 }
 
 #endif 
