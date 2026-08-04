@@ -419,7 +419,7 @@ std::shared_ptr<std::vector<double>> Loader::ABCDmethod(const char* region_A_, c
 }
 
 void Loader::AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_) {
-    Module::Module* temp_module = new Module::AddWeight(weight_name_, variable_name_map_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
+    Module::Module* temp_module = new Module::AddWeight(weight_name_, variable_name_map_, &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
     Modules.push_back(temp_module);
 }
 

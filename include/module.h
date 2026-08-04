@@ -91,18 +91,6 @@ struct CompareHistory {
     }
 };
 
-/*
-* reserved function which always return 1.0
-*/
-double reserve_function(std::deque<Data>::iterator data_, std::vector<std::string> variable_names_) {
-    return 1.0;
-}
-
-/*
-* global function pointer. This can be modified outside module.h
-*/
-double (*ObtainWeight)(std::deque<Data>::iterator, std::vector<std::string>) = reserve_function;
-
 namespace Module {
 
     class Module {
@@ -148,7 +136,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
         std::string TTree_name;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), TTree_name(TTree_name_){
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_){
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -174,41 +162,6 @@ namespace Module {
                         VariableTypes_->push_back(std::string(TypeName));
                     }
                     (*DataStructureDefined) = true;
-
-                    // initialize eventweight related info after data structure is defined
-                    for (EventWeight* eventweight : eventweights_) {
-                        std::vector<std::size_t> variable_indices;
-                        std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
-
-                        for (int i = 0; i < variable_names_eventweight.size(); i++) {
-                            std::string variable_name_eventweight = variable_names_eventweight.at(i);
-                            bool IsFound = false;
-                            std::string variable_name_Data;
-                            for (int j = 0; j < variable_name_map_.size(); j++) {
-                                if (variable_name_eventweight == variable_name_map_.at(j).first) {
-                                    variable_name_Data = variable_name_map_.at(j).second;
-                                    IsFound = true;
-                                    break;
-                                }
-                            }
-                            if (!IsFound) {
-                                printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
-                                exit(1);
-                            }
-                            else {
-                                std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
-                                if (iter != variable_names->end()) {
-                                    variable_indices.push_back(iter - variable_names->begin());
-                                }
-                                else {
-                                    printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
-                                    exit(1);
-                                }
-                            }
-                        }
-
-                        variable_indices_list_->push_back(variable_indices);
-                    }
                 }
                 else {
                     for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -233,8 +186,6 @@ namespace Module {
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
-            eventweights = (*eventweights_);
-            variable_indices_list = (*variable_indices_list_);
         }
         ~Load() {}
 
@@ -345,7 +296,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
         std::string TTree_name;
     public:
-        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), TTree_name(TTree_name_) {
+        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_) {
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -371,41 +322,6 @@ namespace Module {
                         VariableTypes_->push_back(std::string(TypeName));
                     }
                     (*DataStructureDefined) = true;
-
-                    // initialize eventweight related info after data structure is defined
-                    for (EventWeight* eventweight : eventweights_) {
-                        std::vector<std::size_t> variable_indices;
-                        std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
-
-                        for (int i = 0; i < variable_names_eventweight.size(); i++) {
-                            std::string variable_name_eventweight = variable_names_eventweight.at(i);
-                            bool IsFound = false;
-                            std::string variable_name_Data;
-                            for (int j = 0; j < variable_name_map_.size(); j++) {
-                                if (variable_name_eventweight == variable_name_map_.at(j).first) {
-                                    variable_name_Data = variable_name_map_.at(j).second;
-                                    IsFound = true;
-                                    break;
-                                }
-                            }
-                            if (!IsFound) {
-                                printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
-                                exit(1);
-                            }
-                            else {
-                                std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
-                                if (iter != variable_names->end()) {
-                                    variable_indices.push_back(iter - variable_names->begin());
-                                }
-                                else {
-                                    printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
-                                    exit(1);
-                                }
-                            }
-                        }
-
-                        variable_indices_list_->push_back(variable_indices);
-                    }
                 }
                 else {
                     for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -641,7 +557,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
@@ -744,7 +664,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -878,7 +802,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
@@ -1818,7 +1746,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2043,7 +1975,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2313,7 +2249,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
@@ -2563,7 +2503,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2581,7 +2525,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + totalweight;
                 if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + totalweight;
@@ -2765,7 +2713,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
@@ -3182,7 +3134,11 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 // care about preselection first
                 double preselection_result = -1;
@@ -4115,7 +4071,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     std::vector<Token> postfix_expr = postfix_exprs.at(i);
@@ -4171,7 +4131,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
@@ -4212,7 +4176,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -4254,7 +4222,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -4304,7 +4276,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
@@ -4348,7 +4324,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
@@ -4495,7 +4475,11 @@ namespace Module {
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 double totalweight = 1;
-                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
 
                 double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable, &VariableTypes);
                 if (result > 0.5) th1d_ABCD->Fill(0.5, totalweight);
@@ -4680,6 +4664,10 @@ namespace Module {
                 }
 
                 variable_indices_list_->push_back(variable_indices);
+            }
+            else {
+                printf("[AddWeight] ROOT file structure is unknown. Please load ROOT files before calling `AddWeight`\n");
+                exit(1);
             }
 
             // copy event weights
