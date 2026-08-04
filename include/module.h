@@ -174,6 +174,41 @@ namespace Module {
                         VariableTypes_->push_back(std::string(TypeName));
                     }
                     (*DataStructureDefined) = true;
+
+                    // initialize eventweight related info after data structure is defined
+                    for (EventWeight* eventweight : eventweights_) {
+                        std::vector<std::size_t> variable_indices;
+                        std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
+
+                        for (int i = 0; i < variable_names_eventweight.size(); i++) {
+                            std::string variable_name_eventweight = variable_names_eventweight.at(i);
+                            bool IsFound = false;
+                            std::string variable_name_Data;
+                            for (int j = 0; j < variable_name_map_.size(); j++) {
+                                if (variable_name_eventweight == variable_name_map_.at(j).first) {
+                                    variable_name_Data = variable_name_map_.at(j).second;
+                                    IsFound = true;
+                                    break;
+                                }
+                            }
+                            if (!IsFound) {
+                                printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
+                                exit(1);
+                            }
+                            else {
+                                std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
+                                if (iter != variable_names->end()) {
+                                    variable_indices.push_back(iter - variable_names->begin());
+                                }
+                                else {
+                                    printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
+                                    exit(1);
+                                }
+                            }
+                        }
+
+                        variable_indices_list_->push_back(variable_indices);
+                    }
                 }
                 else {
                     for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -198,6 +233,8 @@ namespace Module {
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
+            eventweights = (*eventweights_);
+            variable_indices_list = (*variable_indices_list_);
         }
         ~Load() {}
 
@@ -334,6 +371,41 @@ namespace Module {
                         VariableTypes_->push_back(std::string(TypeName));
                     }
                     (*DataStructureDefined) = true;
+
+                    // initialize eventweight related info after data structure is defined
+                    for (EventWeight* eventweight : eventweights_) {
+                        std::vector<std::size_t> variable_indices;
+                        std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
+
+                        for (int i = 0; i < variable_names_eventweight.size(); i++) {
+                            std::string variable_name_eventweight = variable_names_eventweight.at(i);
+                            bool IsFound = false;
+                            std::string variable_name_Data;
+                            for (int j = 0; j < variable_name_map_.size(); j++) {
+                                if (variable_name_eventweight == variable_name_map_.at(j).first) {
+                                    variable_name_Data = variable_name_map_.at(j).second;
+                                    IsFound = true;
+                                    break;
+                                }
+                            }
+                            if (!IsFound) {
+                                printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
+                                exit(1);
+                            }
+                            else {
+                                std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
+                                if (iter != variable_names->end()) {
+                                    variable_indices.push_back(iter - variable_names->begin());
+                                }
+                                else {
+                                    printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
+                                    exit(1);
+                                }
+                            }
+                        }
+
+                        variable_indices_list_->push_back(variable_indices);
+                    }
                 }
                 else {
                     for (int j = 0; j < temp_tree->GetNbranches(); j++) {
@@ -358,6 +430,8 @@ namespace Module {
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
+            eventweights = (*eventweights_);
+            variable_indices_list = (*variable_indices_list_);
         }
         ~LoadWithCut() {}
 
@@ -464,7 +538,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~Cut() {}
 
         void Start() {
@@ -521,7 +595,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), Nevt(0), Ncandidate(0){}
+        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
         void Start() override {
@@ -641,10 +715,10 @@ namespace Module {
         std::vector<double> x_variable;
         std::vector<double> weight;
     public:
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~DrawTH1D() {
             delete hist;
@@ -772,8 +846,8 @@ namespace Module {
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~DrawTH2D() {
             delete hist;
@@ -900,7 +974,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
         std::string TTree_name;
     public:
-        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), TTree_name(TTree_name_){}
+        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_){}
 
         ~PrintSeparateRootFile() {}
 
@@ -1032,7 +1106,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
         std::string TTree_name;
     public:
-        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), TTree_name(TTree_name_) {}
+        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_) {}
 
         ~PrintRootFile() {}
 
@@ -1139,7 +1213,7 @@ namespace Module {
             return std::toupper(static_cast<unsigned char>(c));
         }
     public:
-        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         
         ~BCS() {}
 
@@ -1351,7 +1425,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~RandomBCS() {}
 
@@ -1537,7 +1611,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~IsBCSValid() {}
 
@@ -1670,14 +1744,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1893,14 +1967,14 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -2131,11 +2205,11 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -2411,7 +2485,7 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // just 100
             NBin = 100;
 
@@ -2587,10 +2661,10 @@ namespace Module {
         int hist_draw_option;
 
     public:
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~DrawStack() {
             delete stack;
@@ -3029,10 +3103,10 @@ namespace Module {
         bool balanced_weight;
 
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
         }
 
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(balanced_weight_), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(balanced_weight_), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
         }
 
         ~FastBDTTrain() {}
@@ -3184,7 +3258,7 @@ namespace Module {
         std::string branch_name;
 
     public:
-        FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_) {
+        FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
@@ -3268,7 +3342,7 @@ namespace Module {
         int selected_index;
 
     public:
-        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~RandomEventSelection() {}
 
@@ -3441,7 +3515,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), new_variable_name(new_variable_name_) {
+        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             replaced_expr = replaceVariables(equation, variable_names_);
             postfix_expr = PostfixExpression(replaced_expr, VariableTypes_);
@@ -3514,11 +3588,49 @@ namespace Module {
             // copy variable list first, but it will not be used
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
+            eventweights = (*eventweights_);
+            variable_indices_list = (*variable_indices_list_);
 
             // remove variable
             for (int idx : removed_index) {
                 variable_names_->erase(variable_names_->begin() + idx);
                 VariableTypes_->erase(VariableTypes_->begin() + idx);
+            }
+
+            // calculate index for event weight again
+            variable_indices_list_->clear();
+            for (EventWeight* eventweight : eventweights_) {
+                std::vector<std::size_t> variable_indices;
+                std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
+
+                for (int i = 0; i < variable_names_eventweight.size(); i++) {
+                    std::string variable_name_eventweight = variable_names_eventweight.at(i);
+                    bool IsFound = false;
+                    std::string variable_name_Data;
+                    for (int j = 0; j < variable_name_map_.size(); j++) {
+                        if (variable_name_eventweight == variable_name_map_.at(j).first) {
+                            variable_name_Data = variable_name_map_.at(j).second;
+                            IsFound = true;
+                            break;
+                        }
+                    }
+                    if (!IsFound) {
+                        printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
+                        exit(1);
+                    }
+                    else {
+                        std::vector<std::string>::iterator iter = std::find(variable_names_->begin(), variable_names_->end(), variable_name_Data);
+                        if (iter != variable_names_->end()) {
+                            variable_indices.push_back(iter - variable_names_->begin());
+                        }
+                        else {
+                            printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
+                            exit(1);
+                        }
+                    }
+                }
+
+                variable_indices_list_->push_back(variable_indices);
             }
         }
 
@@ -3563,7 +3675,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_) {
+        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (std::map<std::string, std::string>::iterator iter_eq = condition_equation__criteria_equation_list.begin(); iter_eq != condition_equation__criteria_equation_list.end(); ++iter_eq) {
                 std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
@@ -3656,7 +3768,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
+        GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
@@ -3721,7 +3833,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_) {
+        GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
@@ -3796,7 +3908,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
+        GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
@@ -3879,7 +3991,7 @@ namespace Module {
         std::string new_variable_name;
 
     public:
-        GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_) {
+        GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
@@ -3965,7 +4077,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), dataset(dataset_), realvars(realvars_), equations(equations_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), dataset(dataset_), realvars(realvars_), equations(equations_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillDataSet() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
@@ -4020,7 +4132,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), tprofile(tprofile_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), tprofile(tprofile_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillTProfile() {}
         void Start() {
             replaced_expr_x = replaceVariables(equation_x, &variable_names);
@@ -4060,7 +4172,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillTH1D(TH1D* th1d_, std::string equation_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equation(equation_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillTH1D(TH1D* th1d_, std::string equation_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equation(equation_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillTH1D() {}
         void Start() {
             replaced_expr = replaceVariables(equation, &variable_names);
@@ -4097,7 +4209,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillCustomizedTH1D() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
@@ -4144,7 +4256,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillTH2D() {}
         void Start() {
             x_replaced_expr = replaceVariables(x_expression, &variable_names);
@@ -4185,7 +4297,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~FillCustomizedTH2D() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
@@ -4222,7 +4334,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
         ~PrintEvent() {}
 
         void Start() {
@@ -4301,8 +4413,8 @@ namespace Module {
         std::shared_ptr<std::vector<double>> output_handle;
 
     public:
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
 
         ~ABCDmethod() {}
 
@@ -4490,7 +4602,7 @@ namespace Module {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
 
             eventweights_->push_back(eventweight);
-            if(DataStructureDefined){ /* to do */
+            if(DataStructureDefined){
                 std::vector<std::size_t> variable_indices;
                 std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
 
@@ -4501,7 +4613,7 @@ namespace Module {
                     for(int j = 0; j < variable_name_map_.size(); j++){
                         if(variable_name_eventweight == variable_name_map_.at(j).first){
                             variable_name_Data = variable_name_map_.at(j).second;
-                            IsFound = true
+                            IsFound = true;
                             break;
                         }
                     }
@@ -4521,7 +4633,7 @@ namespace Module {
                     }
                 }
 
-                variable_indices_list_.push_back(variable_indices);
+                variable_indices_list_->push_back(variable_indices);
             }
 
             // copy event weights

@@ -259,6 +259,10 @@ inline void EventWeight::ResetToNominal(){
     }
 }
 
+inline std::vector<std::string> EventWeight::GetVarNames() {
+    return variable_names;
+}
+
 class EventWeights{
 private:
     EventWeights() = default;
@@ -308,10 +312,6 @@ inline void EventWeights::Register(const std::string& weight_name_, const EventW
 
 inline EventWeight* EventWeights::GetWeight(const std::string& weight_name_){
     return getInstance().InternalGetWeight(weight_name_);
-}
-
-inline std::vector<std::string> EventWeights::GetVarNames(){
-    return variable_names;
 }
 
 #endif 
