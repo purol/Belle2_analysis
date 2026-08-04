@@ -69,7 +69,7 @@ public:
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
     void ResetToNominal();
-    std::vector<std::string> GetVarNames();
+    const std::vector<std::string>& GetVarNames() const;
 };
 
 inline EventWeight::EventWeight(const double constWeight_) : constWeight(true) {
@@ -213,7 +213,16 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
                 std::size_t index = variable_indices_.at(j);
                 double value_min = variable_min.at(i).at(j);
                 double value_max = variable_max.at(i).at(j);
-                double value = std::get<double>(data_.variable.at(index));
+                double value;
+                
+                if (std::holds_alternative<int>(data_.variable.at(index))) value = static_cast<double>(std::get<int>(data_.variable.at(index)));
+                else if (std::holds_alternative<unsigned int>(data_.variable.at(index))) value = static_cast<double>(std::get<unsigned int>(data_.variable.at(index)));
+                else if (std::holds_alternative<float>(data_.variable.at(index))) value = static_cast<double>(std::get<float>(data_.variable.at(index)));
+                else if (std::holds_alternative<double>(data_.variable.at(index))) value = std::get<double>(data_.variable.at(index));
+                else {
+                    printf("[EventWeight::Evaluate] unsupported type\n");
+                    exit(1);
+                }
 
                 if((value < value_min) || (value >= value_max)){
                     IsThisBin = false;
@@ -259,7 +268,7 @@ inline void EventWeight::ResetToNominal(){
     }
 }
 
-inline std::vector<std::string> EventWeight::GetVarNames() {
+inline const std::vector<std::string>& EventWeight::GetVarNames() const {
     return variable_names;
 }
 

@@ -3576,42 +3576,18 @@ namespace Module {
             for (int idx : removed_index) {
                 variable_names_->erase(variable_names_->begin() + idx);
                 VariableTypes_->erase(VariableTypes_->begin() + idx);
-            }
 
-            // calculate index for event weight again
-            variable_indices_list_->clear();
-            for (EventWeight* eventweight : eventweights_) {
-                std::vector<std::size_t> variable_indices;
-                std::vector<std::string> variable_names_eventweight = eventweight->GetVarNames();
-
-                for (int i = 0; i < variable_names_eventweight.size(); i++) {
-                    std::string variable_name_eventweight = variable_names_eventweight.at(i);
-                    bool IsFound = false;
-                    std::string variable_name_Data;
-                    for (int j = 0; j < variable_name_map_.size(); j++) {
-                        if (variable_name_eventweight == variable_name_map_.at(j).first) {
-                            variable_name_Data = variable_name_map_.at(j).second;
-                            IsFound = true;
-                            break;
-                        }
-                    }
-                    if (!IsFound) {
-                        printf("[AddWeight] Variable %s is not found in eventweight %s\n", variable_name_eventweight.c_str(), weight_name.c_str());
-                        exit(1);
-                    }
-                    else {
-                        std::vector<std::string>::iterator iter = std::find(variable_names_->begin(), variable_names_->end(), variable_name_Data);
-                        if (iter != variable_names_->end()) {
-                            variable_indices.push_back(iter - variable_names_->begin());
-                        }
-                        else {
-                            printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
+                // calculate index for event weight again
+                for (std::size_t i = 0; i < variable_indices_list_->size(); i++) {
+                    for (std::size_t j = 0; j < variable_indices_list_->at(i).size(); j++) {
+                        std::size_t temp_index = variable_indices_list_->at(i).at(j);
+                        if (temp_index == idx) {
+                            printf("[RemoveVariable] variable used in weight is tried to be removed\n");
                             exit(1);
                         }
+                        if (temp_index > idx) variable_indices_list_->at(i).at(j) = temp_index - 1;
                     }
                 }
-
-                variable_indices_list_->push_back(variable_indices);
             }
         }
 
@@ -4628,7 +4604,7 @@ namespace Module {
         std::vector<std::vector<std::size_t>> variable_indices_list;
 
     public:
-        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
 
             eventweights_->push_back(eventweight);
@@ -4652,9 +4628,9 @@ namespace Module {
                         exit(1);
                     }
                     else{
-                        std::vector<std::string>::iterator iter = std::find(variable_names->begin(), variable_names->end(), variable_name_Data);
-                        if (iter != variable_names->end()) {
-                            variable_indices.push_back(iter - variable_names->begin());
+                        std::vector<std::string>::iterator iter = std::find(variable_names.begin(), variable_names.end(), variable_name_Data);
+                        if (iter != variable_names.end()) {
+                            variable_indices.push_back(iter - variable_names.begin());
                         }
                         else {
                             printf("[AddWeight] Variable %s is not found in file\n", variable_name_Data.c_str());
