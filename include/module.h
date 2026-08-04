@@ -640,6 +640,9 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 // get event variable
                 for (int i = 0; i < Event_variable_list.size(); i++) {
                     int event_variable_index = event_variable_index_list.at(i);
@@ -667,10 +670,10 @@ namespace Module {
 
                 if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
                     history_event_variable.insert(temp_event_variable);
-                    Nevt = Nevt + ObtainWeight(iter, variable_names);
+                    Nevt = Nevt + totalweight;
                 }
 
-                Ncandidate = Ncandidate + ObtainWeight(iter, variable_names);
+                Ncandidate = Ncandidate + totalweight;
                 ++iter;
             }
 
@@ -740,14 +743,17 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(result);
-                    weight.push_back(ObtainWeight(iter, variable_names));
+                    weight.push_back(totalweight);
                 }
                 else {
-                    hist->Fill(result, ObtainWeight(iter, variable_names));
+                    hist->Fill(result, totalweight);
                 }
 
                 // if saved variable exceed 10MB, calculate max, min and create histogram. It is to save memory
@@ -871,16 +877,19 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
                 if (hist == nullptr) {
                     x_variable.push_back(x_result);
                     y_variable.push_back(y_result);
-                    weight.push_back(ObtainWeight(iter, variable_names));
+                    weight.push_back(totalweight);
                 }
                 else {
-                    hist->Fill(x_result, y_result, ObtainWeight(iter, variable_names));
+                    hist->Fill(x_result, y_result, totalweight);
                 }
 
                 // if saved variable exceed 40MB, calculate max, min and create histogram. It is to save memory
@@ -1808,6 +1817,8 @@ namespace Module {
         int Process(std::deque<Data>* data) {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -1816,8 +1827,8 @@ namespace Module {
                 else if (result >= MAX) first_bin = NBin - 1;
                 else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
                 if (first_bin >= 0) {
-                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
-                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + totalweight;
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + totalweight;
                 }
 
                 ++iter;
@@ -2031,6 +2042,8 @@ namespace Module {
         int Process(std::deque<Data>* data) {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2039,8 +2052,8 @@ namespace Module {
                 else if (result >= MAX) first_bin = NBin - 1;
                 else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
                 if (first_bin >= 0) {
-                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
-                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + totalweight;
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + totalweight;
                 }
 
                 ++iter;
@@ -2299,6 +2312,8 @@ namespace Module {
         int Process(std::deque<Data>* data) {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
 
                 double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
@@ -2317,20 +2332,20 @@ namespace Module {
 
                 if ((result_preselection_x > 0.5) && (result_preselection_y > 0.5)) {
                     if ((first_bin_x >= 0) && (first_bin_y >= 0)) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][first_bin_y] = NSIGs[first_bin_x][first_bin_y] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][first_bin_y] = NBKGs[first_bin_x][first_bin_y] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][first_bin_y] = NSIGs[first_bin_x][first_bin_y] + totalweight;
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][first_bin_y] = NBKGs[first_bin_x][first_bin_y] + totalweight;
                     }
                 }
                 else if ((result_preselection_x > 0.5) && (result_preselection_y < 0.5)) {
                     if (first_bin_x >= 0) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][NBin_y - 1] = NSIGs[first_bin_x][NBin_y - 1] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][NBin_y - 1] = NBKGs[first_bin_x][NBin_y - 1] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin_x][NBin_y - 1] = NSIGs[first_bin_x][NBin_y - 1] + totalweight;
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin_x][NBin_y - 1] = NBKGs[first_bin_x][NBin_y - 1] + totalweight;
                     }
                 }
                 else if ((result_preselection_x < 0.5) && (result_preselection_y > 0.5)) {
                     if (first_bin_y >= 0) {
-                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[NBin_x - 1][first_bin_y] = NSIGs[NBin_x - 1][first_bin_y] + ObtainWeight(iter, variable_names);
-                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[NBin_x - 1][first_bin_y] = NBKGs[NBin_x - 1][first_bin_y] + ObtainWeight(iter, variable_names);
+                        if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[NBin_x - 1][first_bin_y] = NSIGs[NBin_x - 1][first_bin_y] + totalweight;
+                        if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[NBin_x - 1][first_bin_y] = NBKGs[NBin_x - 1][first_bin_y] + totalweight;
                     }
                 }
 
@@ -2547,6 +2562,8 @@ namespace Module {
         int Process(std::deque<Data>* data) {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
 
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
@@ -2555,16 +2572,19 @@ namespace Module {
                 else if (result >= MAX) first_bin = NBin - 1;
                 else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
                 if (first_bin >= 0) {
-                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + ObtainWeight(iter, variable_names);
-                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + ObtainWeight(iter, variable_names);
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + totalweight;
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + totalweight;
                 }
 
                 ++iter;
             }
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
-                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + ObtainWeight(iter, variable_names);
-                if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + ObtainWeight(iter, variable_names);
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
+                if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_total = NSIGs_total + totalweight;
+                if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_total = NBKGs_total + totalweight;
 
                 ++iter;
             }
@@ -2744,22 +2764,25 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
 
                     if (stack_hist == nullptr) {
                         x_variable.push_back(result);
-                        weight.push_back(ObtainWeight(iter, variable_names));
+                        weight.push_back(totalweight);
                         label.push_back(iter->label);
                     }
                     else {
                         if (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) {
                             int label_index = std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) - stack_label_list.begin();
-                            stack_hist[label_index]->Fill(result, ObtainWeight(iter, variable_names));
-                            stack_error->Fill(result, ObtainWeight(iter, variable_names));
+                            stack_hist[label_index]->Fill(result, totalweight);
+                            stack_error->Fill(result, totalweight);
                         }
                         else if (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end()) {
-                            hist->Fill(result, ObtainWeight(iter, variable_names));
+                            hist->Fill(result, totalweight);
                         }
                     }
 
@@ -3158,6 +3181,8 @@ namespace Module {
         int Process(std::deque<Data>* data) {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
 
                 // care about preselection first
                 double preselection_result = -1;
@@ -3189,7 +3214,7 @@ namespace Module {
                     else if (Background_label_set.find(iter->label) != Background_label_set.end()) IsItSignal.push_back(false);
 
                     // put weight
-                    weight.push_back(static_cast<float>(ObtainWeight(iter, variable_names)));
+                    weight.push_back(static_cast<float>(totalweight));
                 }
 
                 ++iter;
@@ -4089,6 +4114,9 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     std::vector<Token> postfix_expr = postfix_exprs.at(i);
                     double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
@@ -4098,7 +4126,7 @@ namespace Module {
                 RooArgSet temp_;
                 for (int i = 0; i < postfix_exprs.size(); i++) temp_.add(*(realvars.at(i)));
 
-                dataset->add(temp_, ObtainWeight(iter, variable_names));
+                dataset->add(temp_, totalweight);
 
                 ++iter;
             }
@@ -4142,10 +4170,13 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
                 double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
 
-                tprofile->Fill(result_x, result_y, ObtainWeight(iter, variable_names));
+                tprofile->Fill(result_x, result_y, totalweight);
 
                 ++iter;
             }
@@ -4180,9 +4211,12 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
 
-                th1d->Fill(result, ObtainWeight(iter, variable_names));
+                th1d->Fill(result, totalweight);
 
                 ++iter;
             }
@@ -4219,6 +4253,9 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
@@ -4226,7 +4263,7 @@ namespace Module {
                 }
 
                 double filled_value = custom_function(results);
-                if(std::isnan(filled_value) == false) th1d->Fill(custom_function(results), ObtainWeight(iter, variable_names));
+                if(std::isnan(filled_value) == false) th1d->Fill(custom_function(results), totalweight);
 
                 ++iter;
             }
@@ -4266,10 +4303,13 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
                 double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
 
-                th2d->Fill(x_result, y_result, ObtainWeight(iter, variable_names));
+                th2d->Fill(x_result, y_result, totalweight);
 
                 ++iter;
             }
@@ -4307,6 +4347,9 @@ namespace Module {
         }
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
@@ -4315,7 +4358,7 @@ namespace Module {
 
                 double filled_value_x = x_custom_function(results);
                 double filled_value_y = y_custom_function(results);
-                if ((std::isnan(filled_value_x) == false) && (std::isnan(filled_value_y) == false)) th2d->Fill(filled_value_x, filled_value_y, ObtainWeight(iter, variable_names));
+                if ((std::isnan(filled_value_x) == false) && (std::isnan(filled_value_y) == false)) th2d->Fill(filled_value_x, filled_value_y, totalweight);
 
                 ++iter;
             }
@@ -4451,30 +4494,33 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (EventWeight* eventweight : eventweights) totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices_list);
+
                 double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable, &VariableTypes);
-                if (result > 0.5) th1d_ABCD->Fill(0.5, ObtainWeight(iter, variable_names));
+                if (result > 0.5) th1d_ABCD->Fill(0.5, totalweight);
 
                 result = EvaluatePostfixExpression(postfix_expr_B, iter->variable, &VariableTypes);
-                if (result > 0.5) th1d_ABCD->Fill(1.5, ObtainWeight(iter, variable_names));
+                if (result > 0.5) th1d_ABCD->Fill(1.5, totalweight);
 
                 result = EvaluatePostfixExpression(postfix_expr_C, iter->variable, &VariableTypes);
-                if (result > 0.5) th1d_ABCD->Fill(2.5, ObtainWeight(iter, variable_names));
+                if (result > 0.5) th1d_ABCD->Fill(2.5, totalweight);
 
                 result = EvaluatePostfixExpression(postfix_expr_D, iter->variable, &VariableTypes);
-                if (result > 0.5) th1d_ABCD->Fill(3.5, ObtainWeight(iter, variable_names));
+                if (result > 0.5) th1d_ABCD->Fill(3.5, totalweight);
 
                 if (validation) {
                     result = EvaluatePostfixExpression(postfix_expr_Aprime, iter->variable, &VariableTypes);
-                    if (result > 0.5) th1d_ABCD_validation->Fill(0.5, ObtainWeight(iter, variable_names));
+                    if (result > 0.5) th1d_ABCD_validation->Fill(0.5, totalweight);
 
                     result = EvaluatePostfixExpression(postfix_expr_Bprime, iter->variable, &VariableTypes);
-                    if (result > 0.5) th1d_ABCD_validation->Fill(1.5, ObtainWeight(iter, variable_names));
+                    if (result > 0.5) th1d_ABCD_validation->Fill(1.5, totalweight);
 
                     result = EvaluatePostfixExpression(postfix_expr_Cprime, iter->variable, &VariableTypes);
-                    if (result > 0.5) th1d_ABCD_validation->Fill(2.5, ObtainWeight(iter, variable_names));
+                    if (result > 0.5) th1d_ABCD_validation->Fill(2.5, totalweight);
 
                     result = EvaluatePostfixExpression(postfix_expr_Dprime, iter->variable, &VariableTypes);
-                    if (result > 0.5) th1d_ABCD_validation->Fill(3.5, ObtainWeight(iter, variable_names));
+                    if (result > 0.5) th1d_ABCD_validation->Fill(3.5, totalweight);
                 }
 
                 ++iter;
