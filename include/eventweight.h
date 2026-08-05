@@ -30,6 +30,7 @@ private:
 
     bool constWeight;
     static constexpr double DEFAULT_VALUE = 1.0;
+    bool ignoreOutOfRange;
 
     std::vector<std::string> variable_names; // name of variable used in EventWeight class
     std::vector<std::vector<double>> variable_min; // variable_min[bin range][variable]
@@ -61,10 +62,10 @@ private:
 
 public:
     EventWeight(const double constWeight_);
-    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_);
-    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_);
-    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_);
-    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_);
+    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_, bool ignoreOutOfRange_);
+    EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, bool ignoreOutOfRange_);
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_);
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_);
 
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
@@ -72,13 +73,13 @@ public:
     const std::vector<std::string>& GetVarNames() const;
 };
 
-inline EventWeight::EventWeight(const double constWeight_) : constWeight(true) {
+inline EventWeight::EventWeight(const double constWeight_) : ignoreOutOfRange(false), constWeight(true) {
     nominal_weight_value.push_back(constWeight_);
     fluctuated_weight_value.push_back(constWeight_);
 }
 
-inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_) : constWeight(false) {
-    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"dataMCratio_sys_up", "dataMCratio_sys_down", true}});
+inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_, bool ignoreOutOfRange_) : ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {
+    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"dataMCratio_sys_up", "dataMCratio_sys_down", true}}, true);
 
     std::vector<std::string> axis_min_column_names;
     std::vector<std::string> axis_max_column_names;
@@ -148,7 +149,7 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
 }
 
-inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_) : constWeight(false) {
+inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, bool ignoreOutOfRange_) : ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {
     // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio");
 
     std::vector<std::string> axis_min_column_names;
@@ -193,9 +194,9 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
 }
 
-inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), fluctuation_up(fluctuation_up_), fluctuation_down(fluctuation_down_), correlated(correlated_), constWeight(false) {}
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), fluctuation_up(fluctuation_up_), fluctuation_down(fluctuation_down_), correlated(correlated_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
 
-inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), constWeight(false) {}
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
 
 inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const {
     if(constWeight){
@@ -232,7 +233,11 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
 
             if(IsThisBin) return fluctuated_weight_value.at(i);
         }
-        return DEFAULT_VALUE;
+        if(ignoreOutOfRange) return DEFAULT_VALUE;
+        else {
+            printf("[EventWeight::Evaluate] cannot find proper bins\n");
+            exit(1);
+        }
     }
 }
 
