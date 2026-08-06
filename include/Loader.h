@@ -131,7 +131,7 @@ public:
     void PrintEvent(std::vector<std::string> print_variables_);
     std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_ = true);
     std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_ = true);
-    void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_);
+    void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_ = {});
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
