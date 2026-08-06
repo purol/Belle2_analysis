@@ -110,7 +110,7 @@ std::vector<std::vector<std::string>> ReadCSVColumns(const std::string& filePath
     std::vector<int> column_index;
     for (std::size_t i = 0; i < columnNames.size(); i++) {
         std::string columnName = columnNames.at(i);
-        std::vector<std::string>::iterator it = std::find(header.begin(), header.end(), columnName);
+        std::vector<std::string>::const_iterator it = std::find(header.begin(), header.end(), columnName);
 
         if (it != header.end()) {
             int index = std::distance(header.begin(), it);
