@@ -6,6 +6,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <iterator>
 
 #include "TSystemDirectory.h"
 #include "TList.h"
