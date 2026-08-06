@@ -296,6 +296,8 @@ private:
 public:
     static void Register(const std::string& weight_name_, const EventWeight& eventweight_);
     static EventWeight* GetWeight(const std::string& weight_name_);
+    static void Fluctuate(const std::string& weight_name_);
+    static void ResetToNominal(const std::string& weight_name_);
 };
 
 inline void EventWeights::InternalRegister(const std::string& weight_name_, const EventWeight& eventweight_){
@@ -326,6 +328,14 @@ inline void EventWeights::Register(const std::string& weight_name_, const EventW
 
 inline EventWeight* EventWeights::GetWeight(const std::string& weight_name_){
     return getInstance().InternalGetWeight(weight_name_);
+}
+
+inline void EventWeights::Fluctuate(const std::string& weight_name_) {
+    getInstance().InternalGetWeight(weight_name_)->Fluctuate();
+}
+
+inline void EventWeights::ResetToNominal(const std::string& weight_name_) {
+    getInstance().InternalGetWeight(weight_name_)->ResetToNominal();
 }
 
 #endif 
