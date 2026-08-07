@@ -173,7 +173,7 @@ inline static const std::unordered_map<std::string, ModelDefinition>& FitManager
 	return definitions;
 }
 
-static void ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_){
+static void FitManager::ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_){
 	if (observable_count_ != definition_.observable_ids.size()){
 		/* to do */
 	}
