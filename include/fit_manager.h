@@ -1,134 +1,331 @@
 #ifndef FIT_MANAGER_H
 #define FIT_MANAGER_H
 
-#include <vector>
 #include <string>
+#include <vector>
+#include <utility>
 #include <unordered_map>
-#include <memory>
+#include <optional>
 
-#include <RooDataSet.h>
+#include <RooAbsArg.h>
 #include <RooRealVar.h>
-#include <RooArgSet.h>
-#include <RooFitResult.h>
-#include <RooAbsPdf.h>
+#include <RooWorkspace.h>
+#include <RooCategory.h>
 
-struct DataSetResource {
-	RooRealVar weight;
-	std::string weight_id;
-
-	std::vector<RooRealVar*> observables;
-	std::vector<std::string> observables_id;
-
+struct WorkingDataSet {
+	std::vector<std::string> observable_ids;
+	RooRealVar weight_variable;
 	RooDataSet dataset;
 };
 
-struct ModelResource{
+struct ModelOptions {
+	// RooPolynomial
+	int lowest_order = 1;
 
-	std::vector<RooRealVar*> observables;
-	std::vector<std::string> observables_id;
+	// RooJohnson. If not set, ROOT's default threshold is used.
+	std::optional<double> johnson_mass_threshold;
+};
 
-	std::vector<RooRealVar*> firParameters;
-	std::vector<std::string> firParameters_id;
+struct ModelDefinition {
+	std::vector<std::string> observable_ids;
+	std::vector<std::string> parameter_ids;
 
-	RooAbsPdf abspdf;
+	// Exact-size model: min_parameters == max_parameters.
+	// Variadic model: max_parameters == std::nullopt
+	std::size_t N_min_parameters = 0;
+	std::optional<std::size_t> N_max_parameters;
 };
 
 class FitManager {
 private:
-	std::unordered_map<std::string, RooRealVar> observables;
-	std::unordered_map<std::string, RooRealVar> firParameters;
-	std::unordered_map<std::string, DataSetResource> dataSets;
-	std::unordered_map<std::string, ModelResource> models;
-	std::unordered_map<std::string, FitResource> fits;
+	RooWorkspace workspace;
+	std::unordered_map<std::string, WorkingDataSet> working_datasets;
+
+	void ImportChecked(const RooAbsArg& object_);
+	void EnsureWorkspaceNameAvailable(const std::string& id_) const;
+
+	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
 public:
-	void DefineFitParameter(const std::string& parameter_id_, const std::string& title_, double minValue_, double maxValue_, const std::string& unit_ = "", bool setConst_ = false);
-	void DefineObservable(const std::string& observable_id_, const std::string& title_, double minValue_, double maxValue_, const std::string& unit_ = "");
-	void DefineDataSet(const std::string& dataset_id_, const std::string& title_, const std::vector<std::string>& observable_ids_);
-	void DefineModel(const std::string& model_id_, const std::string& title_, const std::vector<std::string>& observable_ids_);
+	explicit FitManager(const std::string& workspace_name_, const std::string& workspace_title_ = "");
 
-	RooRealVar* GetFitParameter(const std::string& parameter_id_);
-	RooRealVar* GetObservable(const std::string& observable_id_);
-	RooDataSet* GetDataSet(const std::string& dataset_id_);
+	FitManager(const FitManager&) = delete;
+	FitManager& operator=(const FitManager&) = delete;
+	FitManager(FitManager&&) = delete;
+	FitManager& operator=(FitManager&&) = delete;
 
-	void Fit();
-	void SaveFitPlot();
-	void SaveFitResult();
+	~FitManager() = default;
+
+	void DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_ = "");
+	void DefineDataSet(const std::string& id_, const std::vector<std::string> observable_ids_);
+	void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
+	void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
+	void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::pair<std::string, int>>& states_);
+
+	void SetParameterConstant(const std::string& id_, bool constant_ = true);
+	void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
+
+	RooAbsArg* GetRooAbsArg(const std::string& id_);
+	const RooAbsArg* GetRooAbsArg(const std::string& id_) const;
+	RooRealVar* GetRooRealVar(const std::string& id_);
+	const RooRealVar* GetRooRealVar(const std::string& id_) const;
+	RooCategory* GetRooCategory(const std::string& id_);
+	const RooCategory* GetRooCategory(const std::string& id_) const;
+
+	void FinalizeDataSet(const std::string& dataset_id_);
+	void FinalizeAllDataSet();
+
+	void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
 };
 
-inline void FitManager::DefineFitParameter(const std::string& parameter_id_, const std::string& title_, double minValue_, double maxValue_, const std::string& unit_ = ""){
-	if(firParameters.find(parameter_id_) != firParameters.end()){
-		printf("[FitManager::DefineFitParameter] There is already fit parameter %s\n", parameter_id_.c_str());
+inline void FitManager::ImportChecked(const RooAbsArg& object_) {
+	EnsureWorkspaceNameAvailable(object_.GetName());
+
+	if (workspace.import(object_)) {
+		printf("[FitManager::ImportChecked] failed to import RooAbsArg %s", object_.GetName());
+		exit(1);
+	}
+}
+
+inline void FitManager::EnsureWorkspaceNameAvailable(const std::string& id_) const {
+	if (id_.empty()) {
+		printf("[FitManager::EnsureWorkspaceNameAvailable] Object ID must not be empty.\n");
 		exit(1);
 	}
 
-	RooRealVar fit_parameter_temp(parameter_id_.c_str(), title_.c_str(), minValue_, maxValue_, unit_.c_str());
-	fitParameters.push_back(fit_parameter_temp);
+	if ((workspace.arg(id_.c_str()) = !nullptr) || (workspace.data(id_.c_str()) = !nullptr) || (workspace.genobj(id_.c_str()) = !nullptr) || (working_datasets.find(id_) != working_datasets.end())) {
+		printf("[FitManager::EnsureWorkspaceNameAvailable] Ojbect %s already exists.\n", id_.c_str());
+		exit(1);
+	}
 }
 
-inline void FitManager::DefineObservable(const std::string& observable_id_, const std::string& title_, double minValue_, double maxValue_, const std::string& unit_, bool setConst_ = false){
-	if(observables.find(observable_id_) != observables.end()){
-		printf("[FitManager::DefineObservable] There is already observable %s\n", observable_id_.c_str());
+inline static const std::unordered_map<std::string, ModelDefinition>& FitManager::ModelDefinitions() {
+	struct ModelDefinition {
+		std::vector<std::string> observable_ids;
+		std::vector<std::string> parameter_ids;
+
+		// Exact-size model: min_parameters == max_parameters.
+		// Variadic model: max_parameters == std::nullopt
+		std::size_t N_min_parameters = 0;
+		std::optional<std::size_t> N_max_parameters;
+	};
+
+	static const std::unordered_map<std::string, ModelDefinition> definitions = {
+		{ // RooGaussian (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigma)
+			"RooGaussian",
+			{ {"x"}, {"mean", "sigma"}, 0, 0}
+        },
+		{ // RooBifurGauss (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigmaL, RooAbsReal &_sigmaR)
+			"RooBifurGauss",
+			{ {"x"}, {"mean", "sigmaL", "sigmaR"}, 0, 0}
+		},
+		{ // RooBifurGauss (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigmaL, RooAbsReal &_sigmaR)
+			"RooBifurGauss",
+			{ {"x"}, {"mean", "sigmaL", "sigmaR"}, 0, 0}
+		}
+		/* to do */
+	};
+}
+
+inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_) {
+	if (minimum_ > maximum_) {
+		printf("[FitManager::DefineObservable] minimum is larger than maximum\n");
 		exit(1);
 	}
 
-	RooRealVar observable_temp(observable_id_.c_str(), title_.c_str(), minValue_, maxValue_, unit_.c_str());
-	observable_temp.setConstant(setConst_);
-	observables.push_back(observable_temp);
+	RooRealVar observable(id_.c_str(), title_.c_str(), maximum_, minimum_, unit_.c_str());
+
+	ImportChecked(observable);
 }
 
-inline void FitManager::DefineDataSet(const std::string& dataset_id_, const std::string& title_, const std::vector<std::string>& observable_ids_){
-    if(dataSets.find(dataset_id_) != dataSets.end()){
-        printf("[FitManager::DefineDataSet] There is already dataset %s\n", dataset_id_.c_str());
+inline void FitManager::DefineDataSet(const std::string& id_, const std::vector<std::string> observable_ids_) {
+	EnsureWorkspaceNameAvailable(id_);
+
+	if (observable_ids_.empty()) {
+		printf("[FitManager::DefineDataSet] At least one observable is required.\n");
 		exit(1);
 	}
 
-	std::string weight_id = dataset_id_ + "_weight";
-	RooRealVar weight_temp(weight_id.c_str(), weight_id.c_str(), 0.0, 100.0);
+	RooArgSet observables_in_dataset;
 
-	std::vector<RooRealVar*> observables_temp;
-	RooArgSet argset_temp;
-	for(const std::string& observable_id : observable_ids_){
-		RooRealVar* observable_temp = GetObservable(observable_id);
-		observables_temp.push_back(observable_temp);
-		argset_temp.add(*observable_temp);
+	for (const std::string& observable_id : observable_ids_) {
+		RooAbsArg* observable = GetRooAbsArg(observable_id);
+		observables_in_dataset.add(*observable);
 	}
-	argset_temp.add(weight_temp);
 
-	RooDataSet dataset_temp(dataset_id_.c_str(), title_.c_str(), argset_temp, RooFit::WeightVar(weight_id.c_str()));
+	const std::string weight_id = id_ + "__weight";
+	RooRealVar weight_variable(weight_id.c_str(), "weight", 1.0, -100.0, 100.0);
 
-	DataSetResource datasetresource_temp = {weight_temp, weight_id, observables_temp, observable_ids_, dataset_temp};
-	dataSets.push_back(datasetresource_temp);
+	RooDataSet dataset = RooDataSet(id_.c_str(), id_.c_str(), observables_in_dataset, RooFit::WeightVar(weight_id.c_str()));
+
+	WorkingDataSet workingdataset = { observable_ids_, weight_variable, dataset };
+
+	working_datasets.emplace(id_, std::move(workingdataset));
 }
 
-inline void FitManager::DefineModel(const std::string& model_id_, const std::string& title_, const std::vector<std::string>& observable_ids_){
-
-}
-
-inline RooRealVar* FitManager::GetFitParameter(const std::string& parameter_id_){
-	if(firParameters.find(parameter_id_) == firParameters.end()){
-        printf("[FitManager::GetFitParameter] Cannot find fit parameter %s\n", parameter_id_.c_str());
+inline void FitManager::DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_) {
+	if (minimum_ > maximum_) {
+		printf("[FitManager::DefineFitParameter] minimum is larger than maximum\n");
 		exit(1);
 	}
 
-	return &firParameters[parameter_id_];
-}
-
-inline RooRealVar* FitManager::GetObservable(const std::string& observable_id_){
-	if(observables.find(observable_id_) == observables.end()){
-        printf("[FitManager::GetObservable] Cannot find observable %s\n", observable_id_.c_str());
+	if ((init_value_ < minimum_) || (init_value_ > maximum_)) {
+		printf("[FitManager::DefineFitParameter] Initial value is outside the allowed range\n");
 		exit(1);
 	}
 
-	return &observables[observable_id_];
+	RooRealVar parameter(id_.c_str(), title_.c_str(), initial_value_, minimum_, maximum_, unit_.c_str());
+
+	ImportChecked(parameter);
 }
 
-inline RooDataSet* FitManager::GetDataSet(const std::string& dataset_id_){
-	if(dataSets.find(dataset_id_) == dataSets.end()){
-        printf("[FitManager::GetDataSet] Cannot find dataset %s\n", dataset_id_.c_str());
+inline void FitManager::DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_) {
+	RooRealVar parameter(id_.c_str(), title_.c_str(), value_, unit_.c_str());
+
+	parameter.setConstant(true);
+	ImportChecked(parameter);
+}
+
+inline void FitManager::SetParameterConstant(const std::string& id_, bool constant_ = true) {
+	GetRooRealVar(id_)->setConstant(constant_);
+}
+
+inline void FitManager::SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_) {
+	if (range_name_.empty()) {
+		printf("[FitManager::SetRange] range name must not be empty\n");
 		exit(1);
 	}
 
-	return &dataSets[dataset_id_];
+	if (minimum_ > maximum_) {
+		printf("[FitManager::SetRange] minimum must be smaller than maximum\n");
+		exit(1);
+	}
+
+	GetRooRealVar(variable_id_)->setRange(range_name_.c_str(), minimum_, maximum_);
+}
+
+inline void FitManager::DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::pair<std::string, int>>& states_) {
+	if (states_.empty()) {
+		printf("[FitManager::DefineCategory] at least one state is required.\n");
+		exit(1);
+	}
+
+	RooCategory category(id_.c_str(), title_.c_str());
+
+	for (const std::pair<std::string, int>& state : states_) {
+		if (state.first.empty()) {
+			printf("[FitManager::DefineCategory] state label must not be empty.\n");
+			exit(1);
+		}
+
+		if (category.defineType(state.first, state.second)) {
+			printf("[FitManager::DefineCategory] failed to define state %s", state.first.c_str());
+		}
+	}
+
+	ImportChecked(category);
+}
+
+inline RooAbsArg* FitManager::GetRooAbsArg(const std::string& id_) {
+	RooAbsArg* arg = workspace.arg(id_.c_str());
+
+	if (!arg) {
+		printf("[FitManager::GetRooAbsArg] RooAbsArg %s does not exist.\n", id_.c_str());
+	}
+
+	return arg;
+}
+
+inline const RooAbsArg* FitManager::GetRooAbsArg(const std::string& id_) const {
+	RooAbsArg* arg = workspace.arg(id_.c_str());
+
+	if (!arg) {
+		printf("[FitManager::GetRooAbsArg] RooAbsArg %s does not exist.\n", id_.c_str());
+	}
+
+	return arg;
+}
+
+inline RooRealVar* FitManager::GetRooRealVar(const std::string& id_) {
+	RooRealVar* variable = workspace.var(id_.c_str());
+
+	if (!variable) {
+		printf("[FitManager::GetRooRealVar] RooRealVar %s does not exist.\n", id_.c_str());
+		exit(1);
+	}
+
+	return variable;
+}
+
+const inline RooRealVar* FitManager::GetRooRealVar(const std::string& id_) const {
+	RooRealVar* variable = workspace.var(id_.c_str());
+
+	if (!variable) {
+		printf("[FitManager::GetRooRealVar] RooRealVar %s does not exist.\n", id_.c_str());
+		exit(1);
+	}
+
+	return variable;
+}
+
+RooCategory* FitManager::GetRooCategory(const std::string& id_) {
+	RooCategory* category = workspace.cat(id_.c_str());
+
+	if (!category) {
+		printf("[FitManager::GetRooCategory] RooCategory %s does not exist.\n", id_.c_str());
+		exit(1);
+	}
+
+	return category
+}
+
+const RooCategory* FitManager::GetRooCategory(const std::string& id_) const {
+	RooCategory* category = workspace.cat(id_.c_str());
+
+	if (!category) {
+		printf("[FitManager::GetRooCategory] RooCategory %s does not exist.\n", id_.c_str());
+		exit(1);
+	}
+
+	return category
+}
+
+inline void FitManager::FinalizeDataSet(const std::string& dataset_id_) {
+	std::unordered_map<std::string, WorkingDataSet>::iterator it = working_datasets.find(dataset_id_);
+
+	if (it == working_datasets.end()) {
+		printf("[FitManager::FinalizeDataSet] dataset %s does not exist.\n", dataset_id_.c_str());
+	}
+
+	RooDataSet& dataset = it->dataset;
+
+	if (workspace.data(dataset_id_.c_str()) != nullptr) {
+		printf("[FitManager::FinalizeDataSet] dataset %s already exists in the workspace.\n", dataset_id_.c_str());
+		exit(1);
+	}
+
+	if (workspace.import(dataset)) {
+		printf("[FitManager::FinalizeDataSet] fail to import dataset %s in the workspace.\n", dataset_id_.c_str());
+		exit(1);
+	}
+
+	working_datasets.erase(it);
+}
+
+inline void FitManager::FinalizeAllDataSet() {
+	std::vector<std::string> dataset_ids;
+	dataset_ids.reserve(working_datasets.size());
+
+	for (const std::pair<std::string, WorkingDataSet>& dataset : working_datasets) {
+		dataset_ids.push_back(dataset.first);
+	}
+
+	for (const std::string& dataset_id : dataset_ids) {
+		FinalizeDataSet(dataset_id);
+	}
+}
+
+inline void FitManager::DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {}) {
+
 }
 
 #endif 
