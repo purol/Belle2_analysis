@@ -45,6 +45,8 @@ private:
 	void EnsureWorkspaceNameAvailable(const std::string& id_) const;
 
 	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
+
+	static void ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_);
 public:
 	explicit FitManager(const std::string& workspace_name_, const std::string& workspace_title_ = "");
 
@@ -112,18 +114,69 @@ inline static const std::unordered_map<std::string, ModelDefinition>& FitManager
 	static const std::unordered_map<std::string, ModelDefinition> definitions = {
 		{ // RooGaussian (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigma)
 			"RooGaussian",
-			{ {"x"}, {"mean", "sigma"}, 0, 0}
+			{ {"x"}, {"mean", "sigma"}, 2, 2}
         },
 		{ // RooBifurGauss (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigmaL, RooAbsReal &_sigmaR)
 			"RooBifurGauss",
-			{ {"x"}, {"mean", "sigmaL", "sigmaR"}, 0, 0}
+			{ {"x"}, {"mean", "sigmaL", "sigmaR"}, 3, 3}
 		},
-		{ // RooBifurGauss (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_sigmaL, RooAbsReal &_sigmaR)
-			"RooBifurGauss",
-			{ {"x"}, {"mean", "sigmaL", "sigmaR"}, 0, 0}
+		{ // RooCrystalBall (const char *name, const char *title, RooAbsReal &x, RooAbsReal &x0, RooAbsReal &sigmaL, RooAbsReal &sigmaR, RooAbsReal &alphaL, RooAbsReal &nL, RooAbsReal &alphaR, RooAbsReal &nR)
+			"RooCrystalBall",
+			{ {"x"}, {"x0", "sigmaL", "sigmaR", "alphaL", "nL", "alphaR", "nR" }, 7, 7}
+		},
+		{ // RooJohnson (const char *name, const char *title, RooAbsReal &mass, RooAbsReal &mu, RooAbsReal &lambda, RooAbsReal &gamma, RooAbsReal &delta, double massThreshold=-std::numeric_limits< double >::max())
+			"RooJohnson",
+			{ {"x"}, {"mu", "lambda", "gamma", "delta"}, 4, 4}
+		},
+		{ // RooCBShape (const char *name, const char *title, RooAbsReal &_m, RooAbsReal &_m0, RooAbsReal &_sigma, RooAbsReal &_alpha, RooAbsReal &_n)
+			"RooCBShape",
+			{ {"x"}, {"m0", "sigma", "alpha", "n"}, 4, 4}
+		},
+		{ // RooArgusBG (const char *name, const char *title, RooAbsReal &_m, RooAbsReal &_m0, RooAbsReal &_c, RooAbsReal &_p)
+			"RooArgusBG",
+			{ {"x"}, {"m0", "c", "p"}, 3, 3}
+		},
+		{ // RooPolynomial (const char *name, const char *title, RooAbsReal &_x, const RooArgList &_coefList, Int_t lowestOrder=1)
+			"RooPolynomial",
+			{ {"x"}, {"coefficient"}, 0, std::nullopt}
+		},
+		{ // RooExponential (const char *name, const char *title, RooAbsReal &variable, RooAbsReal &coefficient, bool negateCoefficient=false)
+			"RooExponential",
+			{{"x"}, {"c"}, 1, 1}
+		},
+		{ // RooChebychev (const char *name, const char *title, RooAbsReal &_x, const RooArgList &_coefList)
+			"RooChebychev",
+			{{"x"}, {"coefficient"}, 0, std::nullopt}
+		},
+		{ // RooBernstein (const char *name, const char *title, RooAbsRealLValue &_x, const RooArgList &_coefList)
+			"RooBernstein",
+			{{"x"}, {"coefficient"}, 1, std::nullopt}
+		},
+		{ // RooBreitWigner (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_width)
+			"RooBreitWigner",
+			{{"x"}, {"mean", "width"}, 2, 2}
+		},
+		{ // RooVoigtian (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_mean, RooAbsReal &_width, RooAbsReal &_sigma, bool doFast=false)
+			"RooVoigtian",
+			{{"x"}, {"mean", "width", "sigma"}, 3, 3}
+		},
+		{ // RooBukinPdf (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_Xp, RooAbsReal &_sigp, RooAbsReal &_xi, RooAbsReal &_rho1, RooAbsReal &_rho2)
+			"RooBukinPdf",
+			{{"x"}, {"Xp", "sigp", "xi", "rho1", "rho2"}, 5, 5}
+		},
+		{ // RooNovosibirsk (const char *name, const char *title, RooAbsReal &_x, RooAbsReal &_peak, RooAbsReal &_width, RooAbsReal &_tail)
+			"RooNovosibirsk",
+			{{"x"}, {"peak", "width", "tail"}, 3, 3}
 		}
-		/* to do */
 	};
+
+	return definitions;
+}
+
+static void ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_){
+	if (observable_count_ != definition_.observable_ids.size()){
+		/* to do */
+	}
 }
 
 inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_) {
@@ -325,6 +378,19 @@ inline void FitManager::FinalizeAllDataSet() {
 }
 
 inline void FitManager::DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {}) {
+	EnsureWorkspaceNameAvailable(model_id_);
+
+	const std::unordered_map<std::string, ModelDefinition>::iterator it = ModelDefinitions().find(model_type_);
+
+	if(it == ModelDefinitions().end()){
+		printf("[FitManager::DefineModel] cannot find model type %s. Use ImportPdf() for an arbitrary RooAbsPdf.\n", model_type_.c_str());
+		exit(1);
+	}
+
+	const ModelDefinition& definition = it->second;
+
+
+
 
 }
 
