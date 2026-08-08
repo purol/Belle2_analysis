@@ -419,8 +419,24 @@ inline void FitManager::DefineModel(const std::string& model_id_, const std::str
 	std::unique_ptr<RooAbsPdf> pdf;
 
 	if (model_type_ == "RooGaussian"){
-		pdf = std::make_unique<RooGaussian>(model_id_.c_str(), model_id_.c_str(), /* to do */);
+		pdf = std::make_unique<RooGaussian>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1)
+		);
 	}
+	else if(model_type_ == "RooBifurGauss"){
+		pdf = std::make_unique<RooBifurGauss>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2)
+		);
+	} /* to do */
 }
 
 #endif 
