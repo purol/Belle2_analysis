@@ -175,7 +175,18 @@ inline static const std::unordered_map<std::string, ModelDefinition>& FitManager
 
 static void FitManager::ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_){
 	if (observable_count_ != definition_.observable_ids.size()){
-		/* to do */
+		printf("[FitManager::ValidateModelArguments] model type %s requires %zu observable(s), but %zu were supplied.\n". model_type_.c_str(), definition_.observable_ids.size(), observable_count_);
+		exit(1);
+	}
+
+	if(parameter_count_ < definition_.N_min_parameters){
+		printf("[FitManager::ValidateModelArguments] model type %s requires at least %zu parameter(s), but %zu were supplied.\n". model_type_.c_str(), definition_.N_min_parameters, parameter_count_);
+		exit(1);
+	}
+
+		if(parameter_count_ > definition_.N_max_parameters){
+		printf("[FitManager::ValidateModelArguments] model type %s requires at most %zu parameter(s), but %zu were supplied.\n". model_type_.c_str(), definition_.N_max_parameters, parameter_count_);
+		exit(1);
 	}
 }
 
@@ -389,9 +400,27 @@ inline void FitManager::DefineModel(const std::string& model_id_, const std::str
 
 	const ModelDefinition& definition = it->second;
 
+    ValidateModelArguments(model_type_, definition, observable_ids_.size(), parameter_ids_.size());
 
+	std::vector<RooAbsReal*> observables;
+	observables.reserve(observable_ids_.size());
 
+	for(const std::string& observable_id : observable_ids_){
+		observables.push_back(GetRooAbsArg(observable_id));
+	}
 
+	std::vector<RooAbsReal*> parameters;
+	parameters.reserve(parameter_ids_.size());
+
+	for(const std::string& parameter_id : parameter_ids_){
+		parameters.push_back(parameter_id);
+	}
+
+	std::unique_ptr<RooAbsPdf> pdf;
+
+	if (model_type_ == "RooGaussian"){
+		pdf = std::make_unique<RooGaussian>(model_id_.c_str(), model_id_.c_str(), /* to do */);
+	}
 }
 
 #endif 
