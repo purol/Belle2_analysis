@@ -7,10 +7,14 @@
 #include <unordered_map>
 #include <optional>
 
+#include <RooAbsPdf.h>
 #include <RooAbsArg.h>
 #include <RooRealVar.h>
-#include <RooWorkspace.h>
 #include <RooCategory.h>
+#include <RooArgList.h>
+#include <RooDataSet.h>
+#include <RooFitResult.h>
+#include <RooWorkspace.h>
 
 struct WorkingDataSet {
 	std::vector<std::string> observable_ids;
@@ -24,6 +28,12 @@ struct ModelOptions {
 
 	// RooJohnson. If not set, ROOT's default threshold is used.
 	std::optional<double> johnson_mass_threshold;
+
+	// RooExponential
+	bool negateCoefficient = false;
+
+	// RooVoigtian
+	bool doFast = false;
 };
 
 struct ModelDefinition {
@@ -36,12 +46,25 @@ struct ModelDefinition {
 	std::optional<std::size_t> N_max_parameters;
 };
 
+struct FitOptions {
+	std::string range;
+	std::pair<std::string, std::string> Minimizer;
+	std::vector<std::string> Minos;
+	int strategy = 1;
+	bool SumW2Error = false;
+	bool extended = false;
+	std::string Offset = "none";
+
+	int print_level = 0;
+};
+
 class FitManager {
 private:
 	RooWorkspace workspace;
 	std::unordered_map<std::string, WorkingDataSet> working_datasets;
 
 	void ImportChecked(const RooAbsArg& object_);
+	void ImportDataChecked(const RooAbsData& data_);
 	void EnsureWorkspaceNameAvailable(const std::string& id_) const;
 
 	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
@@ -61,22 +84,36 @@ public:
 	void DefineDataSet(const std::string& id_, const std::vector<std::string> observable_ids_);
 	void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
 	void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
-	void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::pair<std::string, int>>& states_);
+	void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
 
 	void SetParameterConstant(const std::string& id_, bool constant_ = true);
 	void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
 
 	RooAbsArg* GetRooAbsArg(const std::string& id_);
 	const RooAbsArg* GetRooAbsArg(const std::string& id_) const;
+	RooAbsReal* GetRooAbsReal(const std::string& id_);
+	const RooAbsReal* GetRooAbsReal(const std::string& id_) const;
 	RooRealVar* GetRooRealVar(const std::string& id_);
 	const RooRealVar* GetRooRealVar(const std::string& id_) const;
 	RooCategory* GetRooCategory(const std::string& id_);
 	const RooCategory* GetRooCategory(const std::string& id_) const;
+	RooAbsPdf* GetPdf(const std::string& id_);
+	const RooAbsPdf* GetPdf(const std::string& id_) const;
 
 	void FinalizeDataSet(const std::string& dataset_id_);
 	void FinalizeAllDataSet();
 
 	void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
+	void DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_ = false);
+	void DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_ = 0.0);
+	void DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_);
+	void DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_);
+
+	void ImportRooAbsArg(const RooAbsArg& object_);
+	void ImportPdf(const RooAbsPdf& pdf_);
+	void ImportData(const RooAbsData& data);
+
+	RooFitResult* MyFit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 };
 
 inline void FitManager::ImportChecked(const RooAbsArg& object_) {
@@ -85,6 +122,14 @@ inline void FitManager::ImportChecked(const RooAbsArg& object_) {
 	if (workspace.import(object_)) {
 		printf("[FitManager::ImportChecked] failed to import RooAbsArg %s", object_.GetName());
 		exit(1);
+	}
+}
+
+inline void FitManager::ImportDataChecked(const RooAbsData& data_) {
+	EnsureWorkspaceNameAvailable(data_.GetName());
+
+	if (workspace.import(data_)) {
+		printf("[FitManager::ImportDataChecked] failed to import dataset %s", data_.GetName());
 	}
 }
 
@@ -267,7 +312,7 @@ inline void FitManager::SetRange(const std::string& variable_id_, const std::str
 	GetRooRealVar(variable_id_)->setRange(range_name_.c_str(), minimum_, maximum_);
 }
 
-inline void FitManager::DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::pair<std::string, int>>& states_) {
+inline void FitManager::DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_) {
 	if (states_.empty()) {
 		printf("[FitManager::DefineCategory] at least one state is required.\n");
 		exit(1);
@@ -275,14 +320,14 @@ inline void FitManager::DefineCategory(const std::string& id_, const std::string
 
 	RooCategory category(id_.c_str(), title_.c_str());
 
-	for (const std::pair<std::string, int>& state : states_) {
-		if (state.first.empty()) {
+	for (const std::string& state : states_) {
+		if (state.empty()) {
 			printf("[FitManager::DefineCategory] state label must not be empty.\n");
 			exit(1);
 		}
 
-		if (category.defineType(state.first, state.second)) {
-			printf("[FitManager::DefineCategory] failed to define state %s", state.first.c_str());
+		if (category.defineType(state)) {
+			printf("[FitManager::DefineCategory] failed to define state %s", state.c_str());
 		}
 	}
 
@@ -307,6 +352,24 @@ inline const RooAbsArg* FitManager::GetRooAbsArg(const std::string& id_) const {
 	}
 
 	return arg;
+}
+
+RooAbsReal* GetRooAbsReal(const std::string& id_) {
+	RooAbsReal* real = dynamic_cast<RooAbsReal*>(GetRooAbsArg(id_));
+
+	if (!real) {
+		printf("[FitManager::GetRooAbsReal] object %s is not a RooAbsReal.\n", id_.c_str());
+		exit(1);
+	}
+}
+
+const RooAbsReal* GetRooAbsReal(const std::string& id_) const {
+	RooAbsReal* real = dynamic_cast<RooAbsReal*>(GetRooAbsArg(id_));
+
+	if (!real) {
+		printf("[FitManager::GetRooAbsReal] object %s is not a RooAbsReal.\n", id_.c_str());
+		exit(1);
+	}
 }
 
 inline RooRealVar* FitManager::GetRooRealVar(const std::string& id_) {
@@ -353,6 +416,26 @@ const RooCategory* FitManager::GetRooCategory(const std::string& id_) const {
 	return category
 }
 
+RooAbsPdf* FitManager::GetPdf(const std::string& id_) {
+	RooAbsPdf* pdf = workspace.pdf(id_.c_str());
+
+	if (!pdf) {
+		printf("[FitManager::GetPdf] PDF %s does not exist\n", id_.c_str());
+	}
+
+	return pdf;
+}
+
+const RooAbsPdf* FitManager::GetPdf(const std::string& id_) const {
+	RooAbsPdf* pdf = workspace.pdf(id_.c_str());
+
+	if (!pdf) {
+		printf("[FitManager::GetPdf] PDF %s does not exist\n", id_.c_str());
+	}
+
+	return pdf;
+}
+
 inline void FitManager::FinalizeDataSet(const std::string& dataset_id_) {
 	std::unordered_map<std::string, WorkingDataSet>::iterator it = working_datasets.find(dataset_id_);
 
@@ -388,7 +471,7 @@ inline void FitManager::FinalizeAllDataSet() {
 	}
 }
 
-inline void FitManager::DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {}) {
+inline void FitManager::DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options_ = {}) {
 	EnsureWorkspaceNameAvailable(model_id_);
 
 	const std::unordered_map<std::string, ModelDefinition>::iterator it = ModelDefinitions().find(model_type_);
@@ -406,14 +489,14 @@ inline void FitManager::DefineModel(const std::string& model_id_, const std::str
 	observables.reserve(observable_ids_.size());
 
 	for(const std::string& observable_id : observable_ids_){
-		observables.push_back(GetRooAbsArg(observable_id));
+		observables.push_back(GetRooAbsReal(observable_id));
 	}
 
 	std::vector<RooAbsReal*> parameters;
 	parameters.reserve(parameter_ids_.size());
 
 	for(const std::string& parameter_id : parameter_ids_){
-		parameters.push_back(parameter_id);
+		parameters.push_back(GetRooAbsReal(parameter_id));
 	}
 
 	std::unique_ptr<RooAbsPdf> pdf;
@@ -436,7 +519,317 @@ inline void FitManager::DefineModel(const std::string& model_id_, const std::str
 			*parameters.at(1),
 			*parameters.at(2)
 		);
-	} /* to do */
+	}
+	else if (model_type_ == "RooCrystalBall") {
+		pdf = std::make_unique<RooCrystalBall>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2),
+			*parameters.at(3),
+			*parameters.at(4),
+			*parameters.at(5),
+			*parameters.at(6)
+		);
+	}
+	else if (model_type_ == "RooJohnson") {
+		if (options_.johnson_mass_threshold.has_value()) {
+			pdf = std::make_unique<RooJohnson>(
+				model_id_.c_str(),
+				model_id_.c_str(),
+				*observables.at(0),
+				*parameters.at(0),
+				*parameters.at(1),
+				*parameters.at(2),
+				*parameters.at(3),
+				options_.johnson_mass_threshold.value()
+			);
+		}
+		else {
+			pdf = std::make_unique<RooJohnson>(
+				model_id_.c_str(),
+				model_id_.c_str(),
+				*observables.at(0),
+				*parameters.at(0),
+				*parameters.at(1),
+				*parameters.at(2),
+				*parameters.at(3)
+			);
+		}
+	}
+	else if (model_type_ == "RooCBShape") {
+		pdf = std::make_unique<RooCBShape>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2),
+			*parameters.at(3)
+		);
+	}
+	else if (model_type_ == "RooPolynomial") {
+		RooArgList coefficients;
+
+		for (RooAbsReal* parameter : parameters) {
+			coefficients.add(*parameter);
+		}
+
+		pdf = std::make_unique<RooPolynomial>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			coefficients,
+			options_.lowest_order
+		);
+	}
+	else if (model_type_ == "RooExponential") {
+		pdf = std::make_unique<RooExponential>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			options_.negateCoefficient
+		);
+	}
+	else if (model_type_ == "RooChebychev") {
+		RooArgList coefficients;
+
+		for (RooAbsReal* parameter : parameters) {
+			coefficients.add(*parameter);
+		}
+
+		pdf = std::make_unique<RooChebychev>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			coefficients
+		);
+	}
+	else if (model_type_ == "RooBernstein") {
+		RooArgList coefficients;
+
+		for (RooAbsReal* parameter : parameters) {
+			coefficients.add(*parameter);
+		}
+
+		pdf = std::make_unique<RooBernstein>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			coefficients
+		);
+	}
+	else if (model_type_ == "RooBreitWigner") {
+		pdf = std::make_unique<RooBreitWigner>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1)
+		);
+	}
+	else if (model_type_ == "RooVoigtian") {
+		pdf = std::make_unique<RooVoigtian>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2),
+			options_.doFast
+		);
+	}
+	else if (model_type_ == "RooBukinPdf") {
+		pdf = std::make_unique<RooBukinPdf>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2),
+			*parameters.at(3),
+			*parameters.at(4)
+		);
+	}
+	else if (model_type_ == "RooNovosibirsk") {
+		pdf = std::make_unique<RooNovosibirsk>(
+			model_id_.c_str(),
+			model_id_.c_str(),
+			*observables.at(0),
+			*parameters.at(0),
+			*parameters.at(1),
+			*parameters.at(2)
+		);
+	}
+	else {
+		printf("[FitManager::DefineModel] model type %s is registered but has not builder.\n", model_type_.c_str());
+		exit(1);
+	}
+
+	ImportPdf(*pdf);
+}
+
+inline void FitManager::DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_ = false) {
+	/*
+	* recursive_fraction = false:
+	* f = c1*f1 + c2*f2 + (1-c1-c2)*f3
+	* 
+	* recursive_fraction = true:
+	* f = c1*f1 + (1-c1)*c2*f2 + (1-c1)*(1-c2)*f3
+	* 
+	* NOTE: Each pdfs are assumed to be normalized. The normalization for the final PDF is not done.
+	* NOTE: If Ncoeff == Npdf - 1, the coefficient for the last pdf is calculated from \sigma c = 1, so it is automatically normalized
+	*/
+	EnsureWorkspaceNameAvailable(model_id_);
+
+	const std::size_t n_pdf = pdf_ids_.size();
+	const std::size_t n_coef = coefficient_ids_.size();
+
+	if (n_pdf < 1) {
+		printf("[FitManager::DefineAddModel] at least one pdf is required.\n");
+		exit(1);
+	}
+
+	if (!((n_coef == n_pdf) || (n_coef + 1 == n_pdf))) {
+		printf();
+		exit(1);
+	}
+
+	RooArgList pdfs;
+	RooArgList coefficients;
+
+	for (const std::string& pdf_id : pdf_ids_) {
+		pdfs.add(*GetPdf(pdf_id));
+	}
+
+	for (const std::string& coefficient_id : coefficient_ids_) {
+		coefficients.add(*GetRooAbsReal(coefficient_id));
+	}
+
+	RooAddPdf model(model_id_.c_str(), model_id_.c_str(), pdfs, coefficients, recursive_fractions_);
+
+	ImportPdf(model);
+
+}
+
+inline void FitManager::DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_) {
+	/*
+	* cut_off: parameter for the optimization. If pdf value is smaller than cut_off, it just becomes zero
+	* 
+	* NOTE: If pdfs share the variables, the normalization is done.
+	*/
+
+	EnsureWorkspaceNameAvailable(model_id_);
+
+	if (pdf_ids_.empty()) {
+		printf("[FitManager::DefineProductModel] at least one pdf is required.\n");
+		exit(1);
+	}
+
+	if (cutoff_ < 0.0) {
+		printf("[FitManager::DefineProductModel] cutoff must be non-negative.\n");
+		exit(1);
+	}
+
+	RooArgList = pdfs;
+
+	for (const std::string& pdf_id : pdf_ids_) {
+		pdfs.add(*GetPdf(pdf_id));
+	}
+
+	RooProdPdf model(model_id_.c_str(), model_id_.c_str(), pdfs, cutoff_);
+
+	ImportPdf(model);
+}
+
+inline void FitManager::DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_) {
+	/*
+	* example usage:
+	* fit_manager.DefineGenericModel("my_gaussian", "exp(-0.5 * pow((@0 - @1) / @2, 2))", {"x", "mean", "sigma"} );
+	* expression follows the valid TFormula
+	* 
+	* NOTE: normalization is automatically done
+	*/
+
+	EnsureWorkspaceNameAvailable(model_id_);
+
+	if (expression_.empty()) {
+		printf("[FitManager::DefineGenericModel] expression must not be empty.\n");
+		exit(1);
+	}
+
+	if (argument_ids_.empty()) {
+		printf("[FitManager::DefineGenericModel] at least one argument is required.\n");
+		exit(1);
+	}
+
+	RooArgList arguments;
+
+	for (const RooAbsArg& argument_id : argument_ids_) {
+		arguments.add(*GetRooAbsArg(argument_id));
+	}
+
+	RooGenericPdf model(model_id_.c_str(), model_id_.c_str(), expression_.c_str(), arguments);
+
+	ImportPdf(model);
+}
+
+inline void FitManager::DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_) {
+	/*
+	* example usage:
+	* fit_manager.DefineCategory( "channel", "channel", { {"electron", "muon"} } );
+	* fit_manager.DefineModel( "electron_pdf", "RooGaussian", "M", {"mean", "sigma_e"} );
+	* fit_manager.DefineModel( "muon_pdf", "RooGaussian", "M", {"mean", "sigma_mu"} );
+	* 
+	* fit_manager.DefineSimultaneousModel( "sim_pdf", "channel", { {"electron", "electron_pdf"}, {"muon", "muon_pdf"} } );
+	*/
+
+	EnsureWorkspaceNameAvailable(model_id_);
+
+	if (state_pdf_ids_.empty()) {
+		printf("[FitManager::DefineSimultaneousModel] at least one state/PDF pair is required.\n");
+		exit(1);
+	}
+
+	RooCategory* category = GetRooCategory(category_id_);
+
+	RooSimultaneous model(model_id_.c_str(), model_id_.c_str(), *category);
+
+	for (const std::pair<std::string, std::string> state_pdf_id : state_pdf_ids_) {
+		const std::string& state = state_pdf_id.first;
+		const std::string& pdf_id = state_pdf_id.second;
+
+		if (!category->hasLabel(state.c_str())) {
+			printf("[FitManager::DefineSimultaneousModel] category %s has no state %s.\n", category_id_.c_str(), state.c_str());
+			exit(1);
+		}
+
+		if (model.addPdf(*GetPdf(pdf_id), state.c_str())) {
+			printf("[FitManager::DefineSimultaneousModel] fail to add PDF %s for state %s.\n", pdf_id.c_str(), state.c_str());
+			exit(1);
+		}
+	}
+
+	ImportPdf(model);
+}
+
+inline void FitManager::ImportRooAbsArg(const RooAbsArg& object_) {
+	ImportChecked(object_);
+}
+
+inline void FitManager::ImportPdf(const RooAbsPdf& pdf_) {
+	ImportChecked(pdf_);
+}
+
+inline void FitManager::ImportData(const RooAbsData& data_) {
+	ImportDataChecked(data_);
+}
+
+inline RooFitResult* MyFit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
+
 }
 
 #endif 
