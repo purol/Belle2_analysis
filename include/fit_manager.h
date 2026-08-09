@@ -158,6 +158,7 @@ public:
 
 	void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 	void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void PlotFit(const std::string& fit_id_, const std::string& observale_id_, int bins, const std::string& plot_name_);
 
 	void PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_);
 	void PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_);
@@ -356,6 +357,60 @@ inline void FitManager::CreateNLL(const std::string& nll_id_, const std::string&
 
 	fit_nlls.emplace(nll_id_, std::unique_ptr<RooAbsReal>(nll));
 
+}
+
+inline void PlotFit(const std::string& fit_id_, const std::string& observale_id_, int bins, const std::string& plot_name_){
+    RooRealVar* observable = GetRooRealVar(observable_id_);
+	RooAbsData* data = GetData(const std::string& id_);
+
+	TNamed* dataset_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__dataset_id").c_str()));
+	TNamed* model_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__model_id").c_str()));
+	TNamed* range_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__range").c_str()));
+
+	//
+		TNamed dataset_metadata((fit_id_ + "__dataset_id").c_str(), dataset_id_.c_str());
+	TNamed model_metadata((fit_id_ + "__model_id").c_str(), model_id_.c_str());
+	TNamed range_metadata((fit_id_ + "__range").c_str(), options_.range.c_str());
+	//
+
+    std::unique_ptr<RooPlot> frame(observable->frame(RooFit::Bins(bins), RooFit::Title(" ")));
+	data->plotOn(frame.get(), RooFit::DataError(RooAbsData::SumW2), RooFit::Name("signal MC")); /* to do */
+    bifurcated_M.plotOn(M_inv_frame, RooFit::LineColor(kRed), RooFit::LineStyle(kDashed), RooFit::Range("full"), RooFit::NormRange("peak"));
+    bifurcated_M.plotOn(M_inv_frame, RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range("peak"), RooFit::NormRange("peak"), RooFit::Name("BifurGauss"));
+
+    RooHist* pull_M = M_inv_frame->pullHist("signal MC", "BifurGauss");
+    RooPlot* M_inv_pull_frame = M_inv.frame(RooFit::Title(""));
+    M_inv_pull_frame->addPlotable(pull_M, "P");
+
+    TCanvas* c_M = new TCanvas("canvas_M_fit", "canvas_M_fit", 800, 800);
+
+    c_M->cd();
+    TPad* pad1_M = new TPad("pad1_M", "pad1_M", 0.0, 0.3, 1.0, 1.0);
+    pad1_M->SetBottomMargin(0.05); pad1_M->SetLeftMargin(0.15); pad1_M->SetGridx(); pad1_M->Draw(); pad1_M->cd();
+    M_inv_frame->GetXaxis()->SetLabelSize(0); M_inv_frame->GetXaxis()->SetTitleSize(0);
+    M_inv_frame->Draw();
+    TLegend* legend_M = new TLegend(0.2, 0.75, 0.45, 0.85);
+    legend_M->AddEntry("signal MC", "signal MC", "lpe");
+    legend_M->AddEntry("BifurGauss", "BifurGauss", "l");
+    legend_M->SetFillStyle(0); legend_M->SetLineWidth(0);
+    legend_M->Draw();
+    TLatex latex_M;
+    latex_M.SetNDC();
+    latex_M.SetTextSize(0.04);
+    latex_M.DrawLatex(0.2, 0.7, ("#mu = " + toStringWithPrecision(mean_M_fit, 4) + " #pm " + toStringWithPrecision(mean_M_fit_error, 4) + " [GeV]").c_str());
+    latex_M.DrawLatex(0.2, 0.6, ("#delta^{left}_{Gauss} = " + toStringWithPrecision(sigma_left_M_fit * 1000.0, 3) + " #pm " + toStringWithPrecision(sigma_left_M_fit_error * 1000.0, 3) + " [MeV]").c_str());
+    latex_M.DrawLatex(0.2, 0.5, ("#delta^{right}_{Gauss} = " + toStringWithPrecision(sigma_right_M_fit * 1000.0, 3) + " #pm " + toStringWithPrecision(sigma_right_M_fit_error * 1000.0, 3) + " [MeV]").c_str());
+
+    c_M->cd();
+    TPad* pad2_M = new TPad("pad2_M", "pad2_M", 0.0, 0.0, 1, 0.3);
+    pad2_M->SetTopMargin(0.05); pad2_M->SetBottomMargin(0.3); pad2_M->SetLeftMargin(0.15); pad2_M->SetGridx(); pad2_M->Draw(); pad2_M->cd();
+    M_inv_pull_frame->GetXaxis()->SetLabelSize(0.1); M_inv_pull_frame->GetXaxis()->SetTitleSize(0.1); M_inv_pull_frame->GetYaxis()->SetTitleOffset(0.4);
+    M_inv_pull_frame->GetYaxis()->SetLabelSize(0.1); M_inv_pull_frame->GetYaxis()->SetTitleSize(0.1); M_inv_pull_frame->GetYaxis()->SetTitle("pull"); M_inv_pull_frame->SetTitle("");
+    M_inv_pull_frame->Draw();
+
+    c_M->SetBottomMargin(0.0);
+    c_M->SaveAs((std::string(argv[2]) + "/M_fit.png").c_str());
+    delete c_M;
 }
 
 inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_) {
@@ -1085,6 +1140,15 @@ inline void FitManager::Fit(const std::string& fit_id_, const std::string datase
 	);
 
 	ImportChecked(*result, fit_id_);
+
+	// save metadata
+	TNamed dataset_metadata((fit_id_ + "__dataset_id").c_str(), dataset_id_.c_str());
+	TNamed model_metadata((fit_id_ + "__model_id").c_str(), model_id_.c_str());
+	TNamed range_metadata((fit_id_ + "__range").c_str(), options_.range.c_str());
+	
+	ImportChecked(dataset_metadata, dataset_metadata.GetName());
+	ImportChecked(model_metadata, model_metadata.GetName());
+	ImportChecked(range_metadata, range_metadata.GetName());
 	
 };
 
