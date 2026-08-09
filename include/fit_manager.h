@@ -15,6 +15,7 @@
 #include <RooDataSet.h>
 #include <RooFitResult.h>
 #include <RooWorkspace.h>
+#include <RooFitResult.h>
 
 struct WorkingDataSet {
 	std::vector<std::string> observable_ids;
@@ -58,18 +59,31 @@ struct FitOptions {
 	int print_level = 0;
 };
 
+struct NLLResource{
+	std::string dataset_id;
+	std::string model_id;
+	std::unique_ptr<RooAbsReal> nll;
+	double minimum_nll = 0.0;
+};
+
 class FitManager {
 private:
 	RooWorkspace workspace;
 	std::unordered_map<std::string, WorkingDataSet> working_datasets;
+	std::unordered_map<std::string, std::unique_ptr<RooFitResult>> fit_results;
+	std::unordered_map<std::string, std::unique_ptr<NLLResource>> fit_nlls;
 
 	void ImportChecked(const RooAbsArg& object_);
 	void ImportDataChecked(const RooAbsData& data_);
 	void EnsureWorkspaceNameAvailable(const std::string& id_) const;
+	void EnsureFitIdAvailable(const std::string& fit_id_) const;
+	void EnsureDataInWorkspace(const std::string& dataset_id_);
 
 	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
 
 	static void ValidateModelArguments(const std::string & model_type_, const ModelDefinition& definition_, std::size_t observable_count_, std::size_t parameter_count_);
+
+	std::unique_ptr<RooAbsReal> CreateNLL(RooAbsPdf& pdf_, RooAbsData& data_, const FitOptions& options_);
 public:
 	explicit FitManager(const std::string& workspace_name_, const std::string& workspace_title_ = "");
 
@@ -99,6 +113,8 @@ public:
 	const RooCategory* GetRooCategory(const std::string& id_) const;
 	RooAbsPdf* GetPdf(const std::string& id_);
 	const RooAbsPdf* GetPdf(const std::string& id_) const;
+	RooAbsData* GetData(const std::string& id_);
+	const RooAbsData* GetData(const std::string& id_) const;
 
 	void FinalizeDataSet(const std::string& dataset_id_);
 	void FinalizeAllDataSet();
@@ -113,7 +129,14 @@ public:
 	void ImportPdf(const RooAbsPdf& pdf_);
 	void ImportData(const RooAbsData& data);
 
-	RooFitResult* MyFit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+	void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void SaveFitResult(const std::string& fit_id_, const std::string& filename_);
+
+	void PlotNLL(const std::string& fit_id_, const std::strinf& plot_name_);
+	void PlotProfileNLL(const std::string& fit_id_, const std::strinf& plot_name_);
+
+	void SaveWorkspace(const std::string& filename_);
+	void LoadWorkspace(const std::string& filename_, const std::string& workspace_name_);
 };
 
 inline void FitManager::ImportChecked(const RooAbsArg& object_) {
@@ -143,6 +166,34 @@ inline void FitManager::EnsureWorkspaceNameAvailable(const std::string& id_) con
 		printf("[FitManager::EnsureWorkspaceNameAvailable] Ojbect %s already exists.\n", id_.c_str());
 		exit(1);
 	}
+}
+
+inline void FitManager::EnsureFitIdAvailable(const std::string& fit_id_) const {
+	if(fit_id_.empty()){
+		printf("[FitManager::EnsureFitIdAvailable] fit ID must not be empty.\n");
+		exit(1);
+	}
+
+	if((fit_result.find(fit_id_) != fit_result.end()) || (fit_nlls.find(fit_id_) != fit_nlls.end())){
+		printf("[FitManager::EnsureFitIdAvailable] fit %s already exists.\n", fit_id_.c_str());
+		exit(1);
+	}
+}
+
+inline void FitManager::EnsureDataInWorkspace(const std::string& dataset_id_){
+	if (workspace.data(dataset_id_.c_str()) != nullptr){
+		return;
+	}
+
+	std::unordered_map<std::string, WorkingDataSet>::iterator it = working_datasets.find(dataset_id_);
+
+	if(it != working_datasets.end()){
+		FinalizeDataSet(dataset_id_);
+		return;
+	}
+
+	printf("[FitManager::EnsureDataInWorkspace] dataset %s does not exists.\n", dataset_id_.c_str());
+	exit(1);
 }
 
 inline static const std::unordered_map<std::string, ModelDefinition>& FitManager::ModelDefinitions() {
@@ -233,6 +284,28 @@ static void FitManager::ValidateModelArguments(const std::string & model_type_, 
 		printf("[FitManager::ValidateModelArguments] model type %s requires at most %zu parameter(s), but %zu were supplied.\n". model_type_.c_str(), definition_.N_max_parameters, parameter_count_);
 		exit(1);
 	}
+}
+
+inline std::unique_ptr<RooAbsReal> FitManager::CreateNLL(RooAbsPdf& pdf_, RooAbsData& data_, const FitOptions& options_){
+
+    if((options_.Offset != "none") || (options_.Offset != "initial") || (options_.Offset != "bin")){
+		printf("[FitManager::Fit] offset must be none, initial, or bin.\n");
+		exit(1):
+	}
+
+	RooCmdArg range_arg = options_.range.empty() ? RooCmdArg::none() : RooFit::Range(options_.range.c_str());
+
+    RooAbsReal* nll = pdf_.createNLL(
+		data_,
+		
+		range_arg,
+
+		RooFit::Extended(options_.extended),
+		RooFit::Offset(options_.Offset)
+	);
+
+	return std::unique_ptr<RooAbsReal>(nll);
+
 }
 
 inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_) {
@@ -434,6 +507,28 @@ const RooAbsPdf* FitManager::GetPdf(const std::string& id_) const {
 	}
 
 	return pdf;
+}
+
+RooAbsData* FitManager::GetData(const std::string& id_){
+	RooAbsData* data = workspace.data(id_.c_str());
+
+	if (!data){
+		printf("[FitManager::GetData] data %s does not exist in the workspace.\n", id_.c_str());
+		exit(1);
+	}
+
+	return data;
+}
+
+const RooAbsData* FitManager::GetData(const std::string& id_) const {
+	RooAbsData* data = workspace.data(id_.c_str());
+
+	if (!data){
+		printf("[FitManager::GetData] data %s does not exist in the workspace.\n", id_.c_str());
+		exit(1);
+	}
+
+	return data;
 }
 
 inline void FitManager::FinalizeDataSet(const std::string& dataset_id_) {
@@ -828,9 +923,54 @@ inline void FitManager::ImportData(const RooAbsData& data_) {
 	ImportDataChecked(data_);
 }
 
-inline RooFitResult* MyFit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
+inline void FitManager::Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
+	EnsureFitIdAvailable(fit_id_);
+	EnsureDataInWorkspace(dataset_id_);
 
-}
+	if((options_.strategy < 0) || (options_.strategy > 2)){
+		printf("[FitManager::Fit] strategy must be 0, 1, or 2.\n");
+		exit(1):
+	}
+
+	if((options_.Offset != "none") || (options_.Offset != "initial") || (options_.Offset != "bin")){
+		printf("[FitManager::Fit] offset must be none, initial, or bin.\n");
+		exit(1):
+	}
+
+	RooAbsPdf* pdf = GetPdf(model_id_);
+	RooAbsData* data = GetData(dataset_id_);
+
+	RooCmdArg range_arg = options_.range.empty() ? RooCmdArg::none() : RooFit::Range(options_.range.c_str());
+    RooCmdArg minimizer_arg = options_.Minimizer.first.empty() ? RooCmdArg::none() : RooFit::Minimizer( options_.Minimizer.first.c_str(), options_.Minimizer.second.empty() ? nullptr : options_.Minimizer.second.c_str() );
+
+	RooArgSet minos_parameters;
+    for (const std::string& parameter_id : options_.Minos) {
+        minos_parameters.add(*GetRooAbsReal(parameter_id));
+    }
+	RooCmdArg minos_arg = options_.Minos.empty() ? ROoCmdArg::none() : RooFit::Minos(minos_parameters);
+
+    RooFitResult* result = pdf->fitTo(
+		*data,
+
+		RooFit::Save(true),
+
+		range_arg,
+		minimizer_arg,
+		minos_arg,
+
+		RooFit::Strategy(options_.strategy),
+        RooFit::SumW2Error(options_.SumW2Error),
+        RooFit::Extended(options_.extended),
+        RooFit::Offset(options_.Offset),
+        RooFit::PrintLevel(options_.print_level)
+	);
+
+	std::unique_ptr<RooAbsReal> nll = CreateNLL(*pdf, *data, options_);
+
+	fit_results.emplace(fit_id_, std::move(std::unique_ptr<RooFitResult>(result)));
+    fit_nlls.emplace(fit_id_, std::move(nll));
+	
+};
 
 #endif 
 
