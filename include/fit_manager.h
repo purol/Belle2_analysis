@@ -94,7 +94,7 @@ public:
 
 	~FitManager() = default;
 
-	void DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_ = "");
+	void DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_ = "");
 	void DefineDataSet(const std::string& id_, const std::vector<std::string> observable_ids_);
 	void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
 	void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
@@ -132,8 +132,8 @@ public:
 	void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
     void SaveFitResult(const std::string& fit_id_, const std::string& filename_);
 
-	void PlotNLL(const std::string& fit_id_, const std::strinf& plot_name_);
-	void PlotProfileNLL(const std::string& fit_id_, const std::strinf& plot_name_);
+	void PlotNLL(const std::string& fit_id_, const std::string& parameter_id_, const std::string& plot_name_);
+	void PlotProfileNLL(const std::string& fit_id_, const std::string& poi_id_, const std::string& plot_name_);
 
 	void SaveWorkspace(const std::string& filename_);
 	void LoadWorkspace(const std::string& filename_, const std::string& workspace_name_);
@@ -162,7 +162,7 @@ inline void FitManager::EnsureWorkspaceNameAvailable(const std::string& id_) con
 		exit(1);
 	}
 
-	if ((workspace.arg(id_.c_str()) = !nullptr) || (workspace.data(id_.c_str()) = !nullptr) || (workspace.genobj(id_.c_str()) = !nullptr) || (working_datasets.find(id_) != working_datasets.end())) {
+	if ((workspace.arg(id_.c_str()) != nullptr) || (workspace.data(id_.c_str()) != nullptr) || (workspace.genobj(id_.c_str()) != nullptr) || (working_datasets.find(id_) != working_datasets.end())) {
 		printf("[FitManager::EnsureWorkspaceNameAvailable] Ojbect %s already exists.\n", id_.c_str());
 		exit(1);
 	}
@@ -174,7 +174,7 @@ inline void FitManager::EnsureFitIdAvailable(const std::string& fit_id_) const {
 		exit(1);
 	}
 
-	if((fit_result.find(fit_id_) != fit_result.end()) || (fit_nlls.find(fit_id_) != fit_nlls.end())){
+	if((fit_results.find(fit_id_) != fit_results.end()) || (fit_nlls.find(fit_id_) != fit_nlls.end())){
 		printf("[FitManager::EnsureFitIdAvailable] fit %s already exists.\n", fit_id_.c_str());
 		exit(1);
 	}
@@ -288,7 +288,7 @@ static void FitManager::ValidateModelArguments(const std::string & model_type_, 
 
 inline std::unique_ptr<RooAbsReal> FitManager::CreateNLL(RooAbsPdf& pdf_, RooAbsData& data_, const FitOptions& options_){
 
-    if((options_.Offset != "none") || (options_.Offset != "initial") || (options_.Offset != "bin")){
+    if((options_.Offset != "none") && (options_.Offset != "initial") && (options_.Offset != "bin")){
 		printf("[FitManager::Fit] offset must be none, initial, or bin.\n");
 		exit(1):
 	}
@@ -308,13 +308,13 @@ inline std::unique_ptr<RooAbsReal> FitManager::CreateNLL(RooAbsPdf& pdf_, RooAbs
 
 }
 
-inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double maximum_, double minimum_, const std::string& unit_) {
+inline void FitManager::DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_) {
 	if (minimum_ > maximum_) {
 		printf("[FitManager::DefineObservable] minimum is larger than maximum\n");
 		exit(1);
 	}
 
-	RooRealVar observable(id_.c_str(), title_.c_str(), maximum_, minimum_, unit_.c_str());
+	RooRealVar observable(id_.c_str(), title_.c_str(), minimum_, maximum_, unit_.c_str());
 
 	ImportChecked(observable);
 }
@@ -336,6 +336,7 @@ inline void FitManager::DefineDataSet(const std::string& id_, const std::vector<
 
 	const std::string weight_id = id_ + "__weight";
 	RooRealVar weight_variable(weight_id.c_str(), "weight", 1.0, -100.0, 100.0);
+	observables_in_dataset.add(weight_variable);
 
 	RooDataSet dataset = RooDataSet(id_.c_str(), id_.c_str(), observables_in_dataset, RooFit::WeightVar(weight_id.c_str()));
 
@@ -355,7 +356,7 @@ inline void FitManager::DefineFitParameter(const std::string& id_, const std::st
 		exit(1);
 	}
 
-	RooRealVar parameter(id_.c_str(), title_.c_str(), initial_value_, minimum_, maximum_, unit_.c_str());
+	RooRealVar parameter(id_.c_str(), title_.c_str(), init_value_, minimum_, maximum_, unit_.c_str());
 
 	ImportChecked(parameter);
 }
@@ -829,7 +830,7 @@ inline void FitManager::DefineProductModel(const std::string& model_id_, const s
 		exit(1);
 	}
 
-	RooArgList = pdfs;
+	RooArgList pdfs;
 
 	for (const std::string& pdf_id : pdf_ids_) {
 		pdfs.add(*GetPdf(pdf_id));
@@ -932,7 +933,7 @@ inline void FitManager::Fit(const std::string& fit_id_, const std::string datase
 		exit(1):
 	}
 
-	if((options_.Offset != "none") || (options_.Offset != "initial") || (options_.Offset != "bin")){
+	if((options_.Offset != "none") && (options_.Offset != "initial") && (options_.Offset != "bin")){
 		printf("[FitManager::Fit] offset must be none, initial, or bin.\n");
 		exit(1):
 	}
@@ -967,8 +968,13 @@ inline void FitManager::Fit(const std::string& fit_id_, const std::string datase
 
 	std::unique_ptr<RooAbsReal> nll = CreateNLL(*pdf, *data, options_);
 
+	nll_resource->dataset_id = dataset_id_;
+	nll_resource->model_id = model_id_;
+    nll_resource->minimum_nll = nll->getVal();
+	nll_resource->nll = std::move(nll);
+
 	fit_results.emplace(fit_id_, std::move(std::unique_ptr<RooFitResult>(result)));
-    fit_nlls.emplace(fit_id_, std::move(nll));
+    fit_nlls.emplace(fit_id_, std::move(nll_resource));
 	
 };
 
