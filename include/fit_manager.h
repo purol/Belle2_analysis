@@ -25,6 +25,7 @@
 #include <RooArgSet.h>
 #include <RooPlot.h>
 #include <RooFit.h>
+#include <TTree.h>
 
 #include <RooGaussian.h>
 #include <RooBifurGauss.h>
@@ -163,6 +164,9 @@ public:
 
 	void SaveWorkspace(const std::string& filename_);
 	void LoadWorkspace(const std::string& filename_, const std::string& workspace_name_);
+
+	void ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_);
+
 };
 
 inline FitManager::FitManager(const std::string& workspace_name_){
@@ -1205,5 +1209,73 @@ inline void FitManager::LoadWorkspace(const std::string& filename_, const std::s
 	workspace = stored_workspace;
 }
 
+inline void FitManager::ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_){
+    TFile file(filename_.c_str(), "RECREATE");
+	TTree tree("fit_result", "");
+
+	std::unordered_map<std::string, double> branchnameTotree;
+	bool structureDetermined = false;
+	std::size_t size_fitresult;
+
+	for(const std::string& fit_id : fit_ids_) {
+		RooFitResult* fitres = GetFitResult(fit_id);
+		const RooArgList& fitargs = fitres->floatParsFinal();
+
+		for (int i = 0; i < fitargs.getSize(); ++i) {
+			const RooRealVar* rrv = dynamic_cast<const RooRealVar*>( fitargs.at(i) );
+            std::string name = rrv->GetName();
+
+			if(structureDetermined){
+				if(size_fitresult != fitargs.getSize()){
+					printf("[FitManager::SaveFitResult] fit id %s holds %d values, while other does not.\n", fit_id.c_str(), fitargs.getSize());
+					exit(1);
+				}
+			}
+
+			if(!structureDetermined){
+				tree->Branch((name + "_val").c_str(), &branchnameTotree[name + "_val"]);
+				tree->Branch((name + "_err").c_str(), &branchnameTotree[name + "_err"]);
+				tree->Branch((name + "_HIerr").c_str(), &branchnameTotree[name + "_HIerr"]);
+				tree->Branch((name + "_LOerr").c_str(), &branchnameTotree[name + "_LOerr"]);
+			}
+			else{
+				if(branchnameTotree.find(name + "_val") == branchnameTotree.end()){
+					printf("[FitManager::SaveFitResult] fit id %s holds %s value, while other does not.\n", fit_id.c_str(), (name + "_val").c_str());
+					exit(1);
+				}
+				if(branchnameTotree.find(name + "_err") == branchnameTotree.end()){
+					printf("[FitManager::SaveFitResult] fit id %s holds %s value, while other does not.\n", fit_id.c_str(), (name + "_err").c_str());
+					exit(1);
+				}
+				if(branchnameTotree.find(name + "_HIerr") == branchnameTotree.end()){
+					printf("[FitManager::SaveFitResult] fit id %s holds %s value, while other does not.\n", fit_id.c_str(), (name + "_HIerr").c_str());
+					exit(1);
+				}
+				if(branchnameTotree.find(name + "_LOerr") == branchnameTotree.end()){
+					printf("[FitManager::SaveFitResult] fit id %s holds %s value, while other does not.\n", fit_id.c_str(), (name + "_LOerr").c_str());
+					exit(1);
+				}
+			}
+            branchnameTotree[name + "_val"] = rrv->getVal();
+            branchnameTotree[name + "_err"] = rrv->getError();
+            branchnameTotree[name + "_HIerr"] = rrv->getAsymErrorHi();
+            branchnameTotree[name + "_LOerr"] = rrv->getAsymErrorLo();
+
+		}
+
+		if(!structureDetermined) {
+			size_fitresult = fitargs.getSize();
+			structureDetermined = true;
+		}
+
+		tree.Fill();
+	}
+
+	tree.Write();
+    file.Close();
+
+}
+
 #endif 
+
 
