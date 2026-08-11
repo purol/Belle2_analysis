@@ -122,6 +122,7 @@ public:
     void GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_);
     void GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
     void GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
+    void GetRandom(std::vector<std::string> equations_, const char* new_variable_name_);
     void FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_);
     void FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_);
     void FillTH1D(TH1D* th1d_, std::string equation_);
@@ -366,6 +367,11 @@ void Loader::GetDiff(std::vector<std::string> equations_, int order_, const char
 
 void Loader::GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_) {
     Module::Module* temp_module = new Module::GetAdd(equations_, order_, new_variable_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
+    Modules.push_back(temp_module);
+}
+
+void Loader::GetRandom(std::vector<std::string> equations_, const char* new_variable_name_) {
+    Module::Module* temp_module = new Module::GetRandom(equations_, new_variable_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
     Modules.push_back(temp_module);
 }
 
