@@ -9,6 +9,7 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 
 #include <RooAddPdf.h>
 #include <RooProdPdf.h>
@@ -27,6 +28,7 @@
 #include <RooArgSet.h>
 #include <RooPlot.h>
 #include <RooFit.h>
+#include <RooFormulaVar.h>
 
 #include <RooGaussian.h>
 #include <RooBifurGauss.h>
@@ -47,6 +49,12 @@
 #include <TFile.h>
 #include <TLatex.h>
 #include <TTree.h>
+#include <TProfile.h>
+#include <TGraph.h>
+#include <TF1.h>
+#include <TFitResult.h>
+#include <TFitResultPtr.h>
+#include <TMatrixDSym.h>
 
 struct WorkingDataSet {
 	std::vector<std::string> observable_ids;
@@ -99,6 +107,11 @@ struct FitPlotOptions {
 	bool showFitparam = false;
 };
 
+enum class ModelKind {
+	Pdf,
+	Function
+};
+
 class FitManager {
 private:
     std::unique_ptr<RooWorkspace> created_workspace;
@@ -115,6 +128,12 @@ private:
 	void EnsureWorkspaceNameAvailable(const std::string& id_) const;
 	void EnsureFitIdAvailable(const std::string& fit_id_) const;
 	void EnsureDataInWorkspace(const std::string& dataset_id_);
+
+	void FitToRooAbsData(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+	void FitToTProfile(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+
+	void PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+	void PlotTProfileFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
 
 	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
 
@@ -136,6 +155,7 @@ public:
 	void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
 	void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
 	void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
+	void DefineProfile(const std::string& profile_id_, const std::string& observable_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_);
 
 	void SetParameterConstant(const std::string& id_, bool constant_ = true);
 	void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
@@ -154,6 +174,8 @@ public:
 	const RooAbsData* GetData(const std::string& id_) const;
 	RooFitResult* GetFitResult(const std::string& fit_id_);
 	const RooFitResult* GetFitResult(const std::string& fit_id_) const;
+	TProfile* GetProfile(const std::string& profile_id_);
+	const TProfile* GetProfile(const std::string& profile_id_) const;
 
 	void FinalizeDataSet(const std::string& dataset_id_);
 	void FinalizeAllDataSet();
@@ -161,12 +183,13 @@ public:
 	void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
 	void DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_ = false);
 	void DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_ = 0.0);
-	void DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_);
+	void DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, ModelKind kind_ = ModelKind::Pdf);
 	void DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_);
 
 	void ImportRooAbsArg(const RooAbsArg& object_);
 	void ImportPdf(const RooAbsPdf& pdf_);
 	void ImportData(const RooAbsData& data);
+	void ImportData(const TProfile& profile_, const std::string& observable_id_);
 
 	void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 	void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
@@ -243,7 +266,13 @@ inline void FitManager::EnsureFitIdAvailable(const std::string& fit_id_) const {
 }
 
 inline void FitManager::EnsureDataInWorkspace(const std::string& dataset_id_){
+	// check RooDataSet
 	if (workspace->data(dataset_id_.c_str()) != nullptr){
+		return;
+	}
+
+	// check TProfile
+	if (dynamic_cast<TProfile*>(workspace->obj(dataset_id_.c_str())) != nullptr) {
 		return;
 	}
 
@@ -371,7 +400,31 @@ inline void FitManager::CreateNLL(const std::string& nll_id_, const std::string&
 
 }
 
-inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_){
+inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_) {
+	TNamed* dataset_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__dataset_id").c_str()));
+
+	if (!dataset_metadata) {
+		printf("[FitManager::PlotFit] dataset metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		exit(1);
+	}
+
+	const std::string dataset_id = dataset_metadata->GetTitle();
+
+	if (workspace->data(dataset_id.c_str())) {
+		PlotRooAbsDataFit(fit_id_, observable_id_, plot_name_, options_);
+		return;
+	}
+
+	if (dynamic_cast<TProfile*>(workspace->obj(dataset_id.c_str())) {
+		PlotTProfileFit(fit_id_, observable_id_, plot_name_, options_);
+		return;
+	}
+
+	printf("[FitManager::PlotFit] unsupported data type for fit %s.\n", fit_id_.c_str());
+	exit(1);
+}
+
+inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_){
 	// predefined color
 	const std::vector<int> component_colors = {
 	    kGreen + 2,
@@ -389,15 +442,15 @@ inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& o
 	TNamed* range_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__range").c_str()));
 
 	if (!dataset_metadata) {
-		printf("[FitManager::PlotFit] dataset metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		printf("[FitManager::PlotRooAbsDataFit] dataset metadata for fit ID %s does not exist.\n", fit_id_.c_str());
 		exit(1);
 	}
 	if (!model_metadata) {
-		printf("[FitManager::PlotFit] model metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		printf("[FitManager::PlotRooAbsDataFit] model metadata for fit ID %s does not exist.\n", fit_id_.c_str());
 		exit(1);
 	}
 	if (!range_metadata) {
-		printf("[FitManager::PlotFit] range metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		printf("[FitManager::PlotRooAbsDataFit] range metadata for fit ID %s does not exist.\n", fit_id_.c_str());
 		exit(1);
 	}
 
@@ -635,6 +688,35 @@ inline void FitManager::DefineCategory(const std::string& id_, const std::string
 	ImportChecked(category);
 }
 
+inline void FitManager::DefineProfile(const std::string& profile_id_, const std::string& observable_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_) {
+	EnsureWorkspaceNameAvailable(profile_id_);
+
+	RooRealVar* observable = GetRooRealVar(observable_id_);
+
+	if (bins_ <= 0) {
+		printf("[FitManager::DefineProfile] number of bins must be positive.\n");
+		exit(1);
+	}
+
+	if (xmin_ >= xmax_) {
+		printf("[FitManager::DefineProfile] xmin must be smaller than xmax.\n");
+		exit(1);
+	}
+
+	if (ymin_ >= ymax_) {
+		printf("[FitManager::DefineProfile] ymin must be smaller than ymax.\n");
+		exit(1);
+	}
+
+	TProfile profile(profile_id_.c_str(), title_.c_str(), bins_, xmin_, xmax_, ymin_, ymax_);
+
+	ImportChecked(profile, profile_id_);
+
+	TNamed observable_metadata((profile_id_ + "__observable_id").c_str(), observable_id_.c_str());
+
+	ImportChecked(observable_metadata, observable_metadata.GetName());
+}
+
 inline RooAbsArg* FitManager::GetRooAbsArg(const std::string& id_) {
 	RooAbsArg* arg = workspace->arg(id_.c_str());
 
@@ -799,6 +881,28 @@ inline const RooFitResult* FitManager::GetFitResult(const std::string& fit_id_) 
 	}
 
 	return result;
+}
+
+inline TProfile* FitManager::GetProfile(const std::string& profile_id_) {
+	TProfile* profile = dynamic_cast<TProfile*>(workspace->obj(profile_id_.c_str()));
+
+	if (!profile) {
+		printf("[FitManager::GetProfile] TProfile %s does not exist.\n", profile_id_.c_str());
+		exit(1);
+	}
+
+	return profile;
+}
+
+inline const TProfile* GetProfile(const std::string& profile_id_) const {
+	TProfile* profile = dynamic_cast<TProfile*>(workspace->obj(profile_id_.c_str()));
+
+	if (!profile) {
+		printf("[FitManager::GetProfile] TProfile %s does not exist.\n", profile_id_.c_str());
+		exit(1);
+	}
+
+	return profile;
 }
 
 inline void FitManager::FinalizeDataSet(const std::string& dataset_id_) {
@@ -1134,7 +1238,7 @@ inline void FitManager::DefineProductModel(const std::string& model_id_, const s
 	ImportPdf(model);
 }
 
-inline void FitManager::DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_) {
+inline void FitManager::DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, ModelKind kind_) {
 	/*
 	* example usage:
 	* fit_manager.DefineGenericModel("my_gaussian", "exp(-0.5 * pow((@0 - @1) / @2, 2))", {"x", "mean", "sigma"} );
@@ -1161,9 +1265,16 @@ inline void FitManager::DefineGenericModel(const std::string& model_id_, const s
 		arguments.add(*GetRooAbsArg(argument_id));
 	}
 
-	RooGenericPdf model(model_id_.c_str(), model_id_.c_str(), expression_.c_str(), arguments);
+	if (kind_ == ModelKind::Pdf) {
+		RooGenericPdf model(model_id_.c_str(), model_id_.c_str(), expression_.c_str(), arguments);
+		ImportPdf(model);
+	}
+	else {
+		// we use RooFormulaVar instead of TF to get a consistency on the formula expression
+		RooFormulaVar model(model_id_.c_str(), model_id_.c_str(), expression_.c_str(), arguments);
+		ImportRooAbsArg(model);
+	}
 
-	ImportPdf(model);
 }
 
 inline void FitManager::DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_) {
@@ -1217,7 +1328,33 @@ inline void FitManager::ImportData(const RooAbsData& data_) {
 	ImportDataChecked(data_);
 }
 
+inline void FitManager::ImportData(const TProfile& profile_, const std::string& observable_id_) {
+	// check that observable exists
+	GetRooRealVar(observable_id_);
+
+	ImportChecked(profile_, profile_.GetName());
+
+	TNamed observable_metadata((std::string(profile_.GetName()) + "__observable_id").c_str(), observable_id_.c_str());
+
+	ImportChecked(observable_metadata, observable_metadata.GetName());
+}
+
 inline void FitManager::Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
+	EnsureFitIdAvailable(fit_id_);
+	EnsureDataInWorkspace(dataset_id_);
+
+	RooAbsData* roo_data = workspace->data(dataset_id_.c_str());
+	TProfile* profile = dynamic_cast<TProfile*>(workspace->obj(dataset_id_.c_str()));
+
+	if (roo_data) FitToRooAbsData(fit_id_, dataset_id_, model_id_, options_);
+	else if (profile) FitToTProfile(fit_id_, dataset_id_, model_id_, options_);
+	else {
+		printf("[FitManager::Fit] Cannot find the proper dataset.\n");
+		exit(1);
+	}
+}
+
+inline void FitManager::FitToRooAbsData(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
 	EnsureFitIdAvailable(fit_id_);
 	EnsureDataInWorkspace(dataset_id_);
 
@@ -1271,6 +1408,121 @@ inline void FitManager::Fit(const std::string& fit_id_, const std::string datase
 	ImportChecked(model_metadata, model_metadata.GetName());
 	ImportChecked(range_metadata, range_metadata.GetName());
 	
+};
+
+inline void FitManager::FitToTProfile(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
+	EnsureFitIdAvailable(fit_id_);
+	EnsureDataInWorkspace(dataset_id_);
+
+	if (options_.SumW2Error) {
+		printf("[FitManager::FitToTProfile] SumW2Error is not applicable to TProfile fits.\n");
+		exit(1);
+	}
+
+	if (options_.extended) {
+		printf("[FitManager::FitToTProfile] extended fit is not applicable to TProfile fits.\n");
+		exit(1);
+	}
+
+	TProfile* profile = GetProfile(dataset_id_);
+
+	const std::string observable_metadata_id = dataset_id_ + "__observable_id";
+	TNamed* observable_metadata = dynamic_cast<TNamed*>(workspace->obj(observable_metadata_id.c_str()));
+
+	if (!observable_metadata) {
+		printf("[FitManager::FitToTProfile] observable metadata for TProfile %s does not exist.\n", dataset_id_.c_str());
+		exit(1);
+	}
+
+	RooRealVar* observable = GetRooRealVar(observable_metadata->GetTitle());
+
+	RooAbsReal* function = GetRooAbsReal(model_id_);
+
+	RooArgSet observable_set(*observable);
+
+	std::unique_ptr<RooArgSet> parameter_set(function->getParameters(observable_set));
+
+	RooArgList fit_parameters;
+	RooArgList constant_parameters;
+
+	for (RooAbsArg* arg : *parameter_set) {
+		RooRealVar* parameter = dynamic_cast<RooRealVar*>(arg);
+
+		if (!parameter) {
+			printf("[FitManager::FitToTProfile] parameter %s is not a RooRealVar.\n", arg->GetName());
+			exit(1);
+		}
+
+		if (parameter->isConstant()) {
+			constant_parameters.add(*parameter);
+		}
+		else {
+			fit_parameters.add(*parameter);
+		}
+	}
+
+	RooArgList observables;
+	observables.add(*observable);
+
+	std::unique_ptr<TF1> function_tf1(function->asTF(observables, fit_parameters));
+
+	for (int i = 0; i < fit_parameters.getSize(); i++) {
+		RooRealVar* parameter = dynamic_cast<RooRealVar*>(fit_parameters.at(i));
+		function_tf1->SetParLimits(i, parameter->getMin(), parameter->getMax());
+	}
+
+	if (!options_.range.empty()) {
+		function_tf1->SetRange(observable->getMin(options_.range.c_str()), observable->getMax(options_.range.c_str()));
+	}
+
+	RooFitResult result(fit_id_.c_str(), fit_id_.c_str());
+	result.setInitParList(fit_parameters);
+	result.setConstParList(constant_parameters);
+
+	std::string fit_options = "RNS";
+	if (!options_.Minos.empty()) fit_options += "E";
+	TFitResultPtr tfit_result = profile->Fit(function_tf1.get(), fit_options.c_str());
+
+	// copy value to the RooRealVars
+	for (int i = 0; i < fit_parameters.getSize(); i++) {
+		RooRealVar* parameter = dynamic_cast<RooRealVar*>(fit_parameters.at(i));
+		parameter->setVal(tfit_result->Parameter(i));
+		parameter->setError(tfit_result->ParError(i));
+
+		// remove possible asymmetric errors from a previous fit
+		parameter->removeAsymError();
+
+		const bool request_minos = std::find(options_.Minos.begin(), options_.Minos.end(), parameter->GetName()) != options_.Minos.end();
+		if (request_minos) {
+			if (tfit_result->HasMinosError(i)) {
+				parameter->setAsymError(tfit_result->LowerError(i), tfit_result->UpperError(i));
+			}
+			else {
+				printf("[FitManager::FitToTProfile] MINOS failed for parameter %s.\n", parameter->GetName());
+				exit(1);
+			}
+		}
+	}
+
+	// TFitResult -> RooFitResult
+	result.setFinalParList(fit_parameters);
+	result.setStatus(tfit_result->Status());
+	result.setCovQual(tfit_result->CovMatrixStatus());
+	result.setEDM(tfit_result->Edm());
+	TMatrixDSym covariance = tfit_result->GetCovarianceMatrix();
+	result.setCovarianceMatrix(covariance);
+
+	ImportChecked(result, fit_id_);
+
+	// save metadata
+	TNamed dataset_metadata((fit_id_ + "__dataset_id").c_str(), dataset_id_.c_str());
+	TNamed model_metadata((fit_id_ + "__model_id").c_str(), model_id_.c_str());
+	TNamed range_metadata((fit_id_ + "__range").c_str(), options_.range.c_str());
+
+	ImportChecked(dataset_metadata, dataset_metadata.GetName());
+	ImportChecked(model_metadata, model_metadata.GetName());
+	ImportChecked(range_metadata, range_metadata.GetName());
+
 };
 
 inline void FitManager::PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_){
