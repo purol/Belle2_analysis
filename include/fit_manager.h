@@ -29,6 +29,7 @@
 #include <RooPlot.h>
 #include <RooFit.h>
 #include <RooFormulaVar.h>
+#include <RooHist.h>
 
 #include <RooGaussian.h>
 #include <RooBifurGauss.h>
@@ -55,6 +56,9 @@
 #include <TFitResult.h>
 #include <TFitResultPtr.h>
 #include <TMatrixDSym.h>
+#include <TLegend.h>
+#include <TPad.h>
+#include <TNamed.h>
 
 struct WorkingDataSet {
 	std::vector<std::string> observable_ids;
@@ -560,7 +564,10 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
 			std::ostringstream text;
 			text << std::fixed << std::setprecision(4);
 
-			text << parameter->GetTitle() << " = " << parameter->getVal() << " #pm " << parameter->getError();
+			text << parameter->GetTitle() << " = " << parameter->getVal();
+
+			if (parameter->hasAsymError()) text << "^{+" << parameter->getAsymErrorHi() << "}_{" << parameter->getAsymErrorLo() << "}";
+			else text << " #pm " << parameter->getError();
 
 			const std::string unit = parameter->getUnit();
 
@@ -584,6 +591,129 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
     delete canvas;
 
 	// change to the original parameter values
+	parameters->assignValueOnly(*parameter_backup);
+}
+
+inline void FitManager::PlotTProfileFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_) {
+	TNamed* dataset_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__dataset_id").c_str()));
+	TNamed* model_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__model_id").c_str()));
+	TNamed* range_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__range").c_str()));
+
+	if (!dataset_metadata) {
+		printf("[FitManager::PlotTProfileFit] dataset metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		exit(1);
+	}
+	if (!model_metadata) {
+		printf("[FitManager::PlotTProfileFit] model metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		exit(1);
+	}
+	if (!range_metadata) {
+		printf("[FitManager::PlotTProfileFit] range metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		exit(1);
+	}
+
+	const std::string dataset_id = dataset_metadata->GetTitle();
+	const std::string model_id = model_metadata->GetTitle();
+
+	RooRealVar* observable = GetRooRealVar(observable_id_);
+	TProfile* profile = GetProfile(dataset_id);
+	RooAbsReal* function = GetRooAbsReal(model_id);
+	std::string range = range_metadata->GetTitle();
+
+	// change to the parameter values after the fit
+	RooArgSet observable_set(*observable);
+	RooFitResult* fit_result = GetFitResult(fit_id_);
+	std::unique_ptr<RooArgSet> parameters(function->getParameters(observable_set));
+	std::unique_ptr<RooArgSet> parameter_backup(parameters->snapshot());
+	parameters->assignValueOnly(fit_result->constPars());
+	parameters->assignValueOnly(fit_result->floatParsFinal());
+
+	RooArgList observables;
+	observables.add(*observable);
+
+	RooArgList fit_parameters;
+	for (RooAbsArg* arg : *parameters) {
+		RooRealVar* parameter = dynamic_cast<RooRealVar*>(arg);
+		if (!parameter) continue;
+
+		if (!parameter->isConstant()) fit_parameters.add(*parameter);
+	}
+	std::unique_ptr<TF1> fit_function(function->asTF(observables, fit_parameters));
+	if (!fit_function) {
+		printf("[FitManager::PlotTProfileFit] failed to convert model %s to TF1.\n", model_id.c_str());
+		exit(1);
+	}
+
+	const double full_xmin = profile->GetXaxis()->GetXmin();
+	const double full_xmax = profile->GetXaxis()->GetXmax();
+	if (!range.empty()) fit_function->SetRange(observable->getMin(range.c_str()), observable->getMax(range.c_str()));
+	else fit_function->SetRange(full_xmin, full_xmax);
+
+	fit_function->SetLineColor(kBlue);
+	fit_function->SetLineStyle(kSolid);
+
+	// draw extrapolation
+	std::unique_ptr<TF1> extrapolation_function;
+
+	if (options_.extrapolation &&!range.empty()) {
+		extrapolation_function.reset(function->asTF(observables,fit_parameters));
+
+		extrapolation_function->SetRange(full_xmin,full_xmax);
+
+		extrapolation_function->SetLineColor(kRed);
+		extrapolation_function->SetLineStyle(kDashed);
+	}
+
+	TCanvas canvas((fit_id_ + "__profile_canvas").c_str(), (fit_id_ + "__profile_canvas").c_str(), 800, 800);
+
+	canvas.SetLeftMargin(0.15);
+
+	profile->SetStats(false);
+	profile->Draw();
+
+	if (extrapolation_function) extrapolation_function->Draw("same");
+
+	fit_function->Draw("same");
+
+	// show fit param value
+	if (options_.showFitparam) {
+
+		TLatex latex;
+		latex.SetNDC();
+		latex.SetTextSize(0.04);
+
+		const RooArgList& fitted_parameters = fit_result->floatParsFinal();
+
+		const double x = 0.58;
+		double y = 0.85;
+		const double y_step = 0.05;
+
+		for (int i = 0; i < fitted_parameters.getSize(); i++) {
+			const RooRealVar* parameter = dynamic_cast<const RooRealVar*>(fitted_parameters.at(i));
+
+			if (!parameter) continue;
+
+			std::ostringstream text;
+			text << std::fixed << std::setprecision(4);
+
+			text << parameter->GetTitle() << " = " << parameter->getVal();
+
+			if (parameter->hasAsymError()) text << "^{+" << parameter->getAsymErrorHi() << "}_{" << parameter->getAsymErrorLo() << "}";
+			else text << " #pm " << parameter->getError();
+
+			const std::string unit = parameter->getUnit();
+
+			if (!unit.empty()) text << " [" << unit << "]";
+
+			latex.DrawLatex(x, y, text.str().c_str());
+
+			y -= y_step;
+		}
+	}
+
+	canvas.SaveAs(plot_name_.c_str());
+
+	// restore workspace parameters
 	parameters->assignValueOnly(*parameter_backup);
 }
 
@@ -894,7 +1024,7 @@ inline TProfile* FitManager::GetProfile(const std::string& profile_id_) {
 	return profile;
 }
 
-inline const TProfile* GetProfile(const std::string& profile_id_) const {
+inline const TProfile* FitManager::GetProfile(const std::string& profile_id_) const {
 	TProfile* profile = dynamic_cast<TProfile*>(workspace->obj(profile_id_.c_str()));
 
 	if (!profile) {
@@ -1474,6 +1604,9 @@ inline void FitManager::FitToTProfile(const std::string& fit_id_, const std::str
 	if (!options_.range.empty()) {
 		function_tf1->SetRange(observable->getMin(options_.range.c_str()), observable->getMax(options_.range.c_str()));
 	}
+	else {
+		function_tf1->SetRange(profile->GetXaxis()->GetXmin(), profile->GetXaxis()->GetXmax());
+	}
 
 	RooFitResult result(fit_id_.c_str(), fit_id_.c_str());
 	result.setInitParList(fit_parameters);
@@ -1499,7 +1632,6 @@ inline void FitManager::FitToTProfile(const std::string& fit_id_, const std::str
 			}
 			else {
 				printf("[FitManager::FitToTProfile] MINOS failed for parameter %s.\n", parameter->GetName());
-				exit(1);
 			}
 		}
 	}
@@ -1670,10 +1802,10 @@ inline void FitManager::ExportFitResult(const std::string& filename_, const std:
 			}
 
 			if(!structureDetermined){
-				tree->Branch((name + "_val").c_str(), &branchnameTotree[name + "_val"]);
-				tree->Branch((name + "_err").c_str(), &branchnameTotree[name + "_err"]);
-				tree->Branch((name + "_HIerr").c_str(), &branchnameTotree[name + "_HIerr"]);
-				tree->Branch((name + "_LOerr").c_str(), &branchnameTotree[name + "_LOerr"]);
+				tree.Branch((name + "_val").c_str(), &branchnameTotree[name + "_val"]);
+				tree.Branch((name + "_err").c_str(), &branchnameTotree[name + "_err"]);
+				tree.Branch((name + "_HIerr").c_str(), &branchnameTotree[name + "_HIerr"]);
+				tree.Branch((name + "_LOerr").c_str(), &branchnameTotree[name + "_LOerr"]);
 			}
 			else{
 				if(branchnameTotree.find(name + "_val") == branchnameTotree.end()){
