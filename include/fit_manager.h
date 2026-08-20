@@ -9,7 +9,6 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
-#include <algorithm>
 
 #include <RooAddPdf.h>
 #include <RooProdPdf.h>
@@ -50,11 +49,9 @@
 #include <TLatex.h>
 #include <TTree.h>
 #include <TProfile.h>
-#include <TGraph.h>
 #include <TF1.h>
 #include <TFitResult.h>
 #include <TFitResultPtr.h>
-#include <TMatrixDSym.h>
 #include <TLegend.h>
 #include <TPad.h>
 #include <TNamed.h>
