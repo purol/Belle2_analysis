@@ -30,6 +30,7 @@
 #include "data.h"
 #include "module.h"
 #include "eventweight.h"
+#include "fit_manager.h"
 
 class Loader {
 private:
@@ -67,6 +68,9 @@ private:
     // to save memory, std::deque is used
     std::deque<Data> TotalData;
 
+    // for fitting
+    FitManager fitmanager;
+
 public:
     Loader(const char* TTree_name_);
     void SetName(const char* loader_name_);
@@ -85,6 +89,9 @@ public:
     void SetSignal(std::vector<std::string> labels_);
     void SetBackground(std::vector<std::string> labels_);
 
+    /*
+     * basic modules for analysis
+     */
     void Load(const char* dirname_, const char* including_string_, const char* label_);
     void LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_);
     void Cut(const char* cut_string_);
@@ -105,6 +112,12 @@ public:
     void RandomBCS(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    void PrintEvent(std::vector<std::string> print_variables_);
+    void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_ = {});
+
+    /*
+     * for FBDT train/test/validation
+     */
     std::shared_ptr<std::vector<double>> DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_);
     std::shared_ptr<std::vector<double>> DrawFOM(const char* equation_, double MIN_, double MAX_, double NBin_, int rank_, const char* png_name_);
     std::shared_ptr<std::vector<double>> DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_);
@@ -115,6 +128,10 @@ public:
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_ = "");
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_ = "");
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
+    
+    /*
+     * for variable manipulation
+     */
     void DefineNewVariable(const char* equation_, const char* new_variable_name_);
     void RemoveVariable(std::vector<std::string> removed_variable_names_);
     void ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_);
@@ -122,16 +139,52 @@ public:
     void GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_);
     void GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
     void GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_);
+
+    /*
+     * direct manipulation of TObjects
+     */
     void FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_);
     void FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_);
     void FillTH1D(TH1D* th1d_, std::string equation_);
     void FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>));
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
     void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
-    void PrintEvent(std::vector<std::string> print_variables_);
+
+    /*
+     * advanced module for analysis
+     */
     std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_ = true);
     std::shared_ptr<std::vector<double>> ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_ = true);
-    void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_ = {});
+    
+    /*
+     * for dedicated fits
+     */
+    void DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_ = "");
+    void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_);
+    void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
+    void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
+    void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
+    void DefineProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_);
+    void SetParameterConstant(const std::string& id_, bool constant_ = true);
+    void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
+    void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
+    void DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_ = false);
+    void DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_ = 0.0);
+    void DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_);
+    void DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_);
+    void DefineTF1(const std::string& function_id_, const std::string& expression_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_ = {});
+    void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+    void ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_);
+    void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_);
+    void PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_);
+    void SaveWorkspace(const std::string& filename_);
+    void LoadWorkspace(const std::string& filename_, const std::string& workspace_name_);
+
+    /*
+     * advanced module & end module
+     */
     void InsertCustomizedModule(Module::Module* module_);
     void end();
 
@@ -422,6 +475,42 @@ void Loader::AddWeight(const char* weight_name_, const std::vector<std::pair<std
     Module::Module* temp_module = new Module::AddWeight(weight_name_, variable_name_map_, &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
     Modules.push_back(temp_module);
 }
+
+void Loader::DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_) {
+    Module::Module* temp_module = new Module::DefineObservable(id_, title_, minimum_, maximum_, unit_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_){
+    Module::Module* temp_module = new Module::DefineAndFillDataSet(id_, observable_ids_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_) {
+    Module::Module* temp_module = new Module::DefineFitParameter(id_, title_, init_value_, minimum_, maximum_, unit_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list);
+    Modules.push_back(temp_module);
+}
+
+    /* to do */
+    void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
+    void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
+    void DefineProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_);
+    void SetParameterConstant(const std::string& id_, bool constant_ = true);
+    void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
+    void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
+    void DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_ = false);
+    void DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_ = 0.0);
+    void DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_);
+    void DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_);
+    void DefineTF1(const std::string& function_id_, const std::string& expression_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_ = {});
+    void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+    void ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_);
+    void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
+    void PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_);
+    void PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_);
+    void SaveWorkspace(const std::string& filename_);
+    void LoadWorkspace(const std::string& filename_, const std::string& workspace_name_);
 
 void Loader::InsertCustomizedModule(Module::Module* module_) {
     // function to insert the customized module
