@@ -17,6 +17,7 @@
 #include "string_equation.h"
 #include "base.h"
 #include "eventweight.h"
+#include "fit_manager.h"
 
 #include "Classifier.h"
 
@@ -4660,6 +4661,112 @@ namespace Module {
 
         void End() override {}
     };
+
+    class DefineObservable : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        std::string title;
+        double minimum;
+        double maximum;
+        std::string unit;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineObservable() {}
+
+        void Start() {
+            fitmanager->DefineObservable(id, title, minimum, maximum, unit);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineAndFillDataSet : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        std::vector<std::string> observable_ids;
+        std::vector<std::string> equations;
+        std::vector<std::vector<Token>> postfix_exprs;
+        std::vector<RooRealVar*> roorealvars;
+        RooAbsData* roodata;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
+            if (observable_ids.size() != expressions.size()) {
+                printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
+                exit(1);
+            }
+        }
+        ~DefineAndFillDataSet() {}
+
+        void Start() {
+            fitmanager->DefineDataSet(id, observable_ids);
+            roodata = fitmanager->GetData(id);
+            for (const std::string& observable_id : observable_ids) {
+                RooRealVar* temp_roorealvar = fitmanager->GetRooRealVar(observable_id);
+                roorealvars.push_back(temp_roorealvar);
+            }
+
+            for (int i = 0; i < equations.size(); i++) {
+                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
+            }
+        }
+
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
+
+                std::vector<double> results;
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    results.push_back(result);
+                }
+
+                // set values
+                for (int i = 0; i < results.size(); i++) {
+                    roorealvars.at(i)->setVal(results.at(i));
+                }
+
+                // fill dataset
+                RooArgSet row;
+                for (RooRealVar* roorealvar : roorealvars) {
+                    row.add(*roorealvar);
+                }
+
+                roodata->add(row, totalweight);
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    /* to do */
 
 }
 
