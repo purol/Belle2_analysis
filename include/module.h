@@ -4766,6 +4766,91 @@ namespace Module {
         void End() override {}
     };
 
+    class DefineFitParameter : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        std::string title;
+        double init_value;
+        double minimum;
+        double maximum;
+        std::string unit;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), init_value(init_value_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineFitParameter() {}
+
+        void Start() {
+            fitmanager->DefineFitParameter(id, title, init_value, minimum, maximum, unit);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineConstantParameter : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        std::string title;
+        double value;
+        std::string unit;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), value(value_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineConstantParameter() {}
+
+        void Start() {
+            fitmanager->DefineConstantParameter(id, title, value, unit);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineCategory : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        std::string title;
+        std::vector<std::string> states;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), states(states_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineCategory() {}
+
+        void Start() {
+            fitmanager->DefineCategory(id, title, states);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
     /* to do */
 
 }
