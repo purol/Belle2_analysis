@@ -164,7 +164,7 @@ public:
     void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
     void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
     void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
-    void DefineProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string expression_x_, std::string expression_y_);
+    void DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_);
     void SetParameterConstant(const std::string& id_, bool constant_ = true);
     void SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_);
     void DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options = {});
@@ -501,8 +501,8 @@ void Loader::DefineCategory(const std::string& id_, const std::string title_, co
     Modules.push_back(temp_module);
 }
 
-void Loader::DefineProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string expression_x_, std::string expression_y_) {
-    Module::Module* temp_module = new Module::DefineProfile(profile_id_, title_, bins_, xmin_, xmax_, ymin_, ymax_, expression_x_, expression_y_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+void Loader::DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_) {
+    Module::Module* temp_module = new Module::DefineAndFillProfile(profile_id_, title_, bins_, xmin_, xmax_, ymin_, ymax_, equation_x_, equation_y_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 

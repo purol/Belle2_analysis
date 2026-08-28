@@ -4851,6 +4851,67 @@ namespace Module {
         void End() override {}
     };
 
+    class DefineAndFillProfile : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string profile_id;
+        std::string title;
+        int bins;
+        double xmin;
+        double xmax;
+        double ymin;
+        double ymax;
+        std::string equation_x;
+        std::string replaced_expr_x;
+        std::vector<Token> postfix_expr_x;
+        std::string equation_y;
+        std::string replaced_expr_y;
+        std::vector<Token> postfix_expr_y;
+        TProfile* tprofile;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), profile_id(profile_id_), title(title_), bins(bins_), xmin(xmin_), xmax(xmax_), ymin(ymin_), ymax(ymax_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineAndFillProfile() {}
+
+        void Start() {
+            replaced_expr_x = replaceVariables(equation_x, &variable_names);
+            postfix_expr_x = PostfixExpression(replaced_expr_x, &VariableTypes);
+
+            replaced_expr_y = replaceVariables(equation_y, &variable_names);
+            postfix_expr_y = PostfixExpression(replaced_expr_y, &VariableTypes);
+
+            fitmanager->DefineProfile(profile_id, title, bins, xmin, xmax, ymin, ymax);
+            tprofile = fitmanager->GetProfile(profile_id);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
+
+                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
+                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
+
+                tprofile->Fill(result_x, result_y, totalweight);
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() override {}
+    };
+
     /* to do */
 
 }
