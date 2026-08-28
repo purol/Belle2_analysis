@@ -135,9 +135,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_){
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -295,9 +296,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_) {
+        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -376,7 +378,8 @@ namespace Module {
                 }
             }
 
-            replaced_expr = replaceVariables(cut_string, &variable_names);
+            replaced_expr = replaceInternalValues(cut_string, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
@@ -453,13 +456,15 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~Cut() {}
 
         void Start() {
-            replaced_expr = replaceVariables(cut_string, &variable_names);
+            replaced_expr = replaceInternalValues(cut_string, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
@@ -510,9 +515,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), Nevt(0), Ncandidate(0){}
+        PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
         void Start() override {
@@ -630,6 +636,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string expression;
         std::string replaced_expr;
         std::vector<Token> postfix_expr;
@@ -639,10 +646,10 @@ namespace Module {
         std::vector<double> x_variable;
         std::vector<double> weight;
     public:
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~DrawTH1D() {
             delete hist;
@@ -652,7 +659,8 @@ namespace Module {
             hist = nullptr;
 
             // change variable name into placeholder
-            replaced_expr = replaceVariables(expression, &variable_names);
+            replaced_expr = replaceInternalValues(expression, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             // if range is determined, make histogram first
@@ -763,6 +771,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string x_expression;
         std::string x_replaced_expr;
         std::vector<Token> x_postfix_expr;
@@ -777,8 +786,8 @@ namespace Module {
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~DrawTH2D() {
             delete hist;
@@ -788,8 +797,10 @@ namespace Module {
             hist = nullptr;
 
             // change variable name into placeholder
-            x_replaced_expr = replaceVariables(x_expression, &variable_names);
-            y_replaced_expr = replaceVariables(y_expression, &variable_names);
+            x_replaced_expr = replaceInternalValues(x_expression, internal_value);
+            y_replaced_expr = replaceInternalValues(y_expression, internal_value);
+            x_replaced_expr = replaceVariables(x_replaced_expr, &variable_names);
+            y_replaced_expr = replaceVariables(y_replaced_expr, &variable_names);
             x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
             y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
 
@@ -910,9 +921,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_){}
+        PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){}
 
         ~PrintSeparateRootFile() {}
 
@@ -1042,9 +1054,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), TTree_name(TTree_name_) {}
+        PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {}
 
         ~PrintRootFile() {}
 
@@ -1146,12 +1159,13 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         static char to_upper(char c) {
             return std::toupper(static_cast<unsigned char>(c));
         }
     public:
-        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         
         ~BCS() {}
 
@@ -1202,7 +1216,8 @@ namespace Module {
                 }
             }
 
-            replaced_expr = replaceVariables(equation, &variable_names);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
 
@@ -1361,9 +1376,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~RandomBCS() {}
 
@@ -1547,9 +1563,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~IsBCSValid() {}
 
@@ -1677,19 +1694,20 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string png_name;
 
         double MyEPSILON;
     public:
-        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        DrawFOM(const char* equation_, double MIN_, double MAX_, int NBin_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1698,7 +1716,8 @@ namespace Module {
 
         void Start() {
             // change variable name into placeholder
-            replaced_expr = replaceVariables(equation, &variable_names);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
@@ -1906,19 +1925,20 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string png_name;
 
         double MyEPSILON;
     public:
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 50
             NBin = 50;
 
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NBin(NBin_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(rank_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -1927,7 +1947,8 @@ namespace Module {
 
         void Start() {
             // change variable name into placeholder
-            replaced_expr = replaceVariables(equation, &variable_names);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
@@ -2150,16 +2171,17 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string png_name;
 
         double MyEPSILON;
     public:
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
-        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x(preselection_x_), preselection_equation_y(preselection_y_), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 0.000001
             MyEPSILON = 0.000001;
         }
@@ -2171,12 +2193,15 @@ namespace Module {
             for (std::vector<std::tuple<const char*, double, double, int>>::const_iterator iter = scan_conditions.begin(); iter != scan_conditions.end(); ++iter) {
                 const char* equation = std::get<0>(*iter);
 
-                std::string replaced_expr = replaceVariables(std::string(equation), &variable_names);
+                std::string replaced_expr = replaceInternalValues(std::string(equation), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 std::vector<Token> postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
                 postfix_exprs.push_back(postfix_expr);
             }
-            preselection_replaced_expr_x = replaceVariables(preselection_equation_x, &variable_names);
-            preselection_replaced_expr_y = replaceVariables(preselection_equation_y, &variable_names);
+            preselection_replaced_expr_x = replaceInternalValues(preselection_equation_x, internal_value);
+            preselection_replaced_expr_y = replaceInternalValues(preselection_equation_y, internal_value);
+            preselection_replaced_expr_x = replaceVariables(preselection_replaced_expr_x, &variable_names);
+            preselection_replaced_expr_y = replaceVariables(preselection_replaced_expr_y, &variable_names);
             postfix_expr_x = PostfixExpression(preselection_replaced_expr_x, &VariableTypes);
             postfix_expr_y = PostfixExpression(preselection_replaced_expr_y, &VariableTypes);
 
@@ -2435,13 +2460,14 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string output_name;
         std::string write_option;
 
         double MyEPSILON;
     public:
-        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 100
             NBin = 100;
 
@@ -2453,7 +2479,8 @@ namespace Module {
 
         void Start() {
             // change variable name into placeholder
-            replaced_expr = replaceVariables(equation, &variable_names);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if (Signal_label_list.size() == 0) {
@@ -2603,6 +2630,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
         std::string expression;
         std::string replaced_expr;
         std::vector<Token> postfix_expr;
@@ -2630,10 +2658,10 @@ namespace Module {
         int hist_draw_option;
 
     public:
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~DrawStack() {
             delete stack;
@@ -2689,7 +2717,8 @@ namespace Module {
             }
 
             // change variable name into placeholder
-            replaced_expr = replaceVariables(expression, &variable_names);
+            replaced_expr = replaceInternalValues(expression, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
 
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
@@ -3057,6 +3086,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::map<std::string, double> hyperparameters;
 
@@ -3079,10 +3109,10 @@ namespace Module {
         bool balanced_weight;
 
     public:
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
         }
 
-        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(balanced_weight_), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(balanced_weight_), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
         }
 
         ~FastBDTTrain() {}
@@ -3105,11 +3135,14 @@ namespace Module {
 
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
-            Signal_replaced_expr = replaceVariables(Signal_equation, &variable_names);
-            Background_replaced_expr = replaceVariables(Background_equation, &variable_names);
+            Signal_replaced_expr = replaceInternalValues(Signal_equation, internal_value);
+            Background_replaced_expr = replaceInternalValues(Background_equation, internal_value);
+            Signal_replaced_expr = replaceVariables(Signal_replaced_expr, &variable_names);
+            Background_replaced_expr = replaceVariables(Background_replaced_expr, &variable_names);
             Signal_postfix_expr = PostfixExpression(Signal_replaced_expr, &VariableTypes);
             Background_postfix_expr = PostfixExpression(Background_replaced_expr, &VariableTypes);
 
@@ -3232,6 +3265,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         // FBDT class
         std::string classifier_path;
@@ -3240,10 +3274,11 @@ namespace Module {
         std::string branch_name;
 
     public:
-        FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, variable_names_);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
@@ -3318,13 +3353,14 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         // the number of split and which one do you want to select?
         int split_num;
         int selected_index;
 
     public:
-        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~RandomEventSelection() {}
 
@@ -3492,14 +3528,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         // FBDT class
         std::string new_variable_name;
 
     public:
-        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equation(equation_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
-            replaced_expr = replaceVariables(equation, variable_names_);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, variable_names_);
             postfix_expr = PostfixExpression(replaced_expr, VariableTypes_);
 
             // check there is the same branch name or not
@@ -3551,9 +3589,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        RemoveVariable(std::vector<std::string> removed_variable_names_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), removed_variable_names(removed_variable_names_) {
+        RemoveVariable(std::vector<std::string> removed_variable_names_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), removed_variable_names(removed_variable_names_) {
+
+            // remove from internal value
+            for (std::string removed_variable_name : removed_variable_names) {
+                auto iter = internal_value_->find(removed_variable_name);
+                if (iter != internal_value_->end()) internal_value_->erase(iter);
+            }
 
             // get index
             for (std::string removed_variable_name : removed_variable_names) {
@@ -3628,16 +3673,19 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         // FBDT class
         std::string new_variable_name;
 
     public:
-        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (std::map<std::string, std::string>::iterator iter_eq = condition_equation__criteria_equation_list.begin(); iter_eq != condition_equation__criteria_equation_list.end(); ++iter_eq) {
-                std::string condition_replaced_expr = replaceVariables(iter_eq->first, variable_names_);
-                std::string criteria_replaced_expr = replaceVariables(iter_eq->second, variable_names_);
+                std::string condition_replaced_expr = replaceInternalValues(iter_eq->first, internal_value);
+                condition_replaced_expr = replaceVariables(condition_replaced_expr, variable_names_);
+                std::string criteria_replaced_expr = replaceInternalValues(iter_eq->second, internal_value);
+                criteria_replaced_expr = replaceVariables(criteria_replaced_expr, variable_names_);
 
                 condition_postfix_expr__criteria_postfix_expr_list.push_back(std::make_pair(PostfixExpression(condition_replaced_expr, VariableTypes_), PostfixExpression(criteria_replaced_expr, VariableTypes_)));
             }
@@ -3722,14 +3770,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string new_variable_name;
 
     public:
-        GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, variable_names_);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
@@ -3787,14 +3837,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         std::string new_variable_name;
 
     public:
-        GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, variable_names_);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
@@ -3860,16 +3912,18 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         int order;
 
         std::string new_variable_name;
 
     public:
-        GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, variable_names_);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
@@ -3943,16 +3997,18 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         int order;
 
         std::string new_variable_name;
 
     public:
-        GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+        GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, variable_names_);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
             }
 
@@ -4033,14 +4089,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), dataset(dataset_), realvars(realvars_), equations(equations_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), dataset(dataset_), realvars(realvars_), equations(equations_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillDataSet() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
                 std::string equation = equations.at(i);
-                std::string replaced_expr = replaceVariables(equation, &variable_names);
+                std::string replaced_expr = replaceInternalValues(equation, internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
 
@@ -4095,13 +4153,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), tprofile(tprofile_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), tprofile(tprofile_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTProfile() {}
         void Start() {
-            replaced_expr_x = replaceVariables(equation_x, &variable_names);
-            replaced_expr_y = replaceVariables(equation_y, &variable_names);
+            replaced_expr_x = replaceInternalValues(equation_x, internal_value);
+            replaced_expr_y = replaceInternalValues(equation_y, internal_value);
+            replaced_expr_x = replaceVariables(replaced_expr_x, &variable_names);
+            replaced_expr_y = replaceVariables(replaced_expr_y, &variable_names);
             postfix_expr_x = PostfixExpression(replaced_expr_x, &VariableTypes);
             postfix_expr_y = PostfixExpression(replaced_expr_y, &VariableTypes);
         }
@@ -4142,12 +4203,14 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillTH1D(TH1D* th1d_, std::string equation_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equation(equation_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillTH1D(TH1D* th1d_, std::string equation_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th1d(th1d_), equation(equation_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTH1D() {}
         void Start() {
-            replaced_expr = replaceVariables(equation, &variable_names);
+            replaced_expr = replaceInternalValues(equation, internal_value);
+            replaced_expr = replaceVariables(replaced_expr, &variable_names);
             postfix_expr = PostfixExpression(replaced_expr, &VariableTypes);
         }
         int Process(std::deque<Data>* data) override {
@@ -4186,13 +4249,15 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillCustomizedTH1D() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
@@ -4240,13 +4305,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTH2D() {}
         void Start() {
-            x_replaced_expr = replaceVariables(x_expression, &variable_names);
-            y_replaced_expr = replaceVariables(y_expression, &variable_names);
+            x_replaced_expr = replaceInternalValues(x_expression, internal_value);
+            y_replaced_expr = replaceInternalValues(y_expression, internal_value);
+            x_replaced_expr = replaceVariables(x_replaced_expr, &variable_names);
+            y_replaced_expr = replaceVariables(y_replaced_expr, &variable_names);
             x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
             y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
         }
@@ -4288,13 +4356,15 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillCustomizedTH2D() {}
         void Start() {
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
@@ -4332,15 +4402,17 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~PrintEvent() {}
 
         void Start() {
             // change variable name into placeholder
             for (int i = 0; i < printed_values.size(); i++) {
-                std::string replaced_expr = replaceVariables(printed_values.at(i), &variable_names);
+                std::string replaced_expr = replaceInternalValues(printed_values.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
@@ -4378,6 +4450,7 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
         TH1D* th1d_ABCD;
         std::string expression_A;
@@ -4413,26 +4486,34 @@ namespace Module {
         std::shared_ptr<std::vector<double>> output_handle;
 
     public:
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
-        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~ABCDmethod() {}
 
         void Start() override {
-            replaced_expr_A = replaceVariables(expression_A, &variable_names);
-            replaced_expr_B = replaceVariables(expression_B, &variable_names);
-            replaced_expr_C = replaceVariables(expression_C, &variable_names);
-            replaced_expr_D = replaceVariables(expression_D, &variable_names);
+            replaced_expr_A = replaceInternalValues(expression_A, internal_value);
+            replaced_expr_B = replaceInternalValues(expression_B, internal_value);
+            replaced_expr_C = replaceInternalValues(expression_C, internal_value);
+            replaced_expr_D = replaceInternalValues(expression_D, internal_value);
+            replaced_expr_A = replaceVariables(replaced_expr_A, &variable_names);
+            replaced_expr_B = replaceVariables(replaced_expr_B, &variable_names);
+            replaced_expr_C = replaceVariables(replaced_expr_C, &variable_names);
+            replaced_expr_D = replaceVariables(replaced_expr_D, &variable_names);
             postfix_expr_A = PostfixExpression(replaced_expr_A, &VariableTypes);
             postfix_expr_B = PostfixExpression(replaced_expr_B, &VariableTypes);
             postfix_expr_C = PostfixExpression(replaced_expr_C, &VariableTypes);
             postfix_expr_D = PostfixExpression(replaced_expr_D, &VariableTypes);
 
             if (validation) {
-                replaced_expr_Aprime = replaceVariables(expression_Aprime, &variable_names);
-                replaced_expr_Bprime = replaceVariables(expression_Bprime, &variable_names);
-                replaced_expr_Cprime = replaceVariables(expression_Cprime, &variable_names);
-                replaced_expr_Dprime = replaceVariables(expression_Dprime, &variable_names);
+                replaced_expr_Aprime = replaceInternalValues(expression_Aprime, internal_value);
+                replaced_expr_Bprime = replaceInternalValues(expression_Bprime, internal_value);
+                replaced_expr_Cprime = replaceInternalValues(expression_Cprime, internal_value);
+                replaced_expr_Dprime = replaceInternalValues(expression_Dprime, internal_value);
+                replaced_expr_Aprime = replaceVariables(replaced_expr_Aprime, &variable_names);
+                replaced_expr_Bprime = replaceVariables(replaced_expr_Bprime, &variable_names);
+                replaced_expr_Cprime = replaceVariables(replaced_expr_Cprime, &variable_names);
+                replaced_expr_Dprime = replaceVariables(replaced_expr_Dprime, &variable_names);
                 postfix_expr_Aprime = PostfixExpression(replaced_expr_Aprime, &VariableTypes);
                 postfix_expr_Bprime = PostfixExpression(replaced_expr_Bprime, &VariableTypes);
                 postfix_expr_Cprime = PostfixExpression(replaced_expr_Cprime, &VariableTypes);
@@ -4603,9 +4684,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_) {
+        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), internal_value(internal_value_) {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
 
             eventweights_->push_back(eventweight);
@@ -4675,9 +4757,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineObservable() {}
 
         void Start() {
@@ -4709,15 +4792,16 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
+        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {
             if (observable_ids.size() != expressions.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
                 exit(1);
             }
         }
-        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
+        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {
             if (observable_ids.size() != expressions.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
                 exit(1);
@@ -4738,12 +4822,14 @@ namespace Module {
             if (!category_id.empty()) category = fitmanager->GetRooCategory(category_id);
 
             for (int i = 0; i < equations.size(); i++) {
-                std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
+                std::string replaced_expr = replaceInternalValues(equations.at(i), internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
 
             for (const auto& [state, condition] : state_conditions) {
-                std::string replaced_expr = replaceVariables(condition, &variable_names);
+                std::string replaced_expr = replaceInternalValues(condition, internal_value);
+                replaced_expr = replaceVariables(replaced_expr, &variable_names);
                 state_condition_postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
@@ -4824,9 +4910,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), init_value(init_value_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), init_value(init_value_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineFitParameter() {}
 
         void Start() {
@@ -4852,9 +4939,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), value(value_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), value(value_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineConstantParameter() {}
 
         void Start() {
@@ -4879,9 +4967,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), title(title_), states(states_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), states(states_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineCategory() {}
 
         void Start() {
@@ -4917,16 +5006,19 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), profile_id(profile_id_), title(title_), bins(bins_), xmin(xmin_), xmax(xmax_), ymin(ymin_), ymax(ymax_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), profile_id(profile_id_), title(title_), bins(bins_), xmin(xmin_), xmax(xmax_), ymin(ymin_), ymax(ymax_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineAndFillProfile() {}
 
         void Start() {
-            replaced_expr_x = replaceVariables(equation_x, &variable_names);
+            replaced_expr_x = replaceInternalValues(equation_x, internal_value);
+            replaced_expr_x = replaceVariables(replaced_expr_x, &variable_names);
             postfix_expr_x = PostfixExpression(replaced_expr_x, &VariableTypes);
 
-            replaced_expr_y = replaceVariables(equation_y, &variable_names);
+            replaced_expr_y = replaceInternalValues(equation_y, internal_value);
+            replaced_expr_y = replaceVariables(replaced_expr_y, &variable_names);
             postfix_expr_y = PostfixExpression(replaced_expr_y, &VariableTypes);
 
             fitmanager->DefineProfile(profile_id, title, bins, xmin, xmax, ymin, ymax);
@@ -4966,9 +5058,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        SetParameterConstant(const std::string& id_, bool constant_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), constant(constant_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        SetParameterConstant(const std::string& id_, bool constant_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), constant(constant_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SetParameterConstant() {}
 
         void Start() {
@@ -4994,9 +5087,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), variable_id(variable_id_), range_name(range_name_), minimum(minimum_), maximum(maximum_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), variable_id(variable_id_), range_name(range_name_), minimum(minimum_), maximum(maximum_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SetRange() {}
 
         void Start() {
@@ -5023,9 +5117,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), model_type(model_type_), observable_ids(observable_ids_), parameter_ids(parameter_ids_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), model_type(model_type_), observable_ids(observable_ids_), parameter_ids(parameter_ids_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineModel() {}
 
         void Start() {
@@ -5051,9 +5146,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), coefficient_ids(coefficient_ids_), recursive_fractions(recursive_fractions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), coefficient_ids(coefficient_ids_), recursive_fractions(recursive_fractions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineAddModel() {}
 
         void Start() {
@@ -5078,9 +5174,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), cutoff(cutoff_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), cutoff(cutoff_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineProductModel() {}
 
         void Start() {
@@ -5105,9 +5202,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), expression(expression_), argument_ids(argument_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), expression(expression_), argument_ids(argument_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineGenericModel() {}
 
         void Start() {
@@ -5132,9 +5230,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), category_id(category_id_), state_pdf_ids(state_pdf_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), category_id(category_id_), state_pdf_ids(state_pdf_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineSimultaneousModel() {}
 
         void Start() {
@@ -5161,9 +5260,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), function_id(function_id_), formula(formula_), xmin(xmin_), xmax(xmax_), parameters(parameters_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), function_id(function_id_), formula(formula_), xmin(xmin_), xmax(xmax_), parameters(parameters_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineTF1() {}
 
         void Start() {
@@ -5189,9 +5289,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~Fit() {}
 
         void Start() {}
@@ -5218,10 +5319,11 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
-        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), category_state(category_state_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
+        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), category_state(category_state_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotFit() {}
 
         void Start() {}
@@ -5246,9 +5348,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), fit_ids(fit_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), fit_ids(fit_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~ExportFitResult() {}
 
         void Start() {}
@@ -5274,9 +5377,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~CreateNLL() {}
 
         void Start() {}
@@ -5301,9 +5405,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), parameter_id(parameter_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), parameter_id(parameter_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotNLL() {}
 
         void Start() {}
@@ -5328,9 +5433,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), poi_id(poi_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), poi_id(poi_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotProfileNLL() {}
 
         void Start() {}
@@ -5353,9 +5459,10 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        SaveWorkspace(const std::string& filename_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        SaveWorkspace(const std::string& filename_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SaveWorkspace() {}
 
         void Start() {}
@@ -5379,20 +5486,21 @@ namespace Module {
         std::vector<std::string> VariableTypes;
         std::vector<EventWeight*> eventweights;
         std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
 
     public:
-        LoadWorkspace(const std::string& filename_, const std::string& workspace_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), workspace_name(workspace_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        LoadWorkspace(const std::string& filename_, const std::string& workspace_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), workspace_name(workspace_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~LoadWorkspace() {}
 
-        void Start() {}
+        void Start() {
+            fitmanager->LoadWorkspace(filename_, workspace_name_);
+        }
 
         int Process(std::deque<Data>* data) override {
             return 1;
         }
 
-        void End() override {
-            fitmanager->LoadWorkspace(filename_, workspace_name_);
-        }
+        void End() override {}
     };
 
     /* to do */

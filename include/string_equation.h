@@ -385,5 +385,45 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
 
 }
 
+std::string replaceInternalValues(const std::string& expression, const std::map<std::string, double>& internal_value) {
+    std::string replaced_expr = expression;
+
+    for (const auto& item: internal_value) {
+        const std::string& name = item.first;
+        const double value = item.second;
+
+        std::string::size_type pos = 0;
+
+        while ((pos = replaced_expr.find(name, pos)) != std::string::npos) {
+            // check previous char
+            if (pos != 0) {
+                char previous = replaced_expr.at(pos - 1);
+                if (std::isalnum(previous) || (previous == '_')) {
+                    pos += name.length();
+                    continue;
+                }
+            }
+
+            // next char check
+            if ((pos + name.length()) != replaced_expr.length()) {
+                char next = replaced_expr.at(pos + name.length());
+                if (std::isalnum(next) || next == '_') {
+                    pos += name.length();
+                    continue;
+                }
+            }
+
+            std::ostringstream value_string;
+            value_string << std::setprecision(17) << value;
+            replaced_expr.replace(pos, name.length(), value_string.str());
+
+            pos += value_string.str().length();
+
+        }
+    }
+
+    return replaced_expr;
+}
+
 #endif 
 
