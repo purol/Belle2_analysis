@@ -4912,6 +4912,442 @@ namespace Module {
         void End() override {}
     };
 
+    class SetParameterConstant : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string id;
+        bool constant;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        SetParameterConstant(const std::string& id_, bool constant_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), constant(constant_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~SetParameterConstant() {}
+
+        void Start() {
+            fitmanager->SetParameterConstant(id, constant);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class SetRange : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string variable_id;
+        std::string range_name;
+        double minimum;
+        double maximum;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), variable_id(variable_id_), range_name(range_name_), minimum(minimum_), maximum(maximum_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~SetRange() {}
+
+        void Start() {
+            fitmanager->SetRange(variable_id, range_name, minimum, maximum);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineModel : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string model_id;
+        std::string model_type;
+        std::vector<std::string> observable_ids;
+        std::vector<std::string> parameter_ids;
+        ModelOptions options;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), model_type(model_type_), observable_ids(observable_ids_), parameter_ids(parameter_ids_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineModel() {}
+
+        void Start() {
+            fitmanager->DefineModel(model_id, model_type, observable_ids, parameter_ids, options);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineAddModel : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string model_id;
+        std::vector<std::string> pdf_ids;
+        std::vector<std::string> coefficient_ids;
+        bool recursive_fractions;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), coefficient_ids(coefficient_ids_), recursive_fractions(recursive_fractions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineAddModel() {}
+
+        void Start() {
+            fitmanager->DefineAddModel(model_id, pdf_ids, coefficient_ids, recursive_fractions);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineProductModel : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string model_id;
+        std::vector<std::string> pdf_ids;
+        double cutoff;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), cutoff(cutoff_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineProductModel() {}
+
+        void Start() {
+            fitmanager->DefineProductModel(model_id, pdf_ids, cutoff);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineGenericModel : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string model_id;
+        std::string expression;
+        std::vector<std::string> argument_ids;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), expression(expression_), argument_ids(argument_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineGenericModel() {}
+
+        void Start() {
+            fitmanager->DefineGenericModel(model_id, expression, argument_ids);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineSimultaneousModel : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string model_id;
+        std::string category_id;
+        std::vector<std::pair<std::string, std::string>> state_pdf_ids;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), model_id(model_id_), category_id(category_id_), state_pdf_ids(state_pdf_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineSimultaneousModel() {}
+
+        void Start() {
+            fitmanager->DefineSimultaneousModel(model_id, category_id, state_pdf_ids);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class DefineTF1 : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string function_id;
+        std::string formula;
+        double xmin;
+        double xmax;
+        std::vector<TF1ParameterDefinition>& parameters;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), function_id(function_id_), formula(formula_), xmin(xmin_), xmax(xmax_), parameters(parameters_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~DefineTF1() {}
+
+        void Start() {
+            fitmanager->DefineTF1(function_id, formula, xmin, xmax, parameters);
+        }
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+    };
+
+    class Fit : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string fit_id;
+        std::string dataset_id;
+        double model_id;
+        FitOptions options;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~Fit() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->Fit(fit_id, dataset_id, model_id, options);
+        }
+    };
+
+    class PlotFit : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string fit_id;
+        std::string observable_id;
+        std::string plot_name;
+        FitPlotOptions options;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~PlotFit() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->PlotFit(fit_id, observable_id, plot_name, options);
+        }
+    };
+
+    class ExportFitResult : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string filename;
+        std::string fit_ids;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), fit_ids(fit_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~ExportFitResult() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->ExportFitResult(filename, fit_ids);
+        }
+    };
+
+    class CreateNLL : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string nll_id;
+        std::string dataset_id;
+        std::string model_id;
+        FitOptions options;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~CreateNLL() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->CreateNLL(nll_id, dataset_id, model_id, options);
+        }
+    };
+
+    class PlotNLL : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string nll_id;
+        std::string parameter_id;
+        std::string plot_name;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), parameter_id(parameter_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~PlotNLL() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->PlotNLL(nll_id, parameter_id, plot_name);
+        }
+    };
+
+    class PlotProfileNLL : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string nll_id;
+        std::string poi_id;
+        std::string plot_name;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), poi_id(poi_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~PlotProfileNLL() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->PlotProfileNLL(nll_id, poi_id, plot_name);
+        }
+    };
+
+    class SaveWorkspace : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string filename;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        SaveWorkspace(const std::string& filename_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~SaveWorkspace() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->SaveWorkspace(filename_);
+        }
+    };
+
+    class LoadWorkspace : public Module {
+    private:
+        FitManager* fitmanager;
+        std::string filename;
+        std::string workspace_name;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+    public:
+        LoadWorkspace(const std::string& filename_, const std::string& workspace_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), filename(filename_), workspace_name(workspace_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        ~LoadWorkspace() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {
+            fitmanager->LoadWorkspace(filename_, workspace_name_);
+        }
+    };
+
     /* to do */
 
 }
