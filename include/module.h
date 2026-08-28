@@ -4697,9 +4697,13 @@ namespace Module {
         std::string id;
         std::vector<std::string> observable_ids;
         std::vector<std::string> equations;
+        std::string category_id;
+        std::vector<std::pair<std::string, std::sring>> state_conditions;
+        RooCategory* category = nullptr;
         std::vector<std::vector<Token>> postfix_exprs;
         std::vector<RooRealVar*> roorealvars;
         RooAbsData* roodata;
+        std::vector<std::vector<Token>> state_condition_postfix_exprs;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -4713,19 +4717,34 @@ namespace Module {
                 exit(1);
             }
         }
+        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
+            if (observable_ids.size() != expressions.size()) {
+                printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
+                exit(1);
+            }
+        }
         ~DefineAndFillDataSet() {}
 
         void Start() {
-            fitmanager->DefineDataSet(id, observable_ids);
+            std::vector<std::string> dataset_variable_ids = observable_ids;
+            if (!category_id.empty()) dataset_variable_ids.push_back(category_id);
+
+            fitmanager->DefineDataSet(id, dataset_variable_ids);
             roodata = fitmanager->GetData(id);
             for (const std::string& observable_id : observable_ids) {
                 RooRealVar* temp_roorealvar = fitmanager->GetRooRealVar(observable_id);
                 roorealvars.push_back(temp_roorealvar);
             }
+            if (!category_id.empty()) category = fitmanager->GetRooCategory(category_id);
 
             for (int i = 0; i < equations.size(); i++) {
                 std::string replaced_expr = replaceVariables(equations.at(i), &variable_names);
                 postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
+            }
+
+            for (const auto& [state, condition] : state_conditions) {
+                std::string replaced_expr = replaceVariables(condition, &variable_names);
+                state_condition_postfix_exprs.push_back(PostfixExpression(replaced_expr, &VariableTypes));
             }
         }
 
@@ -4749,11 +4768,36 @@ namespace Module {
                     roorealvars.at(i)->setVal(results.at(i));
                 }
 
+                // set category
+                if (category != nullptr) {
+                    int matched_state = -1;
+                    for (int i = 0; i < state_condition_postfix_exprs.size(); i++) {
+                        double result = EvaluatePostfixExpression(state_condition_postfix_exprs.at(i), iter->variable, &VariableTypes);
+                        if (result > 0.5) {
+                            if (matched_state != -1) {
+                                printf("[DefineAndFillDataSet] event matches multiple category states.\n");
+                                exit(1);
+                            }
+                            matched_state = i;
+                        }
+                    }
+
+                    if (matched_state == -1) {
+                        ++iter;
+                        continue;
+                    }
+
+                    category->setLabel(state_conditions.at(matched_state).first.c_str());
+                }
+
                 // fill dataset
                 RooArgSet row;
                 for (RooRealVar* roorealvar : roorealvars) {
                     row.add(*roorealvar);
                 }
+
+                // fill category
+                if (category != nullptr) row.add(*category);
 
                 roodata->add(row, totalweight);
 

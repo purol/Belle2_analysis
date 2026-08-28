@@ -161,6 +161,7 @@ public:
      */
     void DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_ = "");
     void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_);
+    void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_);
     void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
     void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
     void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
@@ -483,6 +484,11 @@ void Loader::DefineObservable(const std::string& id_, const std::string& title_,
 
 void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_){
     Module::Module* temp_module = new Module::DefineAndFillDataSet(id_, observable_ids_, expressions_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Modules.push_back(temp_module);
+}
+
+void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_){
+    Module::Module* temp_module = new Module::DefineAndFillDataSet(id_, observable_ids_, expressions_, category_id_, state_conditions_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
