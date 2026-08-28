@@ -522,67 +522,67 @@ void Loader::DefineModel(const std::string& model_id_, const std::string model_t
 }
 
 void Loader::DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_) {
-    Module::Module* temp_module = new Module::DefineAddModel(model_id_, pdf_ids_, coefficient_ids_, recursive_fractions_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::DefineAddModel(model_id_, pdf_ids_, coefficient_ids_, recursive_fractions_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_) {
-    Module::Module* temp_module = new Module::DefineProductModel(model_id_, pdf_ids_, cutoff_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::DefineProductModel(model_id_, pdf_ids_, cutoff_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_) {
-    Module::Module* temp_module = new Module::DefineGenericModel(model_id_, expression_, argument_ids_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::DefineGenericModel(model_id_, expression_, argument_ids_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_) {
-    Module::Module* temp_module = new Module::DefineSimultaneousModel(model_id_, category_id_, state_pdf_ids_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::DefineSimultaneousModel(model_id_, category_id_, state_pdf_ids_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_) {
-    Module::Module* temp_module = new Module::DefineTF1(function_id_, formula_, xmin_, xmax_, parameters_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::DefineTF1(function_id_, formula_, xmin_, xmax_, parameters_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_) {
-    Module::Module* temp_module = new Module::Fit(fit_id_, dataset_id_, model_id_, options_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::Fit(fit_id_, dataset_id_, model_id_, options_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_) {
-    Module::Module* temp_module = new Module::PlotFit(fit_id_, observable_id_, plot_name_, options_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::PlotFit(fit_id_, observable_id_, plot_name_, options_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_) {
-    Module::Module* temp_module = new Module::ExportFitResult(filename_, fit_ids_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::ExportFitResult(filename_, fit_ids_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_) {
-    Module::Module* temp_module = new Module::CreateNLL(nll_id_, dataset_id_, model_id_, options_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::CreateNLL(nll_id_, dataset_id_, model_id_, options_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_) {
-    Module::Module* temp_module = new Module::PlotNLL(nll_id_, parameter_id_, plot_name_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::PlotNLL(nll_id_, parameter_id_, plot_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_) {
-    Module::Module* temp_module = new Module::PlotProfileNLL(nll_id_, poi_id_, plot_name_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::PlotProfileNLL(nll_id_, poi_id_, plot_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::SaveWorkspace(const std::string& filename_) {
-    Module::Module* temp_module = new Module::SaveWorkspace(filename_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::SaveWorkspace(filename_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
 void Loader::LoadWorkspace(const std::string& filename_, const std::string& workspace_name_) {
-    Module::Module* temp_module = new Module::LoadWorkspace(filename_, workspace_name_, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Module::Module* temp_module = new Module::LoadWorkspace(filename_, workspace_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 
