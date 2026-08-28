@@ -146,7 +146,7 @@ private:
 	void FitToRooAbsData(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 	void FitToTProfile(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 
-	void PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+	void PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::optional<std::string>& category_state_, const FitPlotOptions& options_ = {});
 	void PlotTProfileFit(const std::string& fit_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
 
 	static const std::unordered_map<std::string, ModelDefinition>& ModelDefinitions();
@@ -215,6 +215,7 @@ public:
 	void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 	void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
 	void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+	void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_ = {});
 
 	void PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_);
 	void PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_);
@@ -432,11 +433,11 @@ inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& o
 	const std::string dataset_id = dataset_metadata->GetTitle();
 
 	if (workspace->data(dataset_id.c_str())) {
-		PlotRooAbsDataFit(fit_id_, observable_id_, plot_name_, options_);
+		PlotRooAbsDataFit(fit_id_, observable_id_, plot_name_, std::nullopt, options_);
 		return;
 	}
 
-	if (dynamic_cast<TProfile*>(workspace->obj(dataset_id.c_str())) {
+	if (dynamic_cast<TProfile*>(workspace->obj(dataset_id.c_str()))) {
 		PlotTProfileFit(fit_id_, plot_name_, options_);
 		return;
 	}
@@ -445,7 +446,31 @@ inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& o
 	exit(1);
 }
 
-inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_){
+inline void FitManager::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_){
+	TNamed* dataset_metadata = dynamic_cast<TNamed*>(workspace->obj((fit_id_ + "__dataset_id").c_str()));
+
+	if (!dataset_metadata) {
+		printf("[FitManager::PlotFit] dataset metadata for fit ID %s does not exist.\n", fit_id_.c_str());
+		exit(1);
+	}
+
+	const std::string dataset_id = dataset_metadata->GetTitle();
+
+	if (workspace->data(dataset_id.c_str())) {
+		PlotRooAbsDataFit(fit_id_, observable_id_, plot_name_, category_state_, options_);
+		return;
+	}
+
+	if (dynamic_cast<TProfile*>(workspace->obj(dataset_id.c_str()))) {
+		PlotTProfileFit(fit_id_, plot_name_, options_);
+		return;
+	}
+
+	printf("[FitManager::PlotFit] unsupported data type for fit %s.\n", fit_id_.c_str());
+	exit(1);
+}
+
+inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::optional<std::string>& category_state_, const FitPlotOptions& options_){
 	// predefined color
 	const std::vector<int> component_colors = {
 	    kGreen + 2,
@@ -478,7 +503,18 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
 	RooRealVar* observable = GetRooRealVar(observable_id_);
 	RooAbsData* data = GetData(dataset_metadata->GetTitle());
 	RooAbsPdf* model = GetPdf(model_metadata->GetTitle());
+	RooSimultaneous* sim_model = dynamic_cast<RooSimultaneous*>(model);
 	std::string range = range_metadata->GetTitle();
+
+	// check sim model
+	if (category_state_.has_value() && !sim_model){
+		printf("[FitManager::PlotRooAbsDataFit] category state was specified, but model is not RooSimultaneous.\n");
+		exit(1);
+	}
+	if(sim_model && !category_state_.has_value()) {
+		printf("[FitManager::PlotRooAbsDataFit] RooSimultaneous requires a category state for plotting.\n");
+		exit(1);
+	}
 
 	// set internal ID for plot
 	const std::string data_plot_name = fit_id_ + "__plot_data";
@@ -491,23 +527,55 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
 	parameters->assignValueOnly(fit_result->constPars());
 	parameters->assignValueOnly(fit_result->floatParsFinal());
 
+	// draw dataset
     std::unique_ptr<RooPlot> frame(observable->frame(RooFit::Bins(options_.bins), RooFit::Title(" ")));
-	if(options_.sumW2Error) data->plotOn(frame.get(), RooFit::DataError(RooAbsData::SumW2), RooFit::Name(data_plot_name.c_str()));
-	else data->plotOn(frame.get(), RooFit::Name(data_plot_name.c_str()));
+	if(sim_model){
+        RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+		const std::string state = category_state_.value();
+
+		if(!category->hasLabel(state.c_str())){
+			printf("[FitManager::PlotRooAbsDataFit] category %s has no state %s.\n", category->GetName(), state.c_str());
+			exit(1);
+		}
+
+		const std::string cut = std::string(category->GetName()) + "==" + category->GetName() + "::" + state;
+
+	    if(options_.sumW2Error) data->plotOn(frame.get(), RooFit::Cut(cut.c_str()), RooFit::DataError(RooAbsData::SumW2), RooFit::Name(data_plot_name.c_str()));
+	    else data->plotOn(frame.get(), RooFit::Cut(cut.c_str()), RooFit::Name(data_plot_name.c_str()));
+	}
+	else{
+	    if(options_.sumW2Error) data->plotOn(frame.get(), RooFit::DataError(RooAbsData::SumW2), RooFit::Name(data_plot_name.c_str()));
+	    else data->plotOn(frame.get(), RooFit::Name(data_plot_name.c_str()));
+	}
 
 	// draw combined pdf and extrapolation first
 	if (options_.extrapolation && (!range.empty())) {
 		const double xmin = frame->GetXaxis()->GetXmin();
 		const double xmax = frame->GetXaxis()->GetXmax();
 
-		model->plotOn(frame.get(), RooFit::LineColor(kRed), RooFit::LineStyle(kDashed), RooFit::Range(xmin, xmax), RooFit::NormRange(range.c_str()));
-		model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()));
+		if(sim_model){
+			RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+			sim_model->plotOn(frame.get(), RooFit::LineColor(kRed), RooFit::LineStyle(kDashed), RooFit::Range(xmin, xmax), RooFit::NormRange(range.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+			sim_model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+		}
+		else{
+		    model->plotOn(frame.get(), RooFit::LineColor(kRed), RooFit::LineStyle(kDashed), RooFit::Range(xmin, xmax), RooFit::NormRange(range.c_str()));
+		    model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()));
+		}
 	}
 	else if (!range.empty()) {
-		model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()));
+		if(sim_model) {
+			RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+			sim_model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+		}
+		else model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(model_plot_name.c_str()));
 	}
 	else {
-		model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Name(model_plot_name.c_str()));
+		if(sim_model){
+			RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+			sim_model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Name(model_plot_name.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+		}
+		else model->plotOn(frame.get(), RooFit::LineColor(kBlue), RooFit::LineStyle(kSolid), RooFit::Name(model_plot_name.c_str()));
 	}
 
 	// then draw component if exists
@@ -521,10 +589,18 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
 		component_plot_ids.push_back(component_plot_id);
 
 		if (!range.empty()) {
-			model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(component_plot_id.c_str()));
+			if(sim_model){
+			    RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+		    	sim_model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(component_plot_id.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+			}
+			else model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Range(range.c_str()), RooFit::NormRange(range.c_str()), RooFit::Name(component_plot_id.c_str()));
 		}
 		else {
-			model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Name(component_plot_id.c_str()));
+			if(sim_model){
+			    RooCategory* category = GetRooCategory(sim_model->indexCat().GetName());
+		    	sim_model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Name(component_plot_id.c_str()), RooFit::Slice(*category, category_state_.value().c_str()), RooFit::ProjWData(*category, *data));
+			}
+			else model->plotOn(frame.get(), RooFit::Components(component.c_str()), RooFit::LineColor(component_colors[i % component_colors.size()]), RooFit::LineStyle(kDashed), RooFit::Name(component_plot_id.c_str()));
 		}
 	}
 

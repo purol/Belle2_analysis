@@ -161,7 +161,7 @@ public:
      */
     void DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_ = "");
     void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_);
-    void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_);
+    void DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_);
     void DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_ = "");
     void DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_ = "");
     void DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_);
@@ -176,6 +176,7 @@ public:
     void DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_ = {});
     void Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
     void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_ = {});
+    void PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_ = {});
     void ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_);
     void CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_ = {});
     void PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_);
@@ -487,7 +488,7 @@ void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std:
     Modules.push_back(temp_module);
 }
 
-void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_){
+void Loader::DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_){
     Module::Module* temp_module = new Module::DefineAndFillDataSet(id_, observable_ids_, expressions_, category_id_, state_conditions_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
@@ -559,6 +560,11 @@ void Loader::Fit(const std::string& fit_id_, const std::string dataset_id_, cons
 
 void Loader::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_) {
     Module::Module* temp_module = new Module::PlotFit(fit_id_, observable_id_, plot_name_, options_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
+    Modules.push_back(temp_module);
+}
+
+void Loader::PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_){
+    Module::Module* temp_module = new Module::PlotFit(fit_id_, observable_id_, plot_name_, category_state_, options_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &fitmanager);
     Modules.push_back(temp_module);
 }
 

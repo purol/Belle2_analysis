@@ -4698,7 +4698,7 @@ namespace Module {
         std::vector<std::string> observable_ids;
         std::vector<std::string> equations;
         std::string category_id;
-        std::vector<std::pair<std::string, std::sring>> state_conditions;
+        std::vector<std::pair<std::string, std::string>> state_conditions;
         RooCategory* category = nullptr;
         std::vector<std::vector<Token>> postfix_exprs;
         std::vector<RooRealVar*> roorealvars;
@@ -4717,7 +4717,7 @@ namespace Module {
                 exit(1);
             }
         }
-        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::sring>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
+        DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {
             if (observable_ids.size() != expressions.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
                 exit(1);
@@ -5211,6 +5211,7 @@ namespace Module {
         std::string fit_id;
         std::string observable_id;
         std::string plot_name;
+        std::string category_state;
         FitPlotOptions options;
 
         std::vector<std::string> variable_names;
@@ -5220,6 +5221,7 @@ namespace Module {
 
     public:
         PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
+        PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), category_state(category_state_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), fitmanager(fitmanager_) {}
         ~PlotFit() {}
 
         void Start() {}
@@ -5229,7 +5231,8 @@ namespace Module {
         }
 
         void End() override {
-            fitmanager->PlotFit(fit_id, observable_id, plot_name, options);
+            if(category_state.empty()) fitmanager->PlotFit(fit_id, observable_id, plot_name, options);
+            else fitmanager->PlotFit(fit_id, observable_id, plot_name, category_state, options);
         }
     };
 
