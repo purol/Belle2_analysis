@@ -5138,7 +5138,7 @@ namespace Module {
         FitManager* fitmanager;
         std::string fit_id;
         std::string dataset_id;
-        double model_id;
+        std::string model_id;
         FitOptions options;
 
         std::vector<std::string> variable_names;

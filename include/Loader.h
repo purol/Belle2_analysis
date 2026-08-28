@@ -72,7 +72,7 @@ private:
     FitManager fitmanager;
 
 public:
-    Loader(const char* TTree_name_);
+    Loader(const char* TTree_name_, const std::string& workspace_name_ = "workspace");
     void SetName(const char* loader_name_);
 
     /*
@@ -199,7 +199,7 @@ public:
     std::vector<std::string>* MCLabel_address();
 };
 
-Loader::Loader(const char* TTree_name_) : TTree_name(TTree_name_), DataStructureDefined(false) {}
+Loader::Loader(const char* TTree_name_, const std::string& workspace_name_) : TTree_name(TTree_name_), DataStructureDefined(false), fitmanager(workspace_name_) {}
 
 void Loader::SetName(const char* loader_name_) {
     loader_name = std::string(loader_name_);
