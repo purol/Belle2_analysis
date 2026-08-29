@@ -189,7 +189,11 @@ namespace Module {
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
         }
-        ~Load() {}
+        ~Load() {
+            for (std::size_t i = 0; i < temp_variable.size(); i++) {
+                if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
+            }
+        }
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
@@ -359,7 +363,11 @@ namespace Module {
             eventweights = (*eventweights_);
             variable_indices_list = (*variable_indices_list_);
         }
-        ~LoadWithCut() {}
+        ~LoadWithCut() {
+            for (std::size_t i = 0; i < temp_variable.size(); i++) {
+                if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
+            }
+        }
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
