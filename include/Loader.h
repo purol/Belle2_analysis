@@ -33,6 +33,33 @@
 #include "eventweight.h"
 #include "fit_manager.h"
 
+// wrapper for std::vector<std::vector<Module::Module*>>
+struct ModuleList {
+    std::vector<std::vector<Module::Module*>> Modules;
+
+    void push_back(Module::Module* temp_module) {
+        if (temp_module->WaitUpstreams()) {
+            std::vector<Module::Module*> temp_stream;
+            Modules.push_back(temp_stream);
+            Modules.back().push_back(temp_module);
+        }
+        else Modules.back().push_back(temp_module);
+    }
+
+    std::size_t size() const noexcept {
+        return Modules.size();
+    }
+
+    std::vector<Module::Module*>& at(std::size_t index) {
+        return Modules.at(index);
+    }
+
+    const std::vector<Module::Module*>& at(std::size_t index) const {
+        return Modules.at(index);
+    }
+
+};
+
 class Loader {
 private:
 
@@ -51,8 +78,8 @@ private:
     std::vector<std::string> variable_names;
     std::vector<std::string> VariableTypes;
 
-    // vector of modules
-    std::vector<Module::Module*> Modules;
+    // vector of modules.
+    ModuleList Modules;
 
     // label list to assign which one is signal/background
     std::vector<std::string> Signal_label_list;
