@@ -4,6 +4,11 @@
 #include <string>
 #include <stack>
 #include <sstream>
+#include <set>
+#include <cctype>
+#include <map>
+#include <vector>
+#include <iomanip>
 
 enum class OpType {
     Value,      // Literal number (e.g., 3.14)
@@ -114,13 +119,13 @@ std::string replaceVariables(const std::string& expression, const std::vector<st
             // accidentally, variable names can be overlapped (ex. Btag_M and Btag_Mbc, missingMomentumOfEventCMS and missingMomentumOfEventCMS_theta). If next and previous char is alphabet or underbar just skip it.
             // to do: how about number? Mbc3 and Mbc...
             if (pos != 0) {
-                if (std::isalpha(replaced_expr.at(pos - 1)) || (replaced_expr.at(pos - 1) == '_')) {
+                if (std::isalnum(replaced_expr.at(pos - 1)) || (replaced_expr.at(pos - 1) == '_')) {
                     pos = pos + var_name->at(i).length();
                     continue;
                 }
             }
             if ((pos + var_name->at(i).length()) != replaced_expr.length()) {
-                if (std::isalpha(replaced_expr.at(pos + var_name->at(i).length())) || (replaced_expr.at(pos + var_name->at(i).length()) == '_')) {
+                if (std::isalnum(replaced_expr.at(pos + var_name->at(i).length())) || (replaced_expr.at(pos + var_name->at(i).length()) == '_')) {
                     pos = pos + var_name->at(i).length();
                     continue;
                 }
@@ -423,6 +428,42 @@ std::string replaceInternalValues(const std::string& expression, const std::map<
     }
 
     return replaced_expr;
+}
+
+std::set<std::string> GetVariablesFromExpression(const std::string& expression, const std::vector<std::string>& variable_names) {
+    std::set<std::string> result;
+
+    for (const std::string& name : variable_names) {
+        std::size_t pos = 0;
+
+        while ((pos = expression.find(name, pos)) != std::string::npos) {
+            const bool left_ok = (pos == 0) || !(std::isalnum(expression.at(pos - 1)) || (expression.at(pos - 1) == '_'));
+            
+            const std::size_t end = pos + name.size();
+
+            const bool right_ok = (end == expression.size()) || !(std::isalnum(expression.at(end)) || (expression.at(end) == '_'));
+
+            if (left_ok && right_ok) {
+                result.insert(name);
+                break;
+            }
+
+            pos += name.size();
+        }
+    }
+
+    return result;
+}
+
+std::set<std::string> GetVariablesFromExpressions(const std::vector<std::string>& expressions, const std::vector<std::string>& variable_names) {
+    std::set<std::string> result;
+
+    for (const std::string& expression : expressions) {
+        std::set<std::string> temp_result = GetVariablesFromExpression(expression, variable_names);
+        result.merge(temp_result);
+    }
+
+    return result;
 }
 
 #endif 

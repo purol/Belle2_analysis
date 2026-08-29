@@ -12,6 +12,8 @@
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <optional>
+#include <cctype>
 
 #include "data.h"
 #include "string_equation.h"
@@ -117,6 +119,17 @@ namespace Module {
         * `End` function is called after all ROOT files are read. It is called only once.
         */
         virtual void End() = 0;
+        /*
+        * `RequiredVariables` returns the name of variables needed.
+        * It returns `std::nullopt` when all variables are needed.
+        * This function is used for the memory optimization.
+        */
+        virtual std::optional<std::set<std::string>> RequiredVariables() const { return std::nullopt; }
+
+        /*
+        * If it returns false, the module does not wait the upstream modules
+        */
+        virtual bool WaitUpstreams() const { return false; }
     };
 
     class Load : public Module {
@@ -509,6 +522,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return GetVariablesFromExpression(cut_string, variable_names);
+        }
     };
 
     class PrintInformation : public Module {
@@ -642,6 +659,20 @@ namespace Module {
             output_handle->push_back(Nevt);
             output_handle->push_back(Ncandidate);
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(Event_variable_list, variable_names));
+
+            for (const std::vector<std::size_t> variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class DrawTH1D : public Module {
@@ -774,6 +805,20 @@ namespace Module {
             hist->Draw("Hist");
             c_temp->SaveAs(png_name.c_str());
             delete c_temp;
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(expression, variable_names));
+
+            for (const std::vector<std::size_t> variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
         }
 
     };
@@ -928,6 +973,21 @@ namespace Module {
             delete c_temp;
         }
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(x_expression, variable_names));
+            result.merge(GetVariablesFromExpression(y_expression, variable_names));
+
+            for (const std::vector<std::size_t> variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
+
     };
 
     class PrintSeparateRootFile : public Module {
@@ -1061,6 +1121,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::nullopt;
+        }
     };
 
     class PrintRootFile : public Module {
@@ -1154,6 +1218,10 @@ namespace Module {
                 temp_file->Close();
                 delete temp_file;
             }
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::nullopt;
         }
     };
 
@@ -1377,6 +1445,15 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation, variable_names));
+            result.merge(GetVariablesFromExpressions(Event_variable_list, variable_names));
+
+            return result;
+        }
     };
 
     class RandomBCS : public Module {
@@ -1562,6 +1639,14 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(Event_variable_list, variable_names));
+
+            return result;
+        }
     };
 
     class IsBCSValid : public Module {
@@ -1677,6 +1762,14 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(Event_variable_list, variable_names));
+
+            return result;
+        }
     };
 
     class DrawFOM : public Module {
@@ -3235,7 +3328,7 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {
             // reweight, if balanced_weight == true
             if (balanced_weight) {
                 double sum_bkgs = 0.0;
@@ -3275,6 +3368,25 @@ namespace Module {
             else out_stream.open((path + "/" + output_name).c_str(), std::ios_base::out | std::ios_base::trunc);
             out_stream << classifier << std::endl;
             out_stream.close();
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+            result.merge(GetVariablesFromExpression(Signal_equation, variable_names));
+            result.merge(GetVariablesFromExpression(Background_equation, variable_names));
+            for (const std::vector<std::size_t> variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
+
+        bool WaitUpstreams() const override {
+            return true;
         }
     };
 
@@ -3348,8 +3460,10 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return GetVariablesFromExpressions(equations, variable_names);
         }
     };
 
@@ -3538,6 +3652,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return GetVariablesFromExpressions(Event_variable_list, variable_names);
+        }
     };
 
     class DefineNewVariable : public Module {
@@ -3597,8 +3715,11 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            // new variable is not included
+            return GetVariablesFromExpression(equation, variable_names);
         }
     };
 
@@ -4794,6 +4915,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineAndFillDataSet : public Module {
@@ -4916,6 +5041,23 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+            for (const auto& [state, condition] : state_conditions) {
+                result.merge(GetVariablesFromExpression(condition, variable_names));
+            }
+
+            for (const auto& variable_indices : variable_indices_list) {
+                for (const std::size_t variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class DefineFitParameter : public Module {
@@ -4947,6 +5089,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineConstantParameter : public Module {
@@ -4976,6 +5122,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineCategory : public Module {
@@ -5004,6 +5154,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineAndFillProfile : public Module {
@@ -5068,6 +5222,21 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation_x, variable_names));
+            result.merge(GetVariablesFromExpression(equation_y, variable_names));
+
+            for (const auto& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class SetParameterConstant : public Module {
@@ -5095,6 +5264,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class SetRange : public Module {
@@ -5124,6 +5297,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineModel : public Module {
@@ -5154,6 +5331,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineAddModel : public Module {
@@ -5183,6 +5364,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineProductModel : public Module {
@@ -5211,6 +5396,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineGenericModel : public Module {
@@ -5239,6 +5428,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineSimultaneousModel : public Module {
@@ -5267,6 +5460,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineTF1 : public Module {
@@ -5297,6 +5494,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class Fit : public Module {
@@ -5325,6 +5526,14 @@ namespace Module {
 
         void End() override {
             fitmanager->Fit(fit_id, dataset_id, model_id, options);
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
+
+        bool WaitUpstreams() const override {
+            return true;
         }
     };
 
@@ -5358,13 +5567,17 @@ namespace Module {
             if(category_state.empty()) fitmanager->PlotFit(fit_id, observable_id, plot_name, options);
             else fitmanager->PlotFit(fit_id, observable_id, plot_name, category_state, options);
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class ExportFitResult : public Module {
     private:
         FitManager* fitmanager;
         std::string filename;
-        std::string fit_ids;
+        std::vector<std::string> fit_ids;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -5384,6 +5597,10 @@ namespace Module {
 
         void End() override {
             fitmanager->ExportFitResult(filename, fit_ids);
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
         }
     };
 
@@ -5414,6 +5631,10 @@ namespace Module {
         void End() override {
             fitmanager->CreateNLL(nll_id, dataset_id, model_id, options);
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class PlotNLL : public Module {
@@ -5441,6 +5662,10 @@ namespace Module {
 
         void End() override {
             fitmanager->PlotNLL(nll_id, parameter_id, plot_name);
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
         }
     };
 
@@ -5470,6 +5695,10 @@ namespace Module {
         void End() override {
             fitmanager->PlotProfileNLL(nll_id, poi_id, plot_name);
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class SaveWorkspace : public Module {
@@ -5494,7 +5723,11 @@ namespace Module {
         }
 
         void End() override {
-            fitmanager->SaveWorkspace(filename_);
+            fitmanager->SaveWorkspace(filename);
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
         }
     };
 
@@ -5515,7 +5748,7 @@ namespace Module {
         ~LoadWorkspace() {}
 
         void Start() {
-            fitmanager->LoadWorkspace(filename_, workspace_name_);
+            fitmanager->LoadWorkspace(filename, workspace_name);
         }
 
         int Process(std::deque<Data>* data) override {
@@ -5523,6 +5756,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     /* to do */
