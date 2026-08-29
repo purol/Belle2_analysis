@@ -259,7 +259,14 @@ namespace Module {
                 temp.variable.reserve(VariableTypes.size() + 50);
 
                 // copy from temp_variable
-                temp.variable.insert(temp.variable.end(), temp_variable.begin(), temp_variable.end());
+                for (std::size_t i = 0; i < temp_variable.size(); i++) {
+                    if (VariableTypes.at(i) == "string") {
+                        std::string* root_string = std::get<std::string*>(temp_variable.at(i));
+                        if (root_string != nullptr) temp.PushString(*root_string);
+                        else temp.PushString("");
+                    }
+                    else temp.variable.push_back(temp_variable.at(i));
+                }
                 temp.label = label;
                 temp.filename = filename.at(Currententry);
 
@@ -429,7 +436,14 @@ namespace Module {
                     temp.variable.reserve(VariableTypes.size() + 50);
 
                     // copy from temp_variable
-                    temp.variable.insert(temp.variable.end(), temp_variable.begin(), temp_variable.end());
+                    for (std::size_t i = 0; i < temp_variable.size(); i++) {
+                        if (VariableTypes.at(i) == "string") {
+                            std::string* root_string = std::get<std::string*>(temp_variable.at(i));
+                            if (root_string != nullptr) temp.PushString(*root_string);
+                            else temp.PushString("");
+                        }
+                        else temp.variable.push_back(temp_variable.at(i));
+                    }
                     temp.label = label;
                     temp.filename = filename.at(Currententry);
 
