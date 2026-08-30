@@ -8,6 +8,8 @@
 #include <tuple>
 #include <memory>
 #include <map>
+#include <optional>
+#include <set>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -32,18 +34,62 @@
 #include "module.h"
 #include "eventweight.h"
 #include "fit_manager.h"
+#include "DataStore.h"
 
 // wrapper for std::vector<std::vector<Module::Module*>>
-struct ModuleList {
+class ModuleList {
+private:
     std::vector<std::vector<Module::Module*>> Modules;
 
+    // required variables at each stages
+    std::vector<std::optional<std::set<std::string>>> required_variables;
+
+    // variable_names at the end of each stages
+    std::vector<std::vector<std::string>> variable_names_end_stage;
+
+    // VariableTypes at the end of each stages
+    std::vector<std::vector<std::string>> VariableTypes_end_stage;
+
+    // current variable_names at Loader
+    std::vector<std::string>* current_variable_names;
+
+    // current VariableTypes at Loader
+    std::vector<std::string>* current_VariableTypes;
+
+    bool meetEndOfStage = false;
+
+public:
+    ModuleList(std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : current_variable_names(variable_names_), current_VariableTypes(VariableTypes_) {}
+
     void push_back(Module::Module* temp_module) {
-        if (temp_module->WaitUpstreams()) {
-            std::vector<Module::Module*> temp_stream;
-            Modules.push_back(temp_stream);
-            Modules.back().push_back(temp_module);
+        if (Modules.empty()) {
+            std::vector<Module::Module*> temp_stage;
+            Modules.push_back(temp_stage);
         }
-        else Modules.back().push_back(temp_module);
+        Modules.back().push_back(temp_module);
+
+        if (required_variables.empty()) required_variables.push_back(std::set<std::string>{});
+        std::optional<std::set<std::string>> RequiredVariables_module = temp_module->RequiredVariables();
+        for (std::optional<std::set<std::string>>& required_variable : required_variables) {
+            if ((!RequiredVariables_module.has_value()) || (!required_variable.has_value())) required_variable = std::nullopt;
+            else required_variable.value().insert(RequiredVariables_module.begin(), RequiredVariables_module.end());
+        }
+
+        if (variable_names_end_stage.empty()) variable_names_end_stage.push_back(*current_variable_names);
+        else variable_names_end_stage.back() = *current_variable_names;
+
+        if (VariableTypes_end_stage.empty()) VariableTypes_end_stage.push_back(*current_VariableTypes);
+        else VariableTypes_end_stage.back() = *current_VariableTypes;
+
+        if (temp_module->BlocksDownstream()) {
+            std::vector<Module::Module*> temp_stage;
+            Modules.push_back(temp_stage);
+            required_variables.push_back(std::set<std::string>{});
+
+            variable_names_end_stage.push_back(std::vector<std::string>{});
+            VariableTypes_end_stage.push_back(std::vector<std::string>{});
+        }
+
     }
 
     std::size_t size() const noexcept {
@@ -56,6 +102,18 @@ struct ModuleList {
 
     const std::vector<Module::Module*>& at(std::size_t index) const {
         return Modules.at(index);
+    }
+
+    const std::optional<std::set<std::string>>& GetRequiredVariables(std::size_t stage) const {
+        return required_variables.at(stage);
+    }
+
+    const std::vector<std::string>& GetVariableNamesEndStage(std::size_t stage) const {
+        return variable_names_end_stage.at(stage);
+    }
+
+    const std::vector<std::string>& GetVariableTypesEndStage(std::size_t stage) const {
+        return VariableTypes_end_stage.at(stage);
     }
 
 };
@@ -232,7 +290,7 @@ public:
     std::vector<std::string>* MCLabel_address();
 };
 
-Loader::Loader(const char* TTree_name_, const std::string& workspace_name_) : TTree_name(TTree_name_), DataStructureDefined(false), fitmanager(workspace_name_) {}
+Loader::Loader(const char* TTree_name_, const std::string& workspace_name_) : TTree_name(TTree_name_), DataStructureDefined(false), Modules(&variable_names, &VariableTypes), fitmanager(workspace_name_) {}
 
 void Loader::SetName(const char* loader_name_) {
     loader_name = std::string(loader_name_);
@@ -635,29 +693,73 @@ void Loader::InsertCustomizedModule(Module::Module* module_) {
 }
 
 void Loader::end() {
-    // run Start
-    for (int i = 0; i < Modules.size(); i++) Modules.at(i)->Start();
+    // temporary data for BlocksDownstream
+    MemoryDataStore input_store;
+    MemoryDataStore output_store;
 
-    while (true) {
-        bool AreAllFilesRead = true;
+    for (int stage = 0; stage < Modules.size(); stage++) {
 
-        // run Process
-        for (int i = 0; i < Modules.size(); i++) {
-            if (Modules.at(i)->Process(&TotalData) == 0) AreAllFilesRead = false;
+        // modules at each stage
+        std::vector<Module::Module*> Modules_at = Modules.at(stage);
+
+        // run Start
+        for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->Start();
+
+        while (true) {
+            bool AreAllFilesRead = true;
+
+            // fill data from upsteam
+            if(stage != 0) AreAllFilesRead = !input_store.ReadFromBatch(&TotalData);
+
+            // run Process
+            for (int i = 0; i < Modules_at.size(); i++) {
+                if (Modules_at.at(i)->Process(&TotalData) == 0) AreAllFilesRead = false;
+            }
+
+            // if it is not last stage, save data into DataStream
+            if ((Modules.size() - 1) != stage) {
+                // get reduced schema
+                std::vector<std::string> reduced_variable_names;
+                std::vector<std::string> reduced_VariableTypes;
+                for (int index = 0; index < Modules.GetVariableNamesEndStage(stage + 1).size(); index++) {
+                    const std::string& variable_name = Modules.GetVariableNamesEndStage(stage + 1).at(index);
+                    const std::string& VariableType = Modules.GetVariableTypesEndStage(stage + 1).at(index);
+
+                    // there can be "DefineVariable" at the next stage
+                    if (std::find(Modules.GetVariableNamesEndStage(stage).begin(), Modules.GetVariableNamesEndStage(stage).end(), variable_name) != Modules.GetVariableNamesEndStage(stage).end()) {
+                        if (!Modules.GetRequiredVariables(stage + 1).has_value()) {
+                            reduced_variable_names.push_back(variable_name);
+                            reduced_VariableTypes.push_back(VariableType);
+                        }
+                        else if (Modules.GetRequiredVariables(stage + 1).value().find(variable_name) != Modules.GetRequiredVariables(stage + 1).value().end()) {
+                            reduced_variable_names.push_back(variable_name);
+                            reduced_VariableTypes.push_back(VariableType);
+                        }
+                    }
+                }
+
+                output_store.SetSchema(Modules.GetVariableNamesEndStage(stage), Modules.GetVariableTypesEndStage(stage), reduced_variable_names, reduced_VariableTypes);
+                output_store.WriteToBatch(std::move(TotalData));
+            }
+            TotalData.clear();
+
+            // If all files are read, exit from while loop
+            if (AreAllFilesRead) break;
         }
 
-        // clear remaining data
-        TotalData.clear();
+        // run End
+        for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->End();
 
-        // If all files are read, exit from while loop
-        if (AreAllFilesRead) break;
+        // delete all modules
+        for (int i = 0; i < Modules_at.size(); i++) delete Modules_at.at(i);
+
+        input_store.Clear();
+        input_store = std::move(output_store);
+        output_store.Clear();
     }
 
-    // run End
-    for (int i = 0; i < Modules.size(); i++) Modules.at(i)->End();
-
-    // delete all modules
-    for (int i = 0; i < Modules.size(); i++) delete Modules.at(i);
+    input_store.Clear();
+    output_store.Clear();
 
     printf("[Loader] loader %s is successfully done\n", loader_name.c_str());
 }

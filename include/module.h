@@ -129,7 +129,7 @@ namespace Module {
         /*
         * If it returns false, the module does not wait the upstream modules
         */
-        virtual bool WaitUpstreams() const { return false; }
+        virtual bool BlocksDownstream() const { return false; }
     };
 
     class Load : public Module {
@@ -3385,7 +3385,7 @@ namespace Module {
             return result;
         }
 
-        bool WaitUpstreams() const override {
+        bool BlocksDownstream() const override {
             return true;
         }
     };
@@ -5532,7 +5532,7 @@ namespace Module {
             return std::set<std::string>{};
         }
 
-        bool WaitUpstreams() const override {
+        bool BlocksDownstream() const override {
             return true;
         }
     };
@@ -5761,8 +5761,6 @@ namespace Module {
             return std::set<std::string>{};
         }
     };
-
-    /* to do */
 
 }
 
