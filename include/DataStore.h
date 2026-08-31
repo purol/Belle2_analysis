@@ -2,6 +2,8 @@
 #define DATASTORE_H
 
 #include <deque>
+#include <vector>
+#include <string>
 
 #include "data.h"
 
@@ -9,11 +11,9 @@ class DataStore {
 public:
 	virtual ~DataStore() {}
 
-	virtual void WriteToBatch(std::deque<Data>&& data, const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) = 0;
 	virtual void WriteToBatch(std::deque<Data>&& data) = 0;
 
 	// return false if there is no batch
-	virtual bool ReadFromBatch(std::deque<Data>* data, const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) = 0;
 	virtual bool ReadFromBatch(std::deque<Data>* data) = 0;
 
 	virtual void SetSchema(const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) = 0;
@@ -41,10 +41,6 @@ private:
 	bool SchemaExists = false;
 
 public:
-	void WriteToBatch(std::deque<Data>&& data, const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) override {
-		SetSchema(original_variable_names_, original_VariableTypes_, reduced_variable_names_, reduced_VariableTypes_);
-		WriteToBatch(std::move(data));
-	}
 
 	void WriteToBatch(std::deque<Data>&& data) override {
 		if (!SchemaExists) {
@@ -98,11 +94,6 @@ public:
 		}
 
 		batches.push_back(std::move(reduced_batch));
-	}
-
-	bool ReadFromBatch(std::deque<Data>* data, const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) override {
-		SetSchema(original_variable_names_, original_VariableTypes_, reduced_variable_names_, reduced_VariableTypes_);
-		return ReadFromBatch(data);
 	}
 
 	bool ReadFromBatch(std::deque<Data>* data) override {

@@ -729,7 +729,7 @@ void Loader::end() {
                 }
 
                 output_store.SetSchema(Modules.GetVariableNamesEndStage(stage), Modules.GetVariableTypesEndStage(stage), reduced_variable_names, reduced_VariableTypes);
-                output_store.WriteToBatch(std::move(TotalData));
+                if(!TotalData.empty()) output_store.WriteToBatch(std::move(TotalData));
             }
             TotalData.clear();
 

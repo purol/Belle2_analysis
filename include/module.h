@@ -2005,6 +2005,20 @@ namespace Module {
 
             delete c_temp;
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class DrawPunziFOM : public Module {
@@ -2234,6 +2248,20 @@ namespace Module {
             free(FOMs);
 
             delete c_temp;
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
         }
     };
 
@@ -2548,6 +2576,25 @@ namespace Module {
 
             delete c_temp;
         }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            for (const auto& scan_condition : scan_conditions) {
+                result.merge(GetVariablesFromExpression(std::string(std::get<0>(scan_condition)), variable_names));
+            }
+
+            result.merge(GetVariablesFromExpression(preselection_equation_x, variable_names));
+            result.merge(GetVariablesFromExpression(preselection_equation_y, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class CalculateAUC : public Module {
@@ -2732,6 +2779,20 @@ namespace Module {
             free(NSIGs_cumulative);
             free(NBKGs);
             free(NBKGs_cumulative);
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
         }
     };
 
@@ -3182,6 +3243,20 @@ namespace Module {
                 exit(1);
             }
 
+        }
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(expression, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
         }
     };
 
@@ -3909,8 +3984,19 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(expression, variable_names));
+
+            for (const auto& [condition_equation, criteria_equation] : condition_equation__criteria_equation_list) {
+                result.merge(GetVariablesFromExpression(condition_equation, variable_names));
+                result.merge(GetVariablesFromExpression(criteria_equation, variable_names));
+            }
+
+            return result;
         }
     };
 
@@ -3976,8 +4062,14 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            return result;
         }
     };
 
@@ -4051,8 +4143,14 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            return result;
         }
     };
 
@@ -4136,8 +4234,14 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            return result;
         }
     };
 
@@ -4221,8 +4325,14 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            return result;
         }
     };
 
@@ -4281,6 +4391,20 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class FillTProfile : public Module {
@@ -4338,6 +4462,21 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation_x, variable_names));
+            result.merge(GetVariablesFromExpression(equation_y, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class FillTH1D : public Module {
@@ -4384,6 +4523,20 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(equation, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class FillCustomizedTH1D : public Module {
@@ -4437,6 +4590,20 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class FillTH2D : public Module {
@@ -4490,6 +4657,21 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(x_expression, variable_names));
+            result.merge(GetVariablesFromExpression(y_expression, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class FillCustomizedTH2D : public Module {
@@ -4545,6 +4727,20 @@ namespace Module {
             return 1;
         }
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
     };
 
     class PrintEvent : public Module {
@@ -4592,6 +4788,14 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(printed_values, variable_names));
+
+            return result;
+        }
     };
 
     class ABCDmethod : public Module {
@@ -4823,6 +5027,30 @@ namespace Module {
             if (validation) { delete th1d_ABCD_validation; }
         }
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(expression_A, variable_names));
+            result.merge(GetVariablesFromExpression(expression_B, variable_names));
+            result.merge(GetVariablesFromExpression(expression_C, variable_names));
+            result.merge(GetVariablesFromExpression(expression_D, variable_names));
+
+            if (validation) {
+                result.merge(GetVariablesFromExpression(expression_Aprime, variable_names));
+                result.merge(GetVariablesFromExpression(expression_Bprime, variable_names));
+                result.merge(GetVariablesFromExpression(expression_Cprime, variable_names));
+                result.merge(GetVariablesFromExpression(expression_Dprime, variable_names));
+            }
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
+
     };
 
     class AddWeight : public Module {
@@ -4895,6 +5123,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class DefineObservable : public Module {
