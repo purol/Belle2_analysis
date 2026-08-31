@@ -4334,6 +4334,80 @@ namespace Module {
         }
     };
 
+    class GetRandom : public Module {
+    private:
+        std::vector<std::string> equations;
+        std::vector<std::vector<Token>> postfix_exprs;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+
+        std::string new_variable_name;
+
+    public:
+        GetRandom(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
+            // change variable name into placeholder
+            for (int i = 0; i < equations.size(); i++) {
+                std::string replaced_expr = replaceVariables(equations.at(i), variable_names_);
+                postfix_exprs.push_back(PostfixExpression(replaced_expr, VariableTypes_));
+            }
+
+            // check there is the same branch name or not
+            if (std::find(variable_names_->begin(), variable_names_->end(), new_variable_name) != variable_names_->end()) {
+                printf("[GetRandom] there is already %s variable\n", new_variable_name.c_str());
+                exit(1);
+            }
+
+            // copy variable list first, because we use it inside the module
+            variable_names = (*variable_names_);
+            VariableTypes = (*VariableTypes_);
+
+            // add variable
+            variable_names_->push_back(new_variable_name);
+            VariableTypes_->push_back("Double_t");
+        }
+
+        ~GetRandom() {}
+
+        void Start() {
+
+        }
+
+        int Process(std::deque<Data>* data) {
+
+            // Convert the string to a size_t hash value
+            std::hash<std::string> hasher;
+            size_t hashValue;
+            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
+            else hashValue = 42;
+
+            // Initialize the random number generator with the hash value
+            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            std::uniform_int_distribution<int> dist(0, postfix_exprs.size() - 1);
+
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+
+                std::vector<double> inputs;
+                for (int i = 0; i < postfix_exprs.size(); i++) {
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    inputs.push_back(result);
+                }
+
+                iter->variable.push_back(inputs.at(dist(rng)));
+
+                ++iter;
+            }
+
+            return 1;
+        }
+
+        void End() {
+
+        }
+    };
+
     class FillDataSet : public Module {
         /*
         * This module is used to fill RooDataSet

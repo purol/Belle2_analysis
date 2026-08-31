@@ -18,8 +18,31 @@ struct WeightAxis {
 };
 
 struct WeightUncertainty {
+    std::string uncertainty_name;
     std::string up_column;
     std::string down_column;
+    bool bins_correlated;
+};
+
+struct WeightRange{
+    double min;
+    double max;
+};
+
+struct WeightVariation{
+    std::string uncertainty_name;
+    double up_value; // Absolute uncertainty of weight. Should be positive.
+    double down_value; // Absolute uncertainty of weight. Should be positive.
+};
+
+struct WeightBin {
+    std::vector<WeightRange> ranges;
+    double weight;
+    std::vector<WeightVariation> uncertainties = {};
+};
+
+struct WeightUncertaintyInformation {
+    std::string uncertainty_name;
     bool bins_correlated;
 };
 
@@ -37,6 +60,7 @@ private:
     std::vector<std::vector<double>> variable_max; // variable_max[bin range][variable]
     std::vector<double> nominal_weight_value;
     std::vector<double> fluctuated_weight_value;
+    std::map<std::string, int> uncertainty_name_to_index;
     std::vector<std::vector<double>> fluctuation_up; // Absolute uncertainty of weight. Should be positive. fluctuation_up[fluctuation type][fluctuation value]
     std::vector<std::vector<double>> fluctuation_down; // Absolute uncertainty of weight. Should be positive. fluctuation_down[fluctuation type][fluctuation value]
     std::vector<bool> correlated; // correlation among bins
@@ -60,18 +84,49 @@ private:
     correlated = { false }
     */
 
+    void ApplyFluctuate(const std::string& uncertainty_name_);
+
 public:
     EventWeight(const double constWeight_);
     EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_, bool ignoreOutOfRange_);
     EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, bool ignoreOutOfRange_);
-    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_);
-    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_);
+    //EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_);
+    //EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_);
+
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<WeightBin>& weightbins_, bool ignoreOutOfRange_);
+    EventWeight(const std::vector<std::string>& variable_names_, const std::vector<WeightBin>& weightbins_, const std::vector<WeightUncertaintyInformation>& uncertainty_information_, bool ignoreOutOfRange_);
 
     double Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const;
     void Fluctuate();
+    void Fluctuate(const std::string& uncertainty_name_);
+    void Fluctuate(const std::vector<std::string>& uncertainty_names_);
     void ResetToNominal();
     const std::vector<std::string>& GetVarNames() const;
 };
+
+inline void EventWeight::ApplyFluctuate(const std::string& uncertainty_name_){
+    if(uncertainty_name_to_index.find(uncertainty_name_) == uncertainty_name_to_index.end()){
+        printf("[EventWeight::ApplyFluctuate] cannot find uncertainty %s\n", uncertainty_name_.c_str());
+        exit(1);
+    }
+
+    int idx_fluc = uncertainty_name_to_index.find(uncertainty_name_)->second;
+
+    if (correlated.at(idx_fluc)) {
+        double alpha = normal_dist(gen);
+        for (int i = 0; i < nominal_weight_value.size(); i++) {
+            if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
+            else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
+        }
+    }
+    else {
+        for (int i = 0; i < nominal_weight_value.size(); i++) {
+            double alpha = normal_dist(gen);
+            if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
+            else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
+        }
+    }
+}
 
 inline EventWeight::EventWeight(const double constWeight_) : ignoreOutOfRange(false), constWeight(true) {
     nominal_weight_value.push_back(constWeight_);
@@ -79,7 +134,7 @@ inline EventWeight::EventWeight(const double constWeight_) : ignoreOutOfRange(fa
 }
 
 inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<WeightAxis>& axis_columns_, const std::string& weight_column_, const std::vector<WeightUncertainty>& weight_unc_columns_, bool ignoreOutOfRange_) : ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {
-    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"dataMCratio_sys_up", "dataMCratio_sys_down", true}}, true);
+    // usage example: EventWeight("./muonid.csv", {{"momentum", "p_min","p_max"}, {"angle", "theta_min","theta_max"}}, "dataMCratio", {{"stat", "dataMCratio_stat_up", "dataMCratio_stat_down", false}, {"syst", "dataMCratio_sys_up", "dataMCratio_sys_down", true}}, true);
 
     std::vector<std::string> axis_min_column_names;
     std::vector<std::string> axis_max_column_names;
@@ -93,6 +148,11 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
     weight_column_name = weight_column_;
     for (int i = 0; i < weight_unc_columns_.size(); i++) {
+        if(uncertainty_name_to_index.find(weight_unc_columns_.at(i).uncertainty_name) != uncertainty_name_to_index.end()){
+            printf("[EventWeight::EventWeight] uncertainty name %s is duplicated.\n", weight_unc_columns_.at(i).uncertainty_name.c_str());
+            exit(1);
+        }
+        uncertainty_name_to_index.insert(std::make_pair(weight_unc_columns_.at(i).uncertainty_name, i));
         uncer_up_column_names.push_back(weight_unc_columns_.at(i).up_column);
         uncer_down_column_names.push_back(weight_unc_columns_.at(i).down_column);
     }
@@ -194,9 +254,66 @@ inline EventWeight::EventWeight(const std::string& CSV_file_, const std::vector<
     }
 }
 
-inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), fluctuation_up(fluctuation_up_), fluctuation_down(fluctuation_down_), correlated(correlated_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
+//inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, const std::vector<std::vector<double>>& fluctuation_up_, const std::vector<std::vector<double>>& fluctuation_down_, const std::vector<bool>& correlated_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), fluctuation_up(fluctuation_up_), fluctuation_down(fluctuation_down_), correlated(correlated_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
 
-inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
+//inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<std::vector<double>>& variable_min_, const std::vector<std::vector<double>>& variable_max_, const std::vector<double>& nominal_weight_value_, bool ignoreOutOfRange_) : variable_names(variable_names_), variable_min(variable_min_), variable_max(variable_max_), nominal_weight_value(nominal_weight_value_), fluctuated_weight_value(nominal_weight_value_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {}
+
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<WeightBin>& weightbins_, bool ignoreOutOfRange_) : EventWeight(variable_names_, weightbins_, std::vector<WeightUncertaintyInformation>{}, ignoreOutOfRange_) {}
+
+inline EventWeight::EventWeight(const std::vector<std::string>& variable_names_, const std::vector<WeightBin>& weightbins_, const std::vector<WeightUncertaintyInformation>& uncertainty_information_, bool ignoreOutOfRange_) : variable_names(variable_names_), ignoreOutOfRange(ignoreOutOfRange_), constWeight(false) {
+    fluctuation_up.resize(uncertainty_information_.size());
+    fluctuation_down.resize(uncertainty_information_.size());
+
+    int temp_index = 0;
+    for(const auto& uncertainty_info : uncertainty_information_) {
+        if(uncertainty_name_to_index.find(uncertainty_info.uncertainty_name) != uncertainty_name_to_index.end()){
+            printf("[EventWeight::EventWeight] uncertainty name %s is duplicated.\n", uncertainty_info.uncertainty_name.c_str());
+            exit(1);
+        }
+        uncertainty_name_to_index.insert(std::make_pair(uncertainty_info.uncertainty_name, temp_index));
+        correlated.push_back(uncertainty_info.bins_correlated);
+        temp_index++;
+    }
+
+    for(const auto& weightbin : weightbins_) {
+        if(weightbin.ranges.size() != variable_names_.size()){
+            printf("[EventWeight::EventWeight] There are %zu variables are registered, while some bin requires %zu variable range(s).\n", variable_names_.size(), weightbin.ranges.size());
+            exit(1);
+        }
+
+        nominal_weight_value.push_back(weightbin.weight);
+        fluctuated_weight_value.push_back(weightbin.weight);
+
+        std::vector<double> temp_min;
+        std::vector<double> temp_max;
+        for(const auto& weightrange : weightbin.ranges){
+            temp_min.push_back(weightrange.min);
+            temp_max.push_back(weightrange.max);
+        }
+
+        variable_min.push_back(temp_min);
+        variable_max.push_back(temp_max);
+
+        for(const auto& uncertainty : weightbin.uncertainties){
+            if(uncertainty_name_to_index.find(uncertainty.uncertainty_name) == uncertainty_name_to_index.end()) {
+                printf("[EventWeight::EventWeight] uncertainty %s cannot be found.\n", uncertainty.uncertainty_name.c_str());
+                exit(1);
+            }
+
+            int idx_fluc = uncertainty_name_to_index.find(uncertainty.uncertainty_name)->second;
+
+            fluctuation_up.at(idx_fluc).push_back(uncertainty.up_value);
+            fluctuation_down.at(idx_fluc).push_back(uncertainty.down_value);
+        }
+    }
+
+    for(int idx_fluc = 0; idx_fluc < fluctuation_up.size(); idx_fluc++) {
+        if(fluctuation_up.at(idx_fluc).size() != nominal_weight_value.size()){
+            printf("[EventWeight::EventWeight] uncertainty %s has %zu vlaue, while there are %zu bins.\n", uncertainty_information_.at(idx_fluc).uncertainty_name.c_str(), fluctuation_up.at(idx_fluc).size(), nominal_weight_value.size());
+            exit(1);
+        }
+    }
+}
 
 inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::size_t>& variable_indices_) const {
     if(constWeight){
@@ -248,23 +365,21 @@ inline void EventWeight::Fluctuate(){
         return;
     }
     else {
-        for (int idx_fluc = 0; idx_fluc < fluctuation_up.size(); idx_fluc++) {
-            if (correlated.at(idx_fluc)) {
-                double alpha = normal_dist(gen);
-                for (int i = 0; i < nominal_weight_value.size(); i++) {
-                    if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
-                    else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
-                }
-            }
-            else {
-                for (int i = 0; i < nominal_weight_value.size(); i++) {
-                    double alpha = normal_dist(gen);
-                    if (alpha >= 0) fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_up.at(idx_fluc).at(i);
-                    else fluctuated_weight_value.at(i) = fluctuated_weight_value.at(i) + alpha * fluctuation_down.at(idx_fluc).at(i);
-                }
-            }
+        for(const auto& pair : uncertainty_name_to_index){
+            const std::string uncertainty_name = pair.first;
+            ApplyFluctuate(uncertainty_name);
         }
     }
+}
+
+inline void EventWeight::Fluctuate(const std::vector<std::string>& uncertainty_names_) {
+    ResetToNominal();
+    for(const std::string& uncertainty_name : uncertainty_names_) ApplyFluctuate(uncertainty_name);
+}
+
+inline void EventWeight::Fluctuate(const std::string& uncertainty_name_) {
+    ResetToNominal();
+    ApplyFluctuate(uncertainty_name_);
 }
 
 inline void EventWeight::ResetToNominal(){
@@ -297,6 +412,8 @@ public:
     static void Register(const std::string& weight_name_, const EventWeight& eventweight_);
     static EventWeight* GetWeight(const std::string& weight_name_);
     static void Fluctuate(const std::string& weight_name_);
+    static void Fluctuate(const std::string& weight_name_, const std::string& uncertainty_name_);
+    static void Fluctuate(const std::string& weight_name_, const std::vector<std::string>& uncertainty_names_);
     static void ResetToNominal(const std::string& weight_name_);
 };
 
@@ -332,6 +449,14 @@ inline EventWeight* EventWeights::GetWeight(const std::string& weight_name_){
 
 inline void EventWeights::Fluctuate(const std::string& weight_name_) {
     getInstance().InternalGetWeight(weight_name_)->Fluctuate();
+}
+
+inline void EventWeights::Fluctuate(const std::string& weight_name_, const std::string& uncertainty_name_){
+    getInstance().InternalGetWeight(weight_name_)->Fluctuate(uncertainty_name_);
+}
+
+inline void EventWeights::Fluctuate(const std::string& weight_name_, const std::vector<std::string>& uncertainty_names_){
+    getInstance().InternalGetWeight(weight_name_)->Fluctuate(uncertainty_names_);
 }
 
 inline void EventWeights::ResetToNominal(const std::string& weight_name_) {
