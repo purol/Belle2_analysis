@@ -3989,8 +3989,6 @@ namespace Module {
         std::optional<std::set<std::string>> RequiredVariables() const override {
             std::set<std::string> result;
 
-            result.merge(GetVariablesFromExpression(expression, variable_names));
-
             for (const auto& [condition_equation, criteria_equation] : condition_equation__criteria_equation_list) {
                 result.merge(GetVariablesFromExpression(condition_equation, variable_names));
                 result.merge(GetVariablesFromExpression(criteria_equation, variable_names));
