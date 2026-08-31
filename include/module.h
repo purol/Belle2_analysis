@@ -4403,8 +4403,14 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            return result;
         }
     };
 
