@@ -62,33 +62,26 @@ public:
     ModuleList(std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_) : current_variable_names(variable_names_), current_VariableTypes(VariableTypes_) {}
 
     void push_back(Module::Module* temp_module) {
-        if (Modules.empty()) {
-            std::vector<Module::Module*> temp_stage;
-            Modules.push_back(temp_stage);
+        if (Modules.empty() || meetEndOfStage) {
+            Modules.push_back({});
+            required_variables.push_back(std::set<std::string>{});
+            variable_names_end_stage.push_back(std::vector<std::string>{});
+            VariableTypes_end_stage.push_back(std::vector<std::string>{});
+
+            meetEndOfStage = false;
         }
         Modules.back().push_back(temp_module);
 
-        if (required_variables.empty()) required_variables.push_back(std::set<std::string>{});
         std::optional<std::set<std::string>> RequiredVariables_module = temp_module->RequiredVariables();
         for (std::optional<std::set<std::string>>& required_variable : required_variables) {
             if ((!RequiredVariables_module.has_value()) || (!required_variable.has_value())) required_variable = std::nullopt;
-            else required_variable.value().insert(RequiredVariables_module.begin(), RequiredVariables_module.end());
+            else required_variable.value().insert(RequiredVariables_module.value().begin(), RequiredVariables_module.value().end());
         }
 
-        if (variable_names_end_stage.empty()) variable_names_end_stage.push_back(*current_variable_names);
-        else variable_names_end_stage.back() = *current_variable_names;
+        variable_names_end_stage.back() = *current_variable_names;
+        VariableTypes_end_stage.back() = *current_VariableTypes;
 
-        if (VariableTypes_end_stage.empty()) VariableTypes_end_stage.push_back(*current_VariableTypes);
-        else VariableTypes_end_stage.back() = *current_VariableTypes;
-
-        if (temp_module->BlocksDownstream()) {
-            std::vector<Module::Module*> temp_stage;
-            Modules.push_back(temp_stage);
-            required_variables.push_back(std::set<std::string>{});
-
-            variable_names_end_stage.push_back(std::vector<std::string>{});
-            VariableTypes_end_stage.push_back(std::vector<std::string>{});
-        }
+        if (temp_module->BlocksDownstream()) meetEndOfStage = true;
 
     }
 
@@ -721,20 +714,17 @@ void Loader::end() {
                 // get reduced schema
                 std::vector<std::string> reduced_variable_names;
                 std::vector<std::string> reduced_VariableTypes;
-                for (int index = 0; index < Modules.GetVariableNamesEndStage(stage + 1).size(); index++) {
-                    const std::string& variable_name = Modules.GetVariableNamesEndStage(stage + 1).at(index);
-                    const std::string& VariableType = Modules.GetVariableTypesEndStage(stage + 1).at(index);
+                for (int index = 0; index < Modules.GetVariableNamesEndStage(stage).size(); index++) {
+                    const std::string& variable_name = Modules.GetVariableNamesEndStage(stage).at(index);
+                    const std::string& VariableType = Modules.GetVariableTypesEndStage(stage).at(index);
 
-                    // there can be "DefineVariable" at the next stage
-                    if (std::find(Modules.GetVariableNamesEndStage(stage).begin(), Modules.GetVariableNamesEndStage(stage).end(), variable_name) != Modules.GetVariableNamesEndStage(stage).end()) {
-                        if (!Modules.GetRequiredVariables(stage + 1).has_value()) {
-                            reduced_variable_names.push_back(variable_name);
-                            reduced_VariableTypes.push_back(VariableType);
-                        }
-                        else if (Modules.GetRequiredVariables(stage + 1).value().find(variable_name) != Modules.GetRequiredVariables(stage + 1).value().end()) {
-                            reduced_variable_names.push_back(variable_name);
-                            reduced_VariableTypes.push_back(VariableType);
-                        }
+                    if (!Modules.GetRequiredVariables(stage + 1).has_value()) {
+                        reduced_variable_names.push_back(variable_name);
+                        reduced_VariableTypes.push_back(VariableType);
+                    }
+                    else if (Modules.GetRequiredVariables(stage + 1).value().find(variable_name) != Modules.GetRequiredVariables(stage + 1).value().end()) {
+                        reduced_variable_names.push_back(variable_name);
+                        reduced_VariableTypes.push_back(VariableType);
                     }
                 }
 

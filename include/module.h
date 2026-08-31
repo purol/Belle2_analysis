@@ -234,7 +234,7 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
-            // read Currententry'th file. If there is not file to read, just return 1
+            // read Currententry'th file. If there is no file to read, just return 1
             if (Currententry == Nentry) return 1;
 
             // if there is remaining data, do not extract additional one
@@ -298,6 +298,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class LoadWithCut : public Module {
@@ -412,7 +416,7 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
-            // read Currententry'th file. If there is not file to read, just return 1
+            // read Currententry'th file. If there is no file to read, just return 1
             if (Currententry == Nentry) return 1;
 
             // if there is remaining data, do not extract additional one
@@ -480,6 +484,10 @@ namespace Module {
         }
 
         void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
     };
 
     class Cut : public Module {
@@ -3800,8 +3808,10 @@ namespace Module {
             return 1;
         }
 
-        void End() {
+        void End() override {}
 
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
         }
     };
 
