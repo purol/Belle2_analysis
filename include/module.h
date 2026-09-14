@@ -5146,7 +5146,7 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
-        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), internal_value(internal_value_) {
+        AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), internal_value(*internal_value_) {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
 
             eventweights_->push_back(eventweight);
@@ -5263,13 +5263,13 @@ namespace Module {
 
     public:
         DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {
-            if (observable_ids.size() != expressions.size()) {
+            if (observable_ids.size() != equations.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
                 exit(1);
             }
         }
         DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_conditions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), category_id(category_id_), state_conditions(state_conditions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {
-            if (observable_ids.size() != expressions.size()) {
+            if (observable_ids.size() != equations.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
                 exit(1);
             }
@@ -5793,7 +5793,7 @@ namespace Module {
         std::string formula;
         double xmin;
         double xmax;
-        std::vector<TF1ParameterDefinition>& parameters;
+        std::vector<TF1ParameterDefinition> parameters;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;

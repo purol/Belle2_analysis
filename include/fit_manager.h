@@ -606,7 +606,7 @@ inline void FitManager::PlotRooAbsDataFit(const std::string& fit_id_, const std:
 
 	// draw pull
     RooHist* pull = frame->pullHist(data_plot_name.c_str(), model_plot_name.c_str());
-	std::unique_ptr<RooPlot> pull_frame = observable->frame(RooFit::Title(""));
+	std::unique_ptr<RooPlot> pull_frame(observable->frame(RooFit::Title("")));
 	pull_frame->addPlotable(pull, "P");
 
     TCanvas* canvas = new TCanvas("canvas", "canvas", 800, 800);
@@ -1123,7 +1123,7 @@ inline void FitManager::FinalizeDataSet(const std::string& dataset_id_) {
 		exit(1);
 	}
 
-	RooDataSet& dataset = it->dataset;
+	RooDataSet& dataset = it->second.dataset;
 
 	if (workspace->data(dataset_id_.c_str()) != nullptr) {
 		printf("[FitManager::FinalizeDataSet] dataset %s already exists in the workspace.\n", dataset_id_.c_str());
@@ -1890,7 +1890,7 @@ inline void FitManager::ExportFitResult(const std::string& filename_, const std:
 			exit(1);
 		}
 
-		if (!structure_determined) {
+		if (!structureDetermined) {
 
 			parameter_names.reserve(parameters.size());
 
@@ -1910,7 +1910,7 @@ inline void FitManager::ExportFitResult(const std::string& filename_, const std:
 				tree.Branch((name + "_LOerr").c_str(),&branch_values[name + "_LOerr"]);
 			}
 
-			structure_determined = true;
+			structureDetermined = true;
 		}
 		else {
 			if (parameters.size() != parameter_names.size()) {
