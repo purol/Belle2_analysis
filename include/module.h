@@ -1589,8 +1589,7 @@ namespace Module {
                 if (previous_event_variable != temp_event_variable) {
                     if (selected_indices.size() != 0) {
                         for (int i = 0; i < selected_indices.size(); i++) {
-                            Data temp = temp_data.at(selected_indices.at(i));
-                            temp_data_after_BCS.push_back(temp);
+                            temp_data_after_BCS.push_back(std::move(temp_data.at(selected_indices.at(i))));
                         }
 
                         temp_data.clear();
@@ -1619,7 +1618,7 @@ namespace Module {
                 }
 
                 // get Data
-                temp_data.push_back(*iter);
+                temp_data.push_back(std::move(*iter));
 
                 previous_event_variable = temp_event_variable;
 
@@ -1628,8 +1627,7 @@ namespace Module {
             // do BCS for the final dataset
             if (selected_indices.size() != 0) {
                 for (int i = 0; i < selected_indices.size(); i++) {
-                    Data temp = temp_data.at(selected_indices.at(i));
-                    temp_data_after_BCS.push_back(temp);
+                    temp_data_after_BCS.push_back(std::move(temp_data.at(selected_indices.at(i))));
                 }
 
                 temp_data.clear();
