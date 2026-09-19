@@ -3521,13 +3521,13 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) {
+            std::vector<float> inputs(postfix_exprs.size());
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                std::vector<float> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
-                    inputs.push_back(result);
+                    inputs.at(i) = static_cast<float>(result);
                 }
 
                 float Output_FBDT = classifier.predict(inputs);
@@ -3694,8 +3694,7 @@ namespace Module {
 
                     if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
                         for (int i = 0; i < temp_data.size(); i++) {
-                            Data temp = temp_data.at(i);
-                            temp_data_after_selection.push_back(temp);
+                            temp_data_after_selection.push_back(std::move(temp_data.at(i)));
                         }
 
                     }
@@ -3703,7 +3702,7 @@ namespace Module {
                 }
 
                 // get Data
-                temp_data.push_back(*iter);
+                temp_data.push_back(std::move(*iter));
 
                 previous_event_variable = temp_event_variable;
 
@@ -3716,8 +3715,7 @@ namespace Module {
 
             if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
                 for (int i = 0; i < temp_data.size(); i++) {
-                    Data temp = temp_data.at(i);
-                    temp_data_after_selection.push_back(temp);
+                    temp_data_after_selection.push_back(std::move(temp_data.at(i)));
                 }
 
             }
@@ -4210,11 +4208,9 @@ namespace Module {
                 }
 
                 std::vector<double> Diffs;
-                for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result_i = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
-                    for (int j = i + 1; j < postfix_exprs.size(); j++) {
-                        double result_j = EvaluatePostfixExpression(postfix_exprs.at(j), iter->variable, &VariableTypes);
-                        Diffs.push_back(std::abs(result_i - result_j));
+                for (std::size_t i = 0; i < inputs.size(); ++i) {
+                    for (std::size_t j = i + 1; j < inputs.size(); ++j) {
+                        Diffs.push_back(std::abs(inputs.at(i) - inputs.at(j)));
                     }
                 }
 
@@ -4301,11 +4297,9 @@ namespace Module {
                 }
 
                 std::vector<double> Adds;
-                for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result_i = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
-                    for (int j = i + 1; j < postfix_exprs.size(); j++) {
-                        double result_j = EvaluatePostfixExpression(postfix_exprs.at(j), iter->variable, &VariableTypes);
-                        Adds.push_back(result_i + result_j);
+                for (std::size_t i = 0; i < inputs.size(); ++i) {
+                    for (std::size_t j = i + 1; j < inputs.size(); ++j) {
+                        Adds.push_back(inputs.at(i) + inputs.at(j));
                     }
                 }
 
