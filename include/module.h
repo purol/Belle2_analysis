@@ -642,8 +642,7 @@ namespace Module {
                     }
                 }
 
-                if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
-                    history_event_variable.insert(temp_event_variable);
+                if (history_event_variable.insert(temp_event_variable).second) {
                     Nevt = Nevt + totalweight;
                 }
 
@@ -1748,10 +1747,7 @@ namespace Module {
                     }
                 }
 
-                if (history_event_variable.find(temp_event_variable) == history_event_variable.end()) {
-                    history_event_variable.insert(temp_event_variable);
-                }
-                else {
+                if (!history_event_variable.insert(temp_event_variable).second) {
                     printf("BCS is not valid\n");
                     exit(1);
                 }
@@ -3950,12 +3946,10 @@ namespace Module {
                 double condition_result = -1;
                 std::vector<double> condition_results;
                 double criteria_result = std::numeric_limits<double>::max();
-                std::vector<std::vector<Token>> criteria_postfix_exprs;
 
                 for (std::vector<std::pair<std::vector<Token>, std::vector<Token>>>::iterator iter_eq = condition_postfix_expr__criteria_postfix_expr_list.begin(); iter_eq != condition_postfix_expr__criteria_postfix_expr_list.end(); ++iter_eq) {
                     double temp_ = EvaluatePostfixExpression(iter_eq->first, iter->variable, &VariableTypes);
                     condition_results.push_back(temp_);
-                    criteria_postfix_exprs.push_back(iter_eq->second);
                 }
 
                 std::vector<double> temp_condition_results = condition_results;
@@ -3968,7 +3962,7 @@ namespace Module {
                 std::vector<double>::iterator iter_condition_results = std::find(condition_results.begin(), condition_results.end(), condition_result);
                 std::size_t index = std::distance(condition_results.begin(), iter_condition_results);
 
-                criteria_result = EvaluatePostfixExpression(criteria_postfix_exprs.at(index), iter->variable, &VariableTypes);
+                criteria_result = EvaluatePostfixExpression(condition_postfix_expr__criteria_postfix_expr_list.at(index).second, iter->variable, &VariableTypes);
 
                 iter->variable.push_back(static_cast<double>(criteria_result));
 
@@ -4109,19 +4103,21 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) {
+            std::vector<double> inputs(postfix_exprs.size());
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 double avg = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    inputs.at(i) = result;
                     avg = avg + result;
                 }
                 avg = avg / postfix_exprs.size();
 
                 double std = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = inputs.at(i);
                     std = std + (result - avg) * (result - avg);
                 }
                 std = std / postfix_exprs.size();
