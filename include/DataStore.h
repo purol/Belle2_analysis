@@ -4,6 +4,7 @@
 #include <deque>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 #include "data.h"
 
@@ -40,7 +41,14 @@ private:
 
 	bool SchemaExists = false;
 
+	// maximum number of variables needed after restoring a batch
+	std::size_t reserved_variable_num = 0;
+
 public:
+
+	void SetReservedVariableNum(std::size_t reserved_variable_num_) {
+		reserved_variable_num = reserved_variable_num_;
+	}
 
 	void WriteToBatch(std::deque<Data>&& data) override {
 		if (!SchemaExists) {
@@ -116,7 +124,7 @@ public:
 			}
 
 			Data restored_data;
-			restored_data.variable.reserve(original_variable_names.size());
+			restored_data.variable.reserve(std::max(original_variable_names.size(), reserved_variable_num));
 
 			std::size_t reduced_index = 0;
 
@@ -193,6 +201,7 @@ public:
 		original_VariableTypes.clear();
 
 		SchemaExists = false;
+		reserved_variable_num = 0;
 
 		batches.clear();
 	}
