@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <algorithm>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -50,6 +51,9 @@ private:
     // VariableTypes at the end of each stages
     std::vector<std::vector<std::string>> VariableTypes_end_stage;
 
+    // maximum number of variables at each stage, including its input schema
+    std::vector<std::size_t> maximum_variable_num;
+
     // current variable_names at Loader
     std::vector<std::string>* current_variable_names;
 
@@ -63,6 +67,11 @@ public:
 
     void push_back(Module::Module* temp_module) {
         if (Modules.empty() || meetEndOfStage) {
+            // The first module may remove variables. Keep the input size as well.
+            std::size_t input_variable_num = 0;
+            if (!Modules.empty()) input_variable_num = variable_names_end_stage.back().size();
+            maximum_variable_num.push_back(input_variable_num);
+
             Modules.push_back({});
             required_variables.push_back(std::set<std::string>{});
             variable_names_end_stage.push_back(std::vector<std::string>{});
@@ -78,6 +87,7 @@ public:
             else required_variable.value().insert(RequiredVariables_module.value().begin(), RequiredVariables_module.value().end());
         }
 
+        maximum_variable_num.back() = std::max(maximum_variable_num.back(), current_variable_names->size());
         variable_names_end_stage.back() = *current_variable_names;
         VariableTypes_end_stage.back() = *current_VariableTypes;
 
@@ -103,6 +113,10 @@ public:
 
     const std::vector<std::string>& GetVariableNamesEndStage(std::size_t stage) const {
         return variable_names_end_stage.at(stage);
+    }
+
+    std::size_t GetMaximumVariableNum(std::size_t stage) const {
+        return maximum_variable_num.at(stage);
     }
 
     const std::vector<std::string>& GetVariableTypesEndStage(std::size_t stage) const {
@@ -700,6 +714,11 @@ void Loader::end() {
 
         // modules at each stage
         std::vector<Module::Module*> Modules_at = Modules.at(stage);
+
+        // reserve for the largest schema in this stage, not only its final schema
+        std::size_t reserved_variable_num = Modules.GetMaximumVariableNum(stage);
+        input_store.SetReservedVariableNum(reserved_variable_num);
+        for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->SetReservedVariableNum(reserved_variable_num);
 
         // run Start
         for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->Start();

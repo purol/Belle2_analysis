@@ -130,10 +130,16 @@ namespace Module {
         * If it returns false, the module does not wait the upstream modules
         */
         virtual bool BlocksDownstream() const { return false; }
+
+        // set after all modules are registered; only allocating modules use it
+        virtual void SetReservedVariableNum(std::size_t reserved_variable_num_) {}
     };
 
     class Load : public Module {
     private:
+        // maximum number of variables needed in the current stage
+        std::size_t reserved_variable_num = 0;
+
         std::vector<std::string> filename;
         std::string dirname;
         int Nentry;
@@ -208,6 +214,10 @@ namespace Module {
             }
         }
 
+        void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
+            reserved_variable_num = reserved_variable_num_;
+        }
+
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
@@ -272,8 +282,8 @@ namespace Module {
 
                 Data temp;
 
-                // assing 50 more slots to avoid vector memory spike
-                temp.variable.reserve(VariableTypes.size() + 50);
+                // reserve enough slots for all variable additions in this stage
+                temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
 
                 // copy from temp_variable
                 for (std::size_t i = 0; i < temp_variable.size(); i++) {
@@ -306,6 +316,9 @@ namespace Module {
 
     class LoadWithCut : public Module {
     private:
+        // maximum number of variables needed in the current stage
+        std::size_t reserved_variable_num = 0;
+
         std::vector<std::string> filename;
         std::string dirname;
         int Nentry;
@@ -386,6 +399,10 @@ namespace Module {
             }
         }
 
+        void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
+            reserved_variable_num = reserved_variable_num_;
+        }
+
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
@@ -457,8 +474,8 @@ namespace Module {
                 if (result > 0.5) {
                     Data temp;
 
-                    // assing 50 more slots to avoid vector memory spike
-                    temp.variable.reserve(VariableTypes.size() + 50);
+                    // reserve enough slots for all variable additions in this stage
+                    temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
 
                     // copy from temp_variable
                     for (std::size_t i = 0; i < temp_variable.size(); i++) {
