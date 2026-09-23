@@ -132,15 +132,13 @@ namespace Module {
         virtual bool BlocksDownstream() const { return false; }
 
         // set after all modules are registered; only allocating modules use it
-        virtual void SetReservedVariableNum(std::size_t reserved_variable_num_) {}
         virtual void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) {}
     };
 
     class Load : public Module {
     private:
         // maximum number of variables needed in the current stage
-        std::size_t reserved_variable_num = 0;
-        std::optional<VariableCounts> reserved_variable_counts;
+        VariableCounts reserved_variable_counts = {};
         std::shared_ptr<VariableSchema> variable_schema;
 
         std::vector<std::string> filename;
@@ -211,15 +209,12 @@ namespace Module {
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
             variable_schema = std::make_shared<VariableSchema>(VariableTypes);
+            reserved_variable_counts = variable_schema->GetCounts();
         }
         ~Load() {
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
-        }
-
-        void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
-            reserved_variable_num = reserved_variable_num_;
         }
 
         void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) override {
@@ -291,8 +286,7 @@ namespace Module {
                 Data temp(variable_schema);
 
                 // reserve enough slots for all variable additions in this stage
-                if (reserved_variable_counts.has_value()) temp.variable.reserve(reserved_variable_counts.value());
-                else temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
+                temp.variable.reserve(reserved_variable_counts);
 
                 // copy from temp_variable
                 for (std::size_t i = 0; i < temp_variable.size(); i++) {
@@ -326,8 +320,7 @@ namespace Module {
     class LoadWithCut : public Module {
     private:
         // maximum number of variables needed in the current stage
-        std::size_t reserved_variable_num = 0;
-        std::optional<VariableCounts> reserved_variable_counts;
+        VariableCounts reserved_variable_counts = {};
         std::shared_ptr<VariableSchema> variable_schema;
 
         std::vector<std::string> filename;
@@ -402,6 +395,7 @@ namespace Module {
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
             variable_schema = std::make_shared<VariableSchema>(VariableTypes);
+            reserved_variable_counts = variable_schema->GetCounts();
             eventweights = (*eventweights_);
             variable_indices_list = (*variable_indices_list_);
         }
@@ -409,10 +403,6 @@ namespace Module {
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
-        }
-
-        void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
-            reserved_variable_num = reserved_variable_num_;
         }
 
         void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) override {
@@ -491,8 +481,7 @@ namespace Module {
                     Data temp(variable_schema);
 
                     // reserve enough slots for all variable additions in this stage
-                    if (reserved_variable_counts.has_value()) temp.variable.reserve(reserved_variable_counts.value());
-                    else temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
+                    temp.variable.reserve(reserved_variable_counts);
 
                     // copy from temp_variable
                     for (std::size_t i = 0; i < temp_variable.size(); i++) {

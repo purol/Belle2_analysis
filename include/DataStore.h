@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <optional>
 #include <cstdio>
 #include <cstdlib>
 
@@ -45,16 +44,11 @@ private:
 	bool SchemaExists = false;
 
 	// maximum number of variables needed after restoring a batch
-	std::size_t reserved_variable_num = 0;
-	std::optional<VariableCounts> reserved_variable_counts;
+	VariableCounts reserved_variable_counts = {};
 	std::shared_ptr<VariableSchema> original_schema;
 	std::shared_ptr<VariableSchema> reduced_schema;
 
 public:
-
-	void SetReservedVariableNum(std::size_t reserved_variable_num_) {
-		reserved_variable_num = reserved_variable_num_;
-	}
 
 	void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) {
 		reserved_variable_counts = reserved_variable_counts_;
@@ -125,6 +119,12 @@ public:
 		std::deque<Data> reduced_batch = std::move(batches.front());
 		batches.pop_front();
 
+		// Reserve at least the restored schema, including any downstream additions.
+		VariableCounts variable_counts = original_schema->GetCounts();
+		for (std::size_t i = 0; i < variable_counts.size(); i++) {
+			variable_counts.at(i) = std::max(variable_counts.at(i), reserved_variable_counts.at(i));
+		}
+
 		std::deque<Data> restored_batch;
 
 		for (Data& reduced_data : reduced_batch) {
@@ -134,8 +134,7 @@ public:
 			}
 
 			Data restored_data(original_schema);
-			if (reserved_variable_counts.has_value()) restored_data.variable.reserve(reserved_variable_counts.value());
-			else restored_data.variable.reserve(std::max(original_variable_names.size(), reserved_variable_num));
+			restored_data.variable.reserve(variable_counts);
 
 			std::size_t reduced_index = 0;
 
@@ -219,8 +218,7 @@ public:
 		original_VariableTypes.clear();
 
 		SchemaExists = false;
-		reserved_variable_num = 0;
-		reserved_variable_counts.reset();
+		reserved_variable_counts = {};
 		original_schema.reset();
 		reduced_schema.reset();
 

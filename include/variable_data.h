@@ -206,18 +206,6 @@ public:
         string_values.reserve(counts.at(VariableSchema::String));
     }
 
-    // Legacy count-only reservation. Loader uses exact per-type counts instead.
-    void reserve(std::size_t count) {
-        VariableCounts counts = {};
-        std::size_t schema_size = 0;
-        if (schema != nullptr) {
-            counts = schema->GetCounts();
-            schema_size = schema->size();
-        }
-        if (count > schema_size) counts.at(VariableSchema::Double) += count - schema_size;
-        reserve(counts);
-    }
-
     VariableCounts GetCapacities() const {
         return {int_values.capacity(), uint_values.capacity(), float_values.capacity(), double_values.capacity(), string_values.capacity()};
     }
