@@ -475,7 +475,7 @@ namespace Module {
             for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
                 temp_tree->GetEntry(j);
 
-                double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, temp_variable);
 
                 if (result > 0.5) {
                     Data temp(variable_schema);
@@ -541,7 +541,7 @@ namespace Module {
             std::deque<Data>::iterator it_end_of_good = std::stable_partition(data->begin(), data->end(),
                 [&](const Data& d) {
                     // Return true to KEEP the event
-                    double result = EvaluatePostfixExpression(postfix_expr, d.variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_expr, d.variable);
                     return result > 0.5;
                 }
             );
@@ -762,7 +762,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
                 if (hist == nullptr) {
                     x_variable.push_back(result);
@@ -917,8 +917,8 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
-                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
+                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable);
+                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable);
 
                 if (hist == nullptr) {
                     x_variable.push_back(x_result);
@@ -1416,7 +1416,7 @@ namespace Module {
                 }
 
                 // get BCS variable
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
                 
                 // check the BCS criteria
                 if (criteria == "HIGHEST") {
@@ -1910,7 +1910,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -2155,7 +2155,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -2447,10 +2447,10 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
-                double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
-                double result_x = EvaluatePostfixExpression(postfix_exprs.at(0), iter->variable, &VariableTypes);
-                double result_y = EvaluatePostfixExpression(postfix_exprs.at(1), iter->variable, &VariableTypes);
+                double result_preselection_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable);
+                double result_preselection_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable);
+                double result_x = EvaluatePostfixExpression(postfix_exprs.at(0), iter->variable);
+                double result_y = EvaluatePostfixExpression(postfix_exprs.at(1), iter->variable);
 
                 int first_bin_x = -1;
                 if (result_x < MIN_x) first_bin_x = -1;
@@ -2722,7 +2722,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
                 int first_bin = -1;
                 if (result < MIN) first_bin = -1;
@@ -2948,7 +2948,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
                 if ( (std::find(stack_label_list.begin(), stack_label_list.end(), iter->label) != stack_label_list.end()) || (std::find(hist_label_list.begin(), hist_label_list.end(), iter->label) != hist_label_list.end())) {
 
                     if (stack_hist == nullptr) {
@@ -3393,13 +3393,13 @@ namespace Module {
                 if (Signal_label_set.find(iter->label) != Signal_label_set.end()) {
                     if (Signal_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = EvaluatePostfixExpression(Signal_postfix_expr, iter->variable, &VariableTypes);
+                        preselection_result = EvaluatePostfixExpression(Signal_postfix_expr, iter->variable);
                     }
                 }
                 else if (Background_label_set.find(iter->label) != Background_label_set.end()) {
                     if (Background_replaced_expr == "") preselection_result = 1;
                     else {
-                        preselection_result = EvaluatePostfixExpression(Background_postfix_expr, iter->variable, &VariableTypes);
+                        preselection_result = EvaluatePostfixExpression(Background_postfix_expr, iter->variable);
                     }
                 }
                 else {
@@ -3408,7 +3408,7 @@ namespace Module {
 
                 if (preselection_result > 0.5) { // put input variables
                     for (int i = 0; i < postfix_exprs.size(); i++) {
-                        double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                        double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                         InputVariable[i].push_back(result);
                     }
 
@@ -3490,6 +3490,8 @@ namespace Module {
 
     class FastBDTApplication : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -3527,6 +3529,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(branch_name);
             VariableTypes_->push_back("Float_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~FastBDTApplication() {}
@@ -3545,12 +3548,12 @@ namespace Module {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     inputs.at(i) = static_cast<float>(result);
                 }
 
                 float Output_FBDT = classifier.predict(inputs);
-                iter->variable.push_back(static_cast<float>(Output_FBDT));
+                iter->variable.AppendFloat(static_cast<float>(Output_FBDT), output_schema);
 
                 ++iter;
             }
@@ -3756,6 +3759,8 @@ namespace Module {
 
     class DefineNewVariable : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::string equation;
         std::string replaced_expr;
         std::vector<Token> postfix_expr;
@@ -3789,6 +3794,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~DefineNewVariable() {}
@@ -3801,9 +3807,9 @@ namespace Module {
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
-                iter->variable.push_back(static_cast<double>(result));
+                iter->variable.AppendDouble(static_cast<double>(result), output_schema);
 
                 ++iter;
             }
@@ -3905,6 +3911,8 @@ namespace Module {
 
     class ConditionalPairDefineNewVariable : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::map<std::string, std::string> condition_equation__criteria_equation_list;
         std::vector<std::pair<std::vector<Token>, std::vector<Token>>> condition_postfix_expr__criteria_postfix_expr_list;
 
@@ -3954,6 +3962,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~ConditionalPairDefineNewVariable() {}
@@ -3971,7 +3980,7 @@ namespace Module {
                 double criteria_result = std::numeric_limits<double>::max();
 
                 for (std::vector<std::pair<std::vector<Token>, std::vector<Token>>>::iterator iter_eq = condition_postfix_expr__criteria_postfix_expr_list.begin(); iter_eq != condition_postfix_expr__criteria_postfix_expr_list.end(); ++iter_eq) {
-                    double temp_ = EvaluatePostfixExpression(iter_eq->first, iter->variable, &VariableTypes);
+                    double temp_ = EvaluatePostfixExpression(iter_eq->first, iter->variable);
                     condition_results.push_back(temp_);
                 }
 
@@ -3985,9 +3994,9 @@ namespace Module {
                 std::vector<double>::iterator iter_condition_results = std::find(condition_results.begin(), condition_results.end(), condition_result);
                 std::size_t index = std::distance(condition_results.begin(), iter_condition_results);
 
-                criteria_result = EvaluatePostfixExpression(condition_postfix_expr__criteria_postfix_expr_list.at(index).second, iter->variable, &VariableTypes);
+                criteria_result = EvaluatePostfixExpression(condition_postfix_expr__criteria_postfix_expr_list.at(index).second, iter->variable);
 
-                iter->variable.push_back(static_cast<double>(criteria_result));
+                iter->variable.AppendDouble(static_cast<double>(criteria_result), output_schema);
 
                 ++iter;
             }
@@ -4011,6 +4020,8 @@ namespace Module {
 
     class GetAverage : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4044,6 +4055,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~GetAverage() {}
@@ -4058,12 +4070,12 @@ namespace Module {
 
                 double avg = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     avg = avg + result;
                 }
                 avg = avg / postfix_exprs.size();
 
-                iter->variable.push_back(avg);
+                iter->variable.AppendDouble(avg, output_schema);
 
                 ++iter;
             }
@@ -4084,6 +4096,8 @@ namespace Module {
 
     class GetStdDev : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4117,6 +4131,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~GetStdDev() {}
@@ -4132,7 +4147,7 @@ namespace Module {
 
                 double avg = 0;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     inputs.at(i) = result;
                     avg = avg + result;
                 }
@@ -4146,7 +4161,7 @@ namespace Module {
                 std = std / postfix_exprs.size();
                 std = std::sqrt(std);
 
-                iter->variable.push_back(std);
+                iter->variable.AppendDouble(std, output_schema);
 
                 ++iter;
             }
@@ -4167,6 +4182,8 @@ namespace Module {
 
     class GetDiff : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4208,6 +4225,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~GetDiff() {}
@@ -4222,7 +4240,7 @@ namespace Module {
 
                 std::vector<double> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     inputs.push_back(result);
                 }
 
@@ -4235,7 +4253,7 @@ namespace Module {
 
                 std::sort(Diffs.begin(), Diffs.end(), std::greater<double>());
 
-                iter->variable.push_back(Diffs.at(order));
+                iter->variable.AppendDouble(Diffs.at(order), output_schema);
 
                 ++iter;
             }
@@ -4256,6 +4274,8 @@ namespace Module {
 
     class GetAdd : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4297,6 +4317,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~GetAdd() {}
@@ -4311,7 +4332,7 @@ namespace Module {
 
                 std::vector<double> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     inputs.push_back(result);
                 }
 
@@ -4324,7 +4345,7 @@ namespace Module {
 
                 std::sort(Adds.begin(), Adds.end(), std::greater<double>());
 
-                iter->variable.push_back(Adds.at(order));
+                iter->variable.AppendDouble(Adds.at(order), output_schema);
 
                 ++iter;
             }
@@ -4345,6 +4366,8 @@ namespace Module {
 
     class GetRandom : public Module {
     private:
+        std::shared_ptr<VariableSchema> output_schema;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4376,6 +4399,7 @@ namespace Module {
             // add variable
             variable_names_->push_back(new_variable_name);
             VariableTypes_->push_back("Double_t");
+            output_schema = std::make_shared<VariableSchema>(*VariableTypes_);
         }
 
         ~GetRandom() {}
@@ -4400,11 +4424,11 @@ namespace Module {
 
                 std::vector<double> inputs;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     inputs.push_back(result);
                 }
 
-                iter->variable.push_back(inputs.at(dist(rng)));
+                iter->variable.AppendDouble(inputs.at(dist(rng)), output_schema);
 
                 ++iter;
             }
@@ -4464,7 +4488,7 @@ namespace Module {
 
                 for (int i = 0; i < postfix_exprs.size(); i++) {
                     std::vector<Token> postfix_expr = postfix_exprs.at(i);
-                    double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
                     *(realvars.at(i)) = result;
                 }
 
@@ -4539,8 +4563,8 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
-                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
+                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable);
+                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable);
 
                 tprofile->Fill(result_x, result_y, totalweight);
 
@@ -4601,7 +4625,7 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr, iter->variable);
 
                 th1d->Fill(result, totalweight);
 
@@ -4665,7 +4689,7 @@ namespace Module {
 
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     results.push_back(result);
                 }
 
@@ -4734,8 +4758,8 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
-                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
+                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable);
+                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable);
 
                 th2d->Fill(x_result, y_result, totalweight);
 
@@ -4801,7 +4825,7 @@ namespace Module {
 
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     results.push_back(result);
                 }
 
@@ -4858,7 +4882,7 @@ namespace Module {
                 std::vector<double> results;
 
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     results.push_back(result);
                 }
 
@@ -4983,29 +5007,29 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable, &VariableTypes);
+                double result = EvaluatePostfixExpression(postfix_expr_A, iter->variable);
                 if (result > 0.5) th1d_ABCD->Fill(0.5, totalweight);
 
-                result = EvaluatePostfixExpression(postfix_expr_B, iter->variable, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_B, iter->variable);
                 if (result > 0.5) th1d_ABCD->Fill(1.5, totalweight);
 
-                result = EvaluatePostfixExpression(postfix_expr_C, iter->variable, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_C, iter->variable);
                 if (result > 0.5) th1d_ABCD->Fill(2.5, totalweight);
 
-                result = EvaluatePostfixExpression(postfix_expr_D, iter->variable, &VariableTypes);
+                result = EvaluatePostfixExpression(postfix_expr_D, iter->variable);
                 if (result > 0.5) th1d_ABCD->Fill(3.5, totalweight);
 
                 if (validation) {
-                    result = EvaluatePostfixExpression(postfix_expr_Aprime, iter->variable, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Aprime, iter->variable);
                     if (result > 0.5) th1d_ABCD_validation->Fill(0.5, totalweight);
 
-                    result = EvaluatePostfixExpression(postfix_expr_Bprime, iter->variable, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Bprime, iter->variable);
                     if (result > 0.5) th1d_ABCD_validation->Fill(1.5, totalweight);
 
-                    result = EvaluatePostfixExpression(postfix_expr_Cprime, iter->variable, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Cprime, iter->variable);
                     if (result > 0.5) th1d_ABCD_validation->Fill(2.5, totalweight);
 
-                    result = EvaluatePostfixExpression(postfix_expr_Dprime, iter->variable, &VariableTypes);
+                    result = EvaluatePostfixExpression(postfix_expr_Dprime, iter->variable);
                     if (result > 0.5) th1d_ABCD_validation->Fill(3.5, totalweight);
                 }
 
@@ -5321,7 +5345,7 @@ namespace Module {
 
                 std::vector<double> results;
                 for (int i = 0; i < postfix_exprs.size(); i++) {
-                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable, &VariableTypes);
+                    double result = EvaluatePostfixExpression(postfix_exprs.at(i), iter->variable);
                     results.push_back(result);
                 }
 
@@ -5334,7 +5358,7 @@ namespace Module {
                 if (category != nullptr) {
                     int matched_state = -1;
                     for (int i = 0; i < state_condition_postfix_exprs.size(); i++) {
-                        double result = EvaluatePostfixExpression(state_condition_postfix_exprs.at(i), iter->variable, &VariableTypes);
+                        double result = EvaluatePostfixExpression(state_condition_postfix_exprs.at(i), iter->variable);
                         if (result > 0.5) {
                             if (matched_state != -1) {
                                 printf("[DefineAndFillDataSet] event matches multiple category states.\n");
@@ -5539,8 +5563,8 @@ namespace Module {
                     totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
                 }
 
-                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable, &VariableTypes);
-                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable, &VariableTypes);
+                double result_x = EvaluatePostfixExpression(postfix_expr_x, iter->variable);
+                double result_y = EvaluatePostfixExpression(postfix_expr_y, iter->variable);
 
                 tprofile->Fill(result_x, result_y, totalweight);
 

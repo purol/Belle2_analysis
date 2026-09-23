@@ -29,6 +29,9 @@ struct Token {
     OpType type;
     double value; // Used if type == Value
     int index;    // Used if type == Variable
+    // Resolved once by PostfixExpression, not once per candidate.
+    std::size_t variable_type = 0;
+    std::size_t value_index = 0;
 };
 
 int precedence(OpType op) {
@@ -149,6 +152,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
     std::istringstream iss(replaced_expr_);
     std::vector<Token> output;
     std::stack<OpType> ops;
+    VariableSchema variable_schema(*VariableTypes_);
 
     // previous token is needed to check unary operator
     char previous_token = '\0';
@@ -201,7 +205,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
                 exit(1);
             }
 
-            output.push_back({ OpType::Variable, -1, index });
+            output.push_back({ OpType::Variable, -1, index, variable_schema.GetType(index), variable_schema.GetIndex(index) });
 
             iss >> token;
 
@@ -334,57 +338,51 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
     return output;
 }
 
-// Both the ROOT read buffer and candidate storage provide at(index).
+// ROOT read buffers use the original branch index.
+inline double ReadExpressionVariable(const std::vector<VariableValue>& variables, const Token& token) {
+    const VariableValue& value = variables.at(token.index);
+    if (token.variable_type == VariableSchema::Int) return std::get<int>(value);
+    else if (token.variable_type == VariableSchema::UInt) return std::get<unsigned int>(value);
+    else if (token.variable_type == VariableSchema::Float) return std::get<float>(value);
+    else if (token.variable_type == VariableSchema::Double) return std::get<double>(value);
+    else throw std::bad_variant_access();
+}
+
+// Candidates use the typed array position already resolved in the expression.
+inline double ReadExpressionVariable(const VariableData& variables, const Token& token) {
+    return variables.GetNumericValue(token.variable_type, token.value_index);
+}
+
 template <typename Variables>
-double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const Variables& variables_, const std::vector<std::string>* VariableTypes_) {
-    std::stack<double> values;
+double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const Variables& variables_) {
+    std::vector<double> values;
+    values.reserve(postfix_expr_.size());
 
     for (int i = 0; i < postfix_expr_.size(); i++) {
-        Token temp_token = postfix_expr_.at(i);
+        const Token& temp_token = postfix_expr_.at(i);
 
         if (temp_token.type == OpType::Value) {
-            values.push(temp_token.value);
+            values.push_back(temp_token.value);
         }
         else if (temp_token.type == OpType::Variable) {
-            int index = temp_token.index;
-
-            if (VariableTypes_->at(index) == "Double_t") {
-                values.push((double)std::get<double>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "Int_t") {
-                values.push((double)std::get<int>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "UInt_t") {
-                values.push((double)std::get<unsigned int>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "Float_t") {
-                values.push((double)std::get<float>(variables_.at(index)));
-            }
-            else if (VariableTypes_->at(index) == "string") {
-                printf("[evaluateExpression] string variable cannot be used in equations\n");
-                exit(1);
-            }
-            else {
-                printf("unexpected data type\n");
-                exit(1);
-            }
+            values.push_back(ReadExpressionVariable(variables_, temp_token));
         }
         else if ((temp_token.type == OpType::UnaryMinus) || (temp_token.type == OpType::UnaryPlus)) {
             if (values.size() == 0) {
                 printf("[EvaluatePostfixExpression] there is no number when unary operator comes\n");
                 exit(1);
             }
-            double a = values.top(); values.pop();
-            values.push(applyOp(a, temp_token.type));
+            double a = values.back(); values.pop_back();
+            values.push_back(applyOp(a, temp_token.type));
         }
         else {
             if (values.size() < 2) {
                 printf("[EvaluatePostfixExpression] there is only %zu number when binary operator comes\n", values.size());
                 exit(1);
             }
-            double b = values.top(); values.pop();
-            double a = values.top(); values.pop();
-            values.push(applyOp(a, b, temp_token.type));
+            double b = values.back(); values.pop_back();
+            double a = values.back(); values.pop_back();
+            values.push_back(applyOp(a, b, temp_token.type));
         }
     }
 
@@ -393,7 +391,7 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
         exit(1);
     }
 
-    return values.top();
+    return values.back();
 
 }
 

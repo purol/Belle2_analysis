@@ -104,7 +104,8 @@ private:
     }
 
     std::size_t GetValueIndex(std::size_t index, std::size_t expected_type) const {
-        CheckIndex(index);
+        // Schema access and the typed array's at() both check their bounds.
+        if (schema == nullptr) throw std::out_of_range("[VariableData] variable index out of range");
         if (schema->GetType(index) != expected_type) throw std::bad_variant_access();
         return schema->GetIndex(index);
     }
@@ -164,6 +165,34 @@ public:
 
     std::string* const& GetString(std::size_t index) const {
         return string_values.at(GetValueIndex(index, VariableSchema::String));
+    }
+
+    // The caller resolves type and array position while preparing its expression.
+    double GetNumericValue(std::size_t type, std::size_t value_index) const {
+        if (type == VariableSchema::Int) return int_values.at(value_index);
+        else if (type == VariableSchema::UInt) return uint_values.at(value_index);
+        else if (type == VariableSchema::Float) return float_values.at(value_index);
+        else if (type == VariableSchema::Double) return double_values.at(value_index);
+        else throw std::bad_variant_access();
+    }
+
+    // Variable-adding modules prepare the full output schema in their constructor.
+    void AppendDouble(double value, const std::shared_ptr<VariableSchema>& output_schema) {
+        if (output_schema == nullptr || output_schema->size() != size() + 1
+            || output_schema->GetType(output_schema->size() - 1) != VariableSchema::Double) {
+            throw std::invalid_argument("[VariableData::AppendDouble] unexpected output schema");
+        }
+        double_values.push_back(value);
+        schema = output_schema;
+    }
+
+    void AppendFloat(float value, const std::shared_ptr<VariableSchema>& output_schema) {
+        if (output_schema == nullptr || output_schema->size() != size() + 1
+            || output_schema->GetType(output_schema->size() - 1) != VariableSchema::Float) {
+            throw std::invalid_argument("[VariableData::AppendFloat] unexpected output schema");
+        }
+        float_values.push_back(value);
+        schema = output_schema;
     }
 
     // Compatibility for read access. No variants are stored in a candidate.
