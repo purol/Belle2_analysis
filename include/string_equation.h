@@ -334,6 +334,7 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
     return output;
 }
 
+// Both the ROOT read buffer and candidate storage provide at(index).
 template <typename Variables>
 double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const Variables& variables_, const std::vector<std::string>* VariableTypes_) {
     std::stack<double> values;
@@ -348,16 +349,16 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
             int index = temp_token.index;
 
             if (VariableTypes_->at(index) == "Double_t") {
-                values.push((double)GetVariableValue<double>(variables_, index));
+                values.push((double)std::get<double>(variables_.at(index)));
             }
             else if (VariableTypes_->at(index) == "Int_t") {
-                values.push((double)GetVariableValue<int>(variables_, index));
+                values.push((double)std::get<int>(variables_.at(index)));
             }
             else if (VariableTypes_->at(index) == "UInt_t") {
-                values.push((double)GetVariableValue<unsigned int>(variables_, index));
+                values.push((double)std::get<unsigned int>(variables_.at(index)));
             }
             else if (VariableTypes_->at(index) == "Float_t") {
-                values.push((double)GetVariableValue<float>(variables_, index));
+                values.push((double)std::get<float>(variables_.at(index)));
             }
             else if (VariableTypes_->at(index) == "string") {
                 printf("[evaluateExpression] string variable cannot be used in equations\n");

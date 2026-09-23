@@ -656,19 +656,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetDouble(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetUInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetFloat(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetString(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1378,19 +1378,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetDouble(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetUInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetFloat(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetString(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1592,19 +1592,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetDouble(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetUInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetFloat(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetString(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1761,19 +1761,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetDouble(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetUInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetFloat(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetString(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -3692,19 +3692,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetDouble(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetUInt(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetFloat(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
+                        temp_event_variable.at(i) = iter->variable.GetString(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());

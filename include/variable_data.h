@@ -7,7 +7,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -16,14 +15,18 @@ using VariableCounts = std::array<std::size_t, 5>;
 
 // Variable order is shared by candidates. Values keep their original C++ types.
 class VariableSchema {
+public:
+    // These numbers also match the alternatives in VariableValue.
+    enum Type { Int, UInt, Float, Double, String };
+
 private:
     std::vector<std::size_t> types;
     std::vector<std::size_t> indices;
     VariableCounts counts = {};
 
     // Cache schema changes once, instead of copying the schema for every candidate.
-    std::array<std::shared_ptr<VariableSchema>, 5> appended_schemas;
-    std::map<std::size_t, std::shared_ptr<VariableSchema>> erased_schemas;
+    std::array<std::shared_ptr<VariableSchema>, 5> schemas_after_append;
+    std::map<std::size_t, std::shared_ptr<VariableSchema>> schemas_after_erase;
 
     void AppendType(std::size_t type) {
         indices.push_back(counts.at(type));
@@ -39,24 +42,12 @@ public:
     }
 
     static std::size_t GetTypeIndex(const std::string& type) {
-        if (type == "Int_t") return 0;
-        if (type == "UInt_t") return 1;
-        if (type == "Float_t") return 2;
-        if (type == "Double_t") return 3;
-        if (type == "string") return 4;
+        if (type == "Int_t") return Int;
+        if (type == "UInt_t") return UInt;
+        if (type == "Float_t") return Float;
+        if (type == "Double_t") return Double;
+        if (type == "string") return String;
         throw std::invalid_argument("[VariableSchema] unsupported type: " + type);
-    }
-
-    template <typename T>
-    static constexpr std::size_t GetTypeIndex() {
-        if constexpr (std::is_same_v<T, int>) return 0;
-        else if constexpr (std::is_same_v<T, unsigned int>) return 1;
-        else if constexpr (std::is_same_v<T, float>) return 2;
-        else if constexpr (std::is_same_v<T, double>) return 3;
-        else {
-            static_assert(std::is_same_v<T, std::string*>, "unsupported variable type");
-            return 4;
-        }
     }
 
     static VariableCounts CountTypes(const std::vector<std::string>& VariableTypes) {
@@ -71,27 +62,31 @@ public:
     const VariableCounts& GetCounts() const { return counts; }
 
     std::shared_ptr<VariableSchema> Append(std::size_t type) {
-        auto& result = appended_schemas.at(type);
-        if (!result) {
-            result = std::make_shared<VariableSchema>();
-            result->types = types;
-            result->indices = indices;
-            result->counts = counts;
-            result->AppendType(type);
+        // The first candidate creates the new schema. Other candidates reuse it.
+        if (schemas_after_append.at(type) == nullptr) {
+            std::shared_ptr<VariableSchema> new_schema = std::make_shared<VariableSchema>();
+            new_schema->types = types;
+            new_schema->indices = indices;
+            new_schema->counts = counts;
+            new_schema->AppendType(type);
+            schemas_after_append.at(type) = new_schema;
         }
-        return result;
+        return schemas_after_append.at(type);
     }
 
     std::shared_ptr<VariableSchema> Erase(std::size_t index) {
-        types.at(index);
-        auto& result = erased_schemas[index];
-        if (!result) {
-            result = std::make_shared<VariableSchema>();
-            for (std::size_t i = 0; i < types.size(); i++) {
-                if (i != index) result->AppendType(types.at(i));
-            }
+        if (index >= types.size()) throw std::out_of_range("[VariableSchema] variable index out of range");
+
+        auto iter = schemas_after_erase.find(index);
+        if (iter != schemas_after_erase.end()) return iter->second;
+
+        // Keep the old schema intact because other candidates may still use it.
+        std::shared_ptr<VariableSchema> new_schema = std::make_shared<VariableSchema>();
+        for (std::size_t i = 0; i < types.size(); i++) {
+            if (i != index) new_schema->AppendType(types.at(i));
         }
-        return result;
+        schemas_after_erase.insert({index, new_schema});
+        return new_schema;
     }
 };
 
@@ -104,32 +99,14 @@ private:
     std::vector<std::string*> string_values;
     std::shared_ptr<VariableSchema> schema;
 
-    template <typename T>
-    std::vector<T>& Values() {
-        if constexpr (std::is_same_v<T, int>) return int_values;
-        else if constexpr (std::is_same_v<T, unsigned int>) return uint_values;
-        else if constexpr (std::is_same_v<T, float>) return float_values;
-        else if constexpr (std::is_same_v<T, double>) return double_values;
-        else {
-            static_assert(std::is_same_v<T, std::string*>, "unsupported variable type");
-            return string_values;
-        }
-    }
-
-    template <typename T>
-    const std::vector<T>& Values() const {
-        if constexpr (std::is_same_v<T, int>) return int_values;
-        else if constexpr (std::is_same_v<T, unsigned int>) return uint_values;
-        else if constexpr (std::is_same_v<T, float>) return float_values;
-        else if constexpr (std::is_same_v<T, double>) return double_values;
-        else {
-            static_assert(std::is_same_v<T, std::string*>, "unsupported variable type");
-            return string_values;
-        }
-    }
-
     void CheckIndex(std::size_t index) const {
         if (index >= size()) throw std::out_of_range("[VariableData] variable index out of range");
+    }
+
+    std::size_t GetValueIndex(std::size_t index, std::size_t expected_type) const {
+        CheckIndex(index);
+        if (schema->GetType(index) != expected_type) throw std::bad_variant_access();
+        return schema->GetIndex(index);
     }
 
 public:
@@ -143,70 +120,101 @@ public:
 
     bool empty() const { return size() == 0; }
 
-    template <typename T>
-    bool Is(std::size_t index) const {
+    std::size_t GetType(std::size_t index) const {
         CheckIndex(index);
-        return schema->GetType(index) == VariableSchema::GetTypeIndex<T>();
+        return schema->GetType(index);
     }
 
-    template <typename T>
-    const T& Get(std::size_t index) const {
-        if (!Is<T>(index)) throw std::bad_variant_access();
-        return Values<T>().at(schema->GetIndex(index));
+    // GetValueIndex checks the type and maps the variable number to its array index.
+    int& GetInt(std::size_t index) {
+        return int_values.at(GetValueIndex(index, VariableSchema::Int));
     }
 
-    template <typename T>
-    T& Get(std::size_t index) {
-        if (!Is<T>(index)) throw std::bad_variant_access();
-        return Values<T>().at(schema->GetIndex(index));
+    const int& GetInt(std::size_t index) const {
+        return int_values.at(GetValueIndex(index, VariableSchema::Int));
+    }
+
+    unsigned int& GetUInt(std::size_t index) {
+        return uint_values.at(GetValueIndex(index, VariableSchema::UInt));
+    }
+
+    const unsigned int& GetUInt(std::size_t index) const {
+        return uint_values.at(GetValueIndex(index, VariableSchema::UInt));
+    }
+
+    float& GetFloat(std::size_t index) {
+        return float_values.at(GetValueIndex(index, VariableSchema::Float));
+    }
+
+    const float& GetFloat(std::size_t index) const {
+        return float_values.at(GetValueIndex(index, VariableSchema::Float));
+    }
+
+    double& GetDouble(std::size_t index) {
+        return double_values.at(GetValueIndex(index, VariableSchema::Double));
+    }
+
+    const double& GetDouble(std::size_t index) const {
+        return double_values.at(GetValueIndex(index, VariableSchema::Double));
+    }
+
+    std::string*& GetString(std::size_t index) {
+        return string_values.at(GetValueIndex(index, VariableSchema::String));
+    }
+
+    std::string* const& GetString(std::size_t index) const {
+        return string_values.at(GetValueIndex(index, VariableSchema::String));
     }
 
     // Compatibility for read access. No variants are stored in a candidate.
     VariableValue at(std::size_t index) const {
-        CheckIndex(index);
-        switch (schema->GetType(index)) {
-        case 0: return Get<int>(index);
-        case 1: return Get<unsigned int>(index);
-        case 2: return Get<float>(index);
-        case 3: return Get<double>(index);
-        case 4: return Get<std::string*>(index);
-        default: throw std::bad_variant_access();
-        }
-    }
-
-    template <typename T>
-    void push_back(T value) {
-        const std::size_t type = VariableSchema::GetTypeIndex<T>();
-        const std::size_t index = size();
-        if (!schema) schema = std::make_shared<VariableSchema>();
-        if (index == schema->size()) {
-            auto next_schema = schema->Append(type);
-            Values<T>().push_back(value);
-            schema = std::move(next_schema);
-        }
-        else {
-            if (schema->GetType(index) != type) throw std::bad_variant_access();
-            Values<T>().push_back(value);
-        }
+        const std::size_t type = GetType(index);
+        if (type == VariableSchema::Int) return GetInt(index);
+        else if (type == VariableSchema::UInt) return GetUInt(index);
+        else if (type == VariableSchema::Float) return GetFloat(index);
+        else if (type == VariableSchema::Double) return GetDouble(index);
+        else if (type == VariableSchema::String) return GetString(index);
+        else throw std::bad_variant_access();
     }
 
     void push_back(const VariableValue& value) {
-        std::visit([&](auto item) { push_back(item); }, value);
+        const std::size_t type = value.index();
+        const std::size_t index = size();
+        if (schema == nullptr) schema = std::make_shared<VariableSchema>();
+
+        // Loading uses an existing schema; derived variables extend it.
+        std::shared_ptr<VariableSchema> next_schema;
+        if (index == schema->size()) next_schema = schema->Append(type);
+        else if (schema->GetType(index) != type) throw std::bad_variant_access();
+
+        if (type == VariableSchema::Int) int_values.push_back(std::get<int>(value));
+        else if (type == VariableSchema::UInt) uint_values.push_back(std::get<unsigned int>(value));
+        else if (type == VariableSchema::Float) float_values.push_back(std::get<float>(value));
+        else if (type == VariableSchema::Double) double_values.push_back(std::get<double>(value));
+        else if (type == VariableSchema::String) string_values.push_back(std::get<std::string*>(value));
+        else throw std::bad_variant_access();
+
+        // Only change the schema after the value was successfully appended.
+        if (next_schema != nullptr) schema = std::move(next_schema);
     }
 
     void reserve(const VariableCounts& counts) {
-        int_values.reserve(counts.at(0));
-        uint_values.reserve(counts.at(1));
-        float_values.reserve(counts.at(2));
-        double_values.reserve(counts.at(3));
-        string_values.reserve(counts.at(4));
+        int_values.reserve(counts.at(VariableSchema::Int));
+        uint_values.reserve(counts.at(VariableSchema::UInt));
+        float_values.reserve(counts.at(VariableSchema::Float));
+        double_values.reserve(counts.at(VariableSchema::Double));
+        string_values.reserve(counts.at(VariableSchema::String));
     }
 
     // Legacy count-only reservation. Loader uses exact per-type counts instead.
     void reserve(std::size_t count) {
-        VariableCounts counts = schema ? schema->GetCounts() : VariableCounts{};
-        const std::size_t schema_size = schema ? schema->size() : 0;
-        if (count > schema_size) counts.at(3) += count - schema_size;
+        VariableCounts counts = {};
+        std::size_t schema_size = 0;
+        if (schema != nullptr) {
+            counts = schema->GetCounts();
+            schema_size = schema->size();
+        }
+        if (count > schema_size) counts.at(VariableSchema::Double) += count - schema_size;
         reserve(counts);
     }
 
@@ -224,13 +232,12 @@ public:
         CheckIndex(index);
         auto next_schema = schema->Erase(index);
         const std::size_t offset = schema->GetIndex(index);
-        switch (schema->GetType(index)) {
-        case 0: int_values.erase(int_values.begin() + offset); break;
-        case 1: uint_values.erase(uint_values.begin() + offset); break;
-        case 2: float_values.erase(float_values.begin() + offset); break;
-        case 3: double_values.erase(double_values.begin() + offset); break;
-        case 4: string_values.erase(string_values.begin() + offset); break;
-        }
+        const std::size_t type = schema->GetType(index);
+        if (type == VariableSchema::Int) int_values.erase(int_values.begin() + offset);
+        else if (type == VariableSchema::UInt) uint_values.erase(uint_values.begin() + offset);
+        else if (type == VariableSchema::Float) float_values.erase(float_values.begin() + offset);
+        else if (type == VariableSchema::Double) double_values.erase(double_values.begin() + offset);
+        else if (type == VariableSchema::String) string_values.erase(string_values.begin() + offset);
         schema = std::move(next_schema);
     }
 
@@ -243,15 +250,5 @@ public:
         schema.reset();
     }
 };
-
-template <typename T>
-const T& GetVariableValue(const VariableData& variables, std::size_t index) {
-    return variables.Get<T>(index);
-}
-
-template <typename T>
-const T& GetVariableValue(const std::vector<VariableValue>& variables, std::size_t index) {
-    return std::get<T>(variables.at(index));
-}
 
 #endif

@@ -332,11 +332,12 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
                 double value_min = variable_min.at(i).at(j);
                 double value_max = variable_max.at(i).at(j);
                 double value;
+                std::size_t type = data_.variable.GetType(index);
                 
-                if (data_.variable.Is<int>(index)) value = static_cast<double>(data_.variable.Get<int>(index));
-                else if (data_.variable.Is<unsigned int>(index)) value = static_cast<double>(data_.variable.Get<unsigned int>(index));
-                else if (data_.variable.Is<float>(index)) value = static_cast<double>(data_.variable.Get<float>(index));
-                else if (data_.variable.Is<double>(index)) value = data_.variable.Get<double>(index);
+                if (type == VariableSchema::Int) value = static_cast<double>(data_.variable.GetInt(index));
+                else if (type == VariableSchema::UInt) value = static_cast<double>(data_.variable.GetUInt(index));
+                else if (type == VariableSchema::Float) value = static_cast<double>(data_.variable.GetFloat(index));
+                else if (type == VariableSchema::Double) value = data_.variable.GetDouble(index);
                 else {
                     printf("[EventWeight::Evaluate] unsupported type\n");
                     exit(1);
