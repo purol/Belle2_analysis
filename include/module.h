@@ -133,12 +133,15 @@ namespace Module {
 
         // set after all modules are registered; only allocating modules use it
         virtual void SetReservedVariableNum(std::size_t reserved_variable_num_) {}
+        virtual void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) {}
     };
 
     class Load : public Module {
     private:
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
+        std::optional<VariableCounts> reserved_variable_counts;
+        std::shared_ptr<VariableSchema> variable_schema;
 
         std::vector<std::string> filename;
         std::string dirname;
@@ -207,6 +210,7 @@ namespace Module {
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
+            variable_schema = std::make_shared<VariableSchema>(VariableTypes);
         }
         ~Load() {
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
@@ -216,6 +220,10 @@ namespace Module {
 
         void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
             reserved_variable_num = reserved_variable_num_;
+        }
+
+        void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) override {
+            reserved_variable_counts = reserved_variable_counts_;
         }
 
         void Start() override {
@@ -280,10 +288,11 @@ namespace Module {
             for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
                 temp_tree->GetEntry(j);
 
-                Data temp;
+                Data temp(variable_schema);
 
                 // reserve enough slots for all variable additions in this stage
-                temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
+                if (reserved_variable_counts.has_value()) temp.variable.reserve(reserved_variable_counts.value());
+                else temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
 
                 // copy from temp_variable
                 for (std::size_t i = 0; i < temp_variable.size(); i++) {
@@ -318,6 +327,8 @@ namespace Module {
     private:
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
+        std::optional<VariableCounts> reserved_variable_counts;
+        std::shared_ptr<VariableSchema> variable_schema;
 
         std::vector<std::string> filename;
         std::string dirname;
@@ -390,6 +401,7 @@ namespace Module {
             // copy variable name and variable type
             variable_names = (*variable_names_);
             VariableTypes = (*VariableTypes_);
+            variable_schema = std::make_shared<VariableSchema>(VariableTypes);
             eventweights = (*eventweights_);
             variable_indices_list = (*variable_indices_list_);
         }
@@ -401,6 +413,10 @@ namespace Module {
 
         void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
             reserved_variable_num = reserved_variable_num_;
+        }
+
+        void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) override {
+            reserved_variable_counts = reserved_variable_counts_;
         }
 
         void Start() override {
@@ -472,10 +488,11 @@ namespace Module {
                 double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
 
                 if (result > 0.5) {
-                    Data temp;
+                    Data temp(variable_schema);
 
                     // reserve enough slots for all variable additions in this stage
-                    temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
+                    if (reserved_variable_counts.has_value()) temp.variable.reserve(reserved_variable_counts.value());
+                    else temp.variable.reserve(std::max(VariableTypes.size(), reserved_variable_num));
 
                     // copy from temp_variable
                     for (std::size_t i = 0; i < temp_variable.size(); i++) {
@@ -639,19 +656,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1361,19 +1378,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1575,19 +1592,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -1744,19 +1761,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -3675,19 +3692,19 @@ namespace Module {
                     int event_variable_index = event_variable_index_list.at(i);
 
                     if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Double_t") == 0) {
-                        temp_event_variable.at(i) = std::get<double>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<double>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Int_t") == 0) {
-                        temp_event_variable.at(i) = std::get<int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "UInt_t") == 0) {
-                        temp_event_variable.at(i) = std::get<unsigned int>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<unsigned int>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "Float_t") == 0) {
-                        temp_event_variable.at(i) = std::get<float>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<float>(event_variable_index);
                     }
                     else if (strcmp(VariableTypes.at(event_variable_index).c_str(), "string") == 0) {
-                        temp_event_variable.at(i) = std::get<std::string*>(iter->variable.at(event_variable_index));
+                        temp_event_variable.at(i) = iter->variable.Get<std::string*>(event_variable_index);
                     }
                     else {
                         printf("unexpected data type: %s\n", VariableTypes.at(i).c_str());
@@ -3881,7 +3898,7 @@ namespace Module {
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
 
                 for (int idx : removed_index) {
-                    iter->variable.erase(iter->variable.begin() + idx);
+                    iter->variable.Erase(idx);
                 }
 
                 ++iter;

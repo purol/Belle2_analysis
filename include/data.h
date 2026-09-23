@@ -6,12 +6,18 @@
 #include <string>
 #include <memory>
 
+#include "variable_data.h"
+
 typedef struct data {
-    std::vector<std::variant<int, unsigned int, float, double, std::string*>> variable;
+    VariableData variable;
     std::string label;
     std::string filename;
 
     std::vector<std::shared_ptr<std::string>> string_storage;
+
+    data() = default;
+
+    explicit data(const std::shared_ptr<VariableSchema>& schema) : variable(schema) {}
 
     void PushString(const std::string& value) {
         // deep copy std::string

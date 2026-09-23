@@ -54,6 +54,9 @@ private:
     // maximum number of variables at each stage, including its input schema
     std::vector<std::size_t> maximum_variable_num;
 
+    // Peak counts by type also cover additions after variable removal.
+    std::vector<VariableCounts> maximum_variable_counts;
+
     // current variable_names at Loader
     std::vector<std::string>* current_variable_names;
 
@@ -72,6 +75,10 @@ public:
             if (!Modules.empty()) input_variable_num = variable_names_end_stage.back().size();
             maximum_variable_num.push_back(input_variable_num);
 
+            VariableCounts input_variable_counts = {};
+            if (!Modules.empty()) input_variable_counts = VariableSchema::CountTypes(VariableTypes_end_stage.back());
+            maximum_variable_counts.push_back(input_variable_counts);
+
             Modules.push_back({});
             required_variables.push_back(std::set<std::string>{});
             variable_names_end_stage.push_back(std::vector<std::string>{});
@@ -88,6 +95,10 @@ public:
         }
 
         maximum_variable_num.back() = std::max(maximum_variable_num.back(), current_variable_names->size());
+        VariableCounts current_counts = VariableSchema::CountTypes(*current_VariableTypes);
+        for (std::size_t i = 0; i < current_counts.size(); i++) {
+            maximum_variable_counts.back().at(i) = std::max(maximum_variable_counts.back().at(i), current_counts.at(i));
+        }
         variable_names_end_stage.back() = *current_variable_names;
         VariableTypes_end_stage.back() = *current_VariableTypes;
 
@@ -117,6 +128,10 @@ public:
 
     std::size_t GetMaximumVariableNum(std::size_t stage) const {
         return maximum_variable_num.at(stage);
+    }
+
+    const VariableCounts& GetMaximumVariableCounts(std::size_t stage) const {
+        return maximum_variable_counts.at(stage);
     }
 
     const std::vector<std::string>& GetVariableTypesEndStage(std::size_t stage) const {
@@ -718,7 +733,12 @@ void Loader::end() {
         // reserve for the largest schema in this stage, not only its final schema
         std::size_t reserved_variable_num = Modules.GetMaximumVariableNum(stage);
         input_store.SetReservedVariableNum(reserved_variable_num);
-        for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->SetReservedVariableNum(reserved_variable_num);
+        const VariableCounts& reserved_variable_counts = Modules.GetMaximumVariableCounts(stage);
+        input_store.SetReservedVariableCounts(reserved_variable_counts);
+        for (int i = 0; i < Modules_at.size(); i++) {
+            Modules_at.at(i)->SetReservedVariableNum(reserved_variable_num);
+            Modules_at.at(i)->SetReservedVariableCounts(reserved_variable_counts);
+        }
 
         // run Start
         for (int i = 0; i < Modules_at.size(); i++) Modules_at.at(i)->Start();

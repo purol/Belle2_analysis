@@ -9,6 +9,11 @@
 #include <map>
 #include <vector>
 #include <iomanip>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+
+#include "variable_data.h"
 
 enum class OpType {
     Value,      // Literal number (e.g., 3.14)
@@ -329,7 +334,8 @@ std::vector<Token> PostfixExpression(const std::string& replaced_expr_, const st
     return output;
 }
 
-double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const std::vector<std::variant<int, unsigned int, float, double, std::string*>>& variables_, const std::vector<std::string>* VariableTypes_) {
+template <typename Variables>
+double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const Variables& variables_, const std::vector<std::string>* VariableTypes_) {
     std::stack<double> values;
 
     for (int i = 0; i < postfix_expr_.size(); i++) {
@@ -342,16 +348,16 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
             int index = temp_token.index;
 
             if (VariableTypes_->at(index) == "Double_t") {
-                values.push((double)std::get<double>(variables_.at(index)));
+                values.push((double)GetVariableValue<double>(variables_, index));
             }
             else if (VariableTypes_->at(index) == "Int_t") {
-                values.push((double)std::get<int>(variables_.at(index)));
+                values.push((double)GetVariableValue<int>(variables_, index));
             }
             else if (VariableTypes_->at(index) == "UInt_t") {
-                values.push((double)std::get<unsigned int>(variables_.at(index)));
+                values.push((double)GetVariableValue<unsigned int>(variables_, index));
             }
             else if (VariableTypes_->at(index) == "Float_t") {
-                values.push((double)std::get<float>(variables_.at(index)));
+                values.push((double)GetVariableValue<float>(variables_, index));
             }
             else if (VariableTypes_->at(index) == "string") {
                 printf("[evaluateExpression] string variable cannot be used in equations\n");
@@ -372,7 +378,7 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
         }
         else {
             if (values.size() < 2) {
-                printf("[EvaluatePostfixExpression] there is only %d number when binary operator comes\n", values.size());
+                printf("[EvaluatePostfixExpression] there is only %zu number when binary operator comes\n", values.size());
                 exit(1);
             }
             double b = values.top(); values.pop();
@@ -382,7 +388,7 @@ double EvaluatePostfixExpression(const std::vector<Token>& postfix_expr_, const 
     }
 
     if (values.size() != 1) {
-        printf("[EvaluatePostfixExpression] size of values is %d\n", values.size());
+        printf("[EvaluatePostfixExpression] size of values is %zu\n", values.size());
         exit(1);
     }
 

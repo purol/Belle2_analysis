@@ -5,6 +5,9 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <optional>
+#include <cstdio>
+#include <cstdlib>
 
 #include "data.h"
 
@@ -43,11 +46,18 @@ private:
 
 	// maximum number of variables needed after restoring a batch
 	std::size_t reserved_variable_num = 0;
+	std::optional<VariableCounts> reserved_variable_counts;
+	std::shared_ptr<VariableSchema> original_schema;
+	std::shared_ptr<VariableSchema> reduced_schema;
 
 public:
 
 	void SetReservedVariableNum(std::size_t reserved_variable_num_) {
 		reserved_variable_num = reserved_variable_num_;
+	}
+
+	void SetReservedVariableCounts(const VariableCounts& reserved_variable_counts_) {
+		reserved_variable_counts = reserved_variable_counts_;
 	}
 
 	void WriteToBatch(std::deque<Data>&& data) override {
@@ -77,8 +87,8 @@ public:
 				exit(1);
 			}
 
-			Data reduced_data;
-			reduced_data.variable.reserve(reduced_indices.size());
+			Data reduced_data(reduced_schema);
+			reduced_data.variable.reserve(reduced_schema->GetCounts());
 
 			for (std::size_t i = 0; i < reduced_indices.size(); i++) {
 				const std::size_t original_index = reduced_indices.at(i);
@@ -123,8 +133,9 @@ public:
 				exit(1);
 			}
 
-			Data restored_data;
-			restored_data.variable.reserve(std::max(original_variable_names.size(), reserved_variable_num));
+			Data restored_data(original_schema);
+			if (reserved_variable_counts.has_value()) restored_data.variable.reserve(reserved_variable_counts.value());
+			else restored_data.variable.reserve(std::max(original_variable_names.size(), reserved_variable_num));
 
 			std::size_t reduced_index = 0;
 
@@ -185,7 +196,14 @@ public:
 		return true;
 	}
 
-	void SetSchema(const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) {
+	void SetSchema(const std::vector<std::string>& original_variable_names_, const std::vector<std::string>& original_VariableTypes_, const std::vector<std::string>& reduced_variable_names_, const std::vector<std::string>& reduced_VariableTypes_) override {
+		if (!SchemaExists || original_VariableTypes != original_VariableTypes_) {
+			original_schema = std::make_shared<VariableSchema>(original_VariableTypes_);
+		}
+		if (!SchemaExists || reduced_VariableTypes != reduced_VariableTypes_) {
+			reduced_schema = std::make_shared<VariableSchema>(reduced_VariableTypes_);
+		}
+
 		reduced_variable_names = reduced_variable_names_;
 		reduced_VariableTypes = reduced_VariableTypes_;
 		original_variable_names = original_variable_names_;
@@ -202,6 +220,9 @@ public:
 
 		SchemaExists = false;
 		reserved_variable_num = 0;
+		reserved_variable_counts.reset();
+		original_schema.reset();
+		reduced_schema.reset();
 
 		batches.clear();
 	}
