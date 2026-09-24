@@ -97,6 +97,7 @@ public:
 
 			reduced_data.label = std::move(original_data.label);
 			reduced_data.filename = std::move(original_data.filename);
+			reduced_data.input_file_id = original_data.input_file_id;
 
 			reduced_batch.push_back(std::move(reduced_data));
 		}
@@ -176,6 +177,7 @@ public:
 
 			restored_data.label = std::move(reduced_data.label);
 			restored_data.filename = std::move(reduced_data.filename);
+			restored_data.input_file_id = reduced_data.input_file_id;
 
 			restored_batch.push_back(std::move(restored_data));
 		}

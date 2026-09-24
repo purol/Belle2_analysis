@@ -13,6 +13,10 @@ typedef struct data {
 
     std::vector<std::shared_ptr<std::string>> string_storage;
 
+    // Distinguishes input files even when different directories share a basename.
+    // Zero keeps the original per-call behavior for manually supplied data.
+    std::size_t input_file_id = 0;
+
     void PushString(const std::string& value) {
         // deep copy std::string
         auto ptr = std::make_shared<std::string>(value);

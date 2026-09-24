@@ -16,6 +16,7 @@
 #include <cctype>
 
 #include "data.h"
+#include "root_batch_reader.h"
 #include "string_equation.h"
 #include "base.h"
 #include "eventweight.h"
@@ -110,7 +111,7 @@ namespace Module {
         */
         virtual void Start() = 0;
         /*
-        * `Process` function is called every time for each ROOT file.
+        * `Process` is called for each event batch (or a whole file when batching is disabled).
         * return: For `Load` module, if it cannot read ROOT file, because there is no more file to read, it is 1. Otherwise, it is 0.
         * For other all modules, it is always 1.
         */
@@ -131,12 +132,21 @@ namespace Module {
         */
         virtual bool BlocksDownstream() const { return false; }
 
+        // Custom modules retain whole-file input until they explicitly opt in.
+        virtual bool SupportsEventBatches() const { return false; }
+        virtual bool IsInputModule() const { return false; }
+        virtual std::vector<std::string> EventGrouping() const { return {}; }
+        virtual std::vector<std::string> RemovedVariables() const { return {}; }
+        virtual void ConfigureEventBatches(std::size_t event_limit, const std::vector<std::vector<std::string>>& event_groups) {}
+
         // set after all modules are registered; only allocating modules use it
         virtual void SetReservedVariableNum(std::size_t reserved_variable_num_) {}
     };
 
     class Load : public Module {
     private:
+        RootBatchReader batch_reader;
+
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
 
@@ -157,6 +167,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
@@ -209,9 +221,16 @@ namespace Module {
             VariableTypes = (*VariableTypes_);
         }
         ~Load() {
+            batch_reader.Close();
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
+        }
+
+        bool IsInputModule() const override { return true; }
+
+        void ConfigureEventBatches(std::size_t event_limit, const std::vector<std::vector<std::string>>& event_groups) override {
+            batch_reader.Configure(event_limit, event_groups);
         }
 
         void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
@@ -250,35 +269,15 @@ namespace Module {
             // if there is remaining data, do not extract additional one
             if (data->empty() == false) return 0;
 
-            // read file
-            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
-            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
-
-            // read tree
-            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
-
-            // set branch addresses
-            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
-                }
+            if (!batch_reader.IsOpen()) {
+                printf("Read %s... (%d/%d)\n", filename.at(Currententry).c_str(), Currententry, Nentry);
+                fflush(stdout);
+                batch_reader.Open(dirname + "/" + filename.at(Currententry), TTree_name, variable_names, VariableTypes, temp_variable);
             }
 
-            // fill Data vector
-            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
-                temp_tree->GetEntry(j);
+            // The prepass chooses boundaries shared by all event-based modules.
+            while (batch_reader.GetNextEntry() < batch_reader.GetBatchEnd()) {
+                batch_reader.ReadEntry();
 
                 Data temp;
 
@@ -296,14 +295,17 @@ namespace Module {
                 }
                 temp.label = label;
                 temp.filename = filename.at(Currententry);
+                temp.input_file_id = batch_reader.GetFileId();
 
                 // use std::move to avoid copy
                 data->push_back(std::move(temp));
             }
 
-            input_file->Close();
-            delete input_file;
-            Currententry++;
+            batch_reader.FinishBatch();
+            if (batch_reader.Finished()) {
+                batch_reader.Close();
+                Currententry++;
+            }
             return 0;
         }
 
@@ -316,6 +318,8 @@ namespace Module {
 
     class LoadWithCut : public Module {
     private:
+        RootBatchReader batch_reader;
+
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
 
@@ -340,6 +344,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
@@ -394,9 +400,16 @@ namespace Module {
             variable_indices_list = (*variable_indices_list_);
         }
         ~LoadWithCut() {
+            batch_reader.Close();
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
+        }
+
+        bool IsInputModule() const override { return true; }
+
+        void ConfigureEventBatches(std::size_t event_limit, const std::vector<std::vector<std::string>>& event_groups) override {
+            batch_reader.Configure(event_limit, event_groups);
         }
 
         void SetReservedVariableNum(std::size_t reserved_variable_num_) override {
@@ -439,35 +452,15 @@ namespace Module {
             // if there is remaining data, do not extract additional one
             if (data->empty() == false) return 0;
 
-            // read file
-            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
-            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
-
-            // read tree
-            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
-
-            // set branch addresses
-            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
-                }
+            if (!batch_reader.IsOpen()) {
+                printf("Read %s... (%d/%d)\n", filename.at(Currententry).c_str(), Currententry, Nentry);
+                fflush(stdout);
+                batch_reader.Open(dirname + "/" + filename.at(Currententry), TTree_name, variable_names, VariableTypes, temp_variable);
             }
 
-            // fill Data vector
-            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
-                temp_tree->GetEntry(j);
+            // The prepass chooses boundaries shared by all event-based modules.
+            while (batch_reader.GetNextEntry() < batch_reader.GetBatchEnd()) {
+                batch_reader.ReadEntry();
 
                 double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
 
@@ -488,15 +481,18 @@ namespace Module {
                     }
                     temp.label = label;
                     temp.filename = filename.at(Currententry);
+                    temp.input_file_id = batch_reader.GetFileId();
 
                     // use std::move to avoid copy
                     data->push_back(std::move(temp));
                 }
             }
 
-            input_file->Close();
-            delete input_file;
-            Currententry++;
+            batch_reader.FinishBatch();
+            if (batch_reader.Finished()) {
+                batch_reader.Close();
+                Currententry++;
+            }
             return 0;
         }
 
@@ -519,6 +515,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         Cut(const char* cut_string_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), cut_string(cut_string_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~Cut() {}
 
@@ -582,6 +580,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> EventGrouping() const override { return Event_variable_list; }
+
         PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), print_string(print_string_), Event_variable_list(Event_variable_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), Nevt(0), Ncandidate(0){}
         ~PrintInformation() {}
 
@@ -723,6 +724,8 @@ namespace Module {
         std::vector<double> x_variable;
         std::vector<double> weight;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         DrawTH1D(const char* expression_, const char* hist_title_, const char* png_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), hist_title(hist_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
@@ -877,6 +880,8 @@ namespace Module {
         std::vector<double> y_variable;
         std::vector<double> weight;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, int x_nbins_, double x_low_, double x_high_, int y_nbins_, double y_low_, double y_high_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(x_nbins_), x_low(x_low_), x_high(x_high_), y_nbins(y_nbins_), y_low(y_low_), y_high(y_high_), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         DrawTH2D(const char* x_expression_, const char* y_expression_, const char* hist_title_, const char* png_name_, const char* draw_option_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), x_expression(x_expression_), y_expression(y_expression_), hist_title(hist_title_), x_nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), y_nbins(50), y_low(std::numeric_limits<double>::max()), y_high(std::numeric_limits<double>::max()), png_name(png_name_), draw_option(draw_option_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
@@ -1016,6 +1021,23 @@ namespace Module {
 
     class PrintSeparateRootFile : public Module {
     private:
+        std::string filename;
+        std::size_t input_file_id = 0;
+        TFile* temp_file = nullptr;
+        TTree* temp_tree = nullptr;
+
+        void CloseOutput() {
+            TDirectory::TContext directory_context;
+            if (temp_file == nullptr) return;
+            temp_file->cd();
+            temp_tree->Write();
+            temp_file->Close();
+            delete temp_file;
+            temp_file = nullptr;
+            temp_tree = nullptr;
+            filename.clear();
+        }
+
         std::string path;
         std::string prefix;
         std::string suffix;
@@ -1030,9 +1052,11 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){}
 
-        ~PrintSeparateRootFile() {}
+        ~PrintSeparateRootFile() { CloseOutput(); }
 
         void Start() override {
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
@@ -1060,27 +1084,19 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
+            TDirectory::TContext directory_context;
 
-            std::string filename;
             std::string basename;
             std::string extension;
-            TFile* temp_file = nullptr;
-            TTree* temp_tree = nullptr;
             for (int i = 0; i < data->size(); i++) {
 
                 // if filename changes
                 // 1. set basename and extension again
                 // 2. make ROOT file and TTree
-                if (filename != data->at(i).filename) {
-                    // save the previous file
-                    if (temp_file != nullptr) {
-                        temp_file->cd();
-                        temp_tree->Write();
-                        temp_file->Close();
-                        delete temp_file;
-                    }
-
+                if (temp_file == nullptr || filename != data->at(i).filename || input_file_id != data->at(i).input_file_id) {
+                    CloseOutput();
                     filename = data->at(i).filename;
+                    input_file_id = data->at(i).input_file_id;
 
                     // separate basenamd and extension
                     size_t dotPos = filename.find_last_of('.');
@@ -1133,18 +1149,13 @@ namespace Module {
                 temp_tree->Fill();
             }
 
-            // save branches and file
-            if (temp_file != nullptr) {
-                temp_file->cd();
-                temp_tree->Write();
-                temp_file->Close();
-                delete temp_file;
-            }
+            // Unmarked data still represents one complete legacy Process call.
+            if (!data->empty() && data->front().input_file_id == 0) CloseOutput();
 
             return 1;
         }
 
-        void End() override {}
+        void End() override { CloseOutput(); }
 
         std::optional<std::set<std::string>> RequiredVariables() const override {
             return std::nullopt;
@@ -1167,6 +1178,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PrintRootFile(const char* output_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), output_name(output_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {}
 
         ~PrintRootFile() {}
@@ -1279,6 +1292,9 @@ namespace Module {
             return std::toupper(static_cast<unsigned char>(c));
         }
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> EventGrouping() const override { return Event_variable_list; }
+
         BCS(const char* equation_, const char* criteria_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), criteria(criteria_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         
         ~BCS() {}
@@ -1485,6 +1501,9 @@ namespace Module {
         * 2. candidates from the same event are in the same ROOT file
         */
     private:
+        std::mt19937 rng;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
@@ -1500,6 +1519,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> EventGrouping() const override { return Event_variable_list; }
+
         RandomBCS(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~RandomBCS() {}
@@ -1547,14 +1569,13 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
-
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (data->empty()) return 1;
+            // Continue the same random sequence across batches of this input file.
+            if (data->front().input_file_id == 0 || random_file_id != data->front().input_file_id) {
+                std::size_t hash_value = std::hash<std::string>{}(data->front().filename);
+                rng.seed(static_cast<unsigned int>(hash_value));
+                random_file_id = data->front().input_file_id;
+            }
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after BCS is done.
@@ -1693,6 +1714,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> EventGrouping() const override { return Event_variable_list; }
+
         IsBCSValid(const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~IsBCSValid() {}
@@ -1832,6 +1856,8 @@ namespace Module {
 
         double MyEPSILON;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DrawFOM(const char* equation_, double MIN_, double MAX_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 50
             NBin = 50;
@@ -2077,6 +2103,8 @@ namespace Module {
 
         double MyEPSILON;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), NSIG_initial(NSIG_initial_), alpha(alpha_), rank(0), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 50
             NBin = 50;
@@ -2337,6 +2365,8 @@ namespace Module {
 
         double MyEPSILON;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), scan_conditions(scan_conditions_), preselection_equation_x("1"), preselection_equation_y("1"), NSIG_initial(NSIG_initial_), alpha(alpha_), png_name(png_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 0.000001
             MyEPSILON = 0.000001;
@@ -2646,6 +2676,8 @@ namespace Module {
 
         double MyEPSILON;
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 100
             NBin = 100;
@@ -2851,6 +2883,8 @@ namespace Module {
         int hist_draw_option;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         DrawStack(const char* expression_, const char* stack_title_, int nbins_, double x_low_, double x_high_, const char* png_name_, bool normalized_, bool LogScale_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(nbins_), x_low(x_low_), x_high(x_high_), png_name(png_name_), normalized(normalized_), LogScale(LogScale_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         DrawStack(const char* expression_, const char* stack_title_, const char* png_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string> data_label_list_, std::vector<std::string> MC_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression(expression_), stack_title(stack_title_), nbins(50), x_low(std::numeric_limits<double>::max()), x_high(std::numeric_limits<double>::max()), png_name(png_name_), normalized(false), LogScale(false), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), data_label_list(data_label_list_), MC_label_list(MC_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
@@ -3316,6 +3350,8 @@ namespace Module {
         bool balanced_weight;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(input_variables_), Signal_equation(Signal_preselection_), Background_equation(Background_preselection_), hyperparameters(hyperparameters_), balanced_weight(false), path(path_), output_name(output_name_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
         }
 
@@ -3500,6 +3536,8 @@ namespace Module {
         std::string branch_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(input_variables_), classifier_path(classifier_path_), branch_name(branch_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -3569,6 +3607,9 @@ namespace Module {
         * NOTE: It is NOT random BCS
         */
     private:
+        std::mt19937 rng;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
@@ -3588,6 +3629,9 @@ namespace Module {
         int selected_index;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> EventGrouping() const override { return Event_variable_list; }
+
         RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~RandomEventSelection() {}
@@ -3651,14 +3695,13 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
-
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (data->empty()) return 1;
+            // Continue the same random sequence across batches of this input file.
+            if (data->front().input_file_id == 0 || random_file_id != data->front().input_file_id) {
+                std::size_t hash_value = std::hash<std::string>{}(data->front().filename);
+                rng.seed(static_cast<unsigned int>(hash_value));
+                random_file_id = data->front().input_file_id;
+            }
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after selection is done.
@@ -3764,6 +3807,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineNewVariable(const char* equation_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             replaced_expr = replaceInternalValues(equation, internal_value);
@@ -3825,6 +3870,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+        std::vector<std::string> RemovedVariables() const override { return removed_variable_names; }
+
         RemoveVariable(std::vector<std::string> removed_variable_names_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), removed_variable_names(removed_variable_names_) {
 
             // remove from internal value
@@ -3914,6 +3962,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         ConditionalPairDefineNewVariable(std::map<std::string, std::string> condition_equation__criteria_equation_list_, int condition_order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), condition_equation__criteria_equation_list(condition_equation__criteria_equation_list_), condition_order(condition_order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (std::map<std::string, std::string>::iterator iter_eq = condition_equation__criteria_equation_list.begin(); iter_eq != condition_equation__criteria_equation_list.end(); ++iter_eq) {
@@ -4017,6 +4067,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         GetAverage(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -4090,6 +4142,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         GetStdDev(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -4175,6 +4229,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         GetDiff(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -4264,6 +4320,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         GetAdd(std::vector<std::string> equations_, int order_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equations(equations_), order(order_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -4339,6 +4397,9 @@ namespace Module {
 
     class GetRandom : public Module {
     private:
+        std::mt19937 rng;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4350,6 +4411,8 @@ namespace Module {
         std::string new_variable_name;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         GetRandom(std::vector<std::string> equations_, const char* new_variable_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_) : Module(), equations(equations_), new_variable_name(new_variable_name_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_) {
             // change variable name into placeholder
             for (int i = 0; i < equations.size(); i++) {
@@ -4380,14 +4443,13 @@ namespace Module {
 
         int Process(std::deque<Data>* data) {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
-
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (data->empty()) return 1;
+            // Continue the same random sequence across batches of this input file.
+            if (data->front().input_file_id == 0 || random_file_id != data->front().input_file_id) {
+                std::size_t hash_value = std::hash<std::string>{}(data->front().filename);
+                rng.seed(static_cast<unsigned int>(hash_value));
+                random_file_id = data->front().input_file_id;
+            }
             std::uniform_int_distribution<int> dist(0, postfix_exprs.size() - 1);
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
@@ -4436,6 +4498,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillDataSet(RooDataSet* dataset_, std::vector<RooRealVar*> realvars_, std::vector<std::string> equations_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), dataset(dataset_), realvars(realvars_), equations(equations_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillDataSet() {}
         void Start() {
@@ -4514,6 +4578,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillTProfile(TProfile* tprofile_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), tprofile(tprofile_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTProfile() {}
         void Start() {
@@ -4579,6 +4645,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillTH1D(TH1D* th1d_, std::string equation_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th1d(th1d_), equation(equation_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTH1D() {}
         void Start() {
@@ -4639,6 +4707,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th1d(th1d_), equations(equations_), custom_function(custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillCustomizedTH1D() {}
         void Start() {
@@ -4709,6 +4779,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th2d(th2d_), x_expression(x_expression_), y_expression(y_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillTH2D() {}
         void Start() {
@@ -4775,6 +4847,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>), std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th2d(th2d_), equations(equations_), x_custom_function(x_custom_function_), y_custom_function(y_custom_function_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~FillCustomizedTH2D() {}
         void Start() {
@@ -4835,6 +4909,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PrintEvent(std::vector<std::string> printed_values_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), printed_values(printed_values_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ~PrintEvent() {}
 
@@ -4924,6 +5000,8 @@ namespace Module {
         std::shared_ptr<std::vector<double>> output_handle;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(""), expression_Bprime(""), expression_Cprime(""), expression_Dprime(""), validation(false), WeightSumError(WeightSumError_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
         ABCDmethod(const char* region_A_, const char* region_B_, const char* region_C_, const char* region_D_, const char* region_Aprime_, const char* region_Bprime_, const char* region_Cprime_, const char* region_Dprime_, bool WeightSumError_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), expression_A(region_A_), expression_B(region_B_), expression_C(region_C_), expression_D(region_D_), expression_Aprime(region_Aprime_), expression_Bprime(region_Bprime_), expression_Cprime(region_Cprime_), expression_Dprime(region_Dprime_), WeightSumError(WeightSumError_), validation(true), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
@@ -5149,6 +5227,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), weight_name(weight_name_), variable_name_map(variable_name_map_), DataStructureDefined(*DataStructureDefined_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), internal_value(*internal_value_) {
             EventWeight* eventweight = EventWeights::GetWeight(weight_name);
 
@@ -5226,6 +5306,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineObservable(const std::string& id_, const std::string& title_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineObservable() {}
 
@@ -5265,6 +5347,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineAndFillDataSet(const std::string& id_, const std::vector<std::string> observable_ids_, const std::vector<std::string> expressions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), observable_ids(observable_ids_), equations(expressions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {
             if (observable_ids.size() != equations.size()) {
                 printf("[DefineAndFillDataSet] The number of observable ids and expressions should be the same\n");
@@ -5400,6 +5484,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineFitParameter(const std::string& id_, const std::string& title_, double init_value_, double minimum_, double maximum_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), init_value(init_value_), minimum(minimum_), maximum(maximum_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineFitParameter() {}
 
@@ -5433,6 +5519,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineConstantParameter(const std::string& id_, const std::string& title_, double value_, const std::string& unit_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), value(value_), unit(unit_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineConstantParameter() {}
 
@@ -5465,6 +5553,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineCategory(const std::string& id_, const std::string title_, const std::vector<std::string>& states_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), title(title_), states(states_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineCategory() {}
 
@@ -5508,6 +5598,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineAndFillProfile(const std::string& profile_id_, const std::string& title_, int bins_, double xmin_, double xmax_, double ymin_, double ymax_, std::string equation_x_, std::string equation_y_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), profile_id(profile_id_), title(title_), bins(bins_), xmin(xmin_), xmax(xmax_), ymin(ymin_), ymax(ymax_), equation_x(equation_x_), equation_y(equation_y_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineAndFillProfile() {}
 
@@ -5575,6 +5667,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         SetParameterConstant(const std::string& id_, bool constant_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), id(id_), constant(constant_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SetParameterConstant() {}
 
@@ -5608,6 +5702,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         SetRange(const std::string& variable_id_, const std::string& range_name_, double minimum_, double maximum_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), variable_id(variable_id_), range_name(range_name_), minimum(minimum_), maximum(maximum_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SetRange() {}
 
@@ -5642,6 +5738,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineModel(const std::string& model_id_, const std::string model_type_, const std::vector<std::string>& observable_ids_, const std::vector<std::string>& parameter_ids_, const ModelOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), model_type(model_type_), observable_ids(observable_ids_), parameter_ids(parameter_ids_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineModel() {}
 
@@ -5675,6 +5773,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineAddModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, const std::vector<std::string>& coefficient_ids_, bool recursive_fractions_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), coefficient_ids(coefficient_ids_), recursive_fractions(recursive_fractions_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineAddModel() {}
 
@@ -5707,6 +5807,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineProductModel(const std::string& model_id_, const std::vector<std::string>& pdf_ids_, double cutoff_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), pdf_ids(pdf_ids_), cutoff(cutoff_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineProductModel() {}
 
@@ -5739,6 +5841,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineGenericModel(const std::string& model_id_, const std::string& expression_, const std::vector<std::string>& argument_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), expression(expression_), argument_ids(argument_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineGenericModel() {}
 
@@ -5771,6 +5875,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineSimultaneousModel(const std::string& model_id_, const std::string& category_id_, const std::vector<std::pair<std::string, std::string>>& state_pdf_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), model_id(model_id_), category_id(category_id_), state_pdf_ids(state_pdf_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineSimultaneousModel() {}
 
@@ -5805,6 +5911,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         DefineTF1(const std::string& function_id_, const std::string& formula_, double xmin_, double xmax_, const std::vector<TF1ParameterDefinition>& parameters_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), function_id(function_id_), formula(formula_), xmin(xmin_), xmax(xmax_), parameters(parameters_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~DefineTF1() {}
 
@@ -5838,6 +5946,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         Fit(const std::string& fit_id_, const std::string dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~Fit() {}
 
@@ -5876,6 +5986,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         PlotFit(const std::string& fit_id_, const std::string& observable_id_, const std::string& plot_name_, const std::string& category_state_, const FitPlotOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), fit_id(fit_id_), observable_id(observable_id_), plot_name(plot_name_), category_state(category_state_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotFit() {}
@@ -5909,6 +6021,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         ExportFitResult(const std::string& filename_, const std::vector<std::string>& fit_ids_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), fit_ids(fit_ids_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~ExportFitResult() {}
 
@@ -5942,6 +6056,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         CreateNLL(const std::string& nll_id_, const std::string& dataset_id_, const std::string& model_id_, const FitOptions& options_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), dataset_id(dataset_id_), model_id(model_id_), options(options_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~CreateNLL() {}
 
@@ -5974,6 +6090,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PlotNLL(const std::string& nll_id_, const std::string& parameter_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), parameter_id(parameter_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotNLL() {}
 
@@ -6006,6 +6124,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         PlotProfileNLL(const std::string& nll_id_, const std::string& poi_id_, const std::string& plot_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), nll_id(nll_id_), poi_id(poi_id_), plot_name(plot_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~PlotProfileNLL() {}
 
@@ -6036,6 +6156,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         SaveWorkspace(const std::string& filename_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~SaveWorkspace() {}
 
@@ -6067,6 +6189,8 @@ namespace Module {
         std::map<std::string, double> internal_value;
 
     public:
+        bool SupportsEventBatches() const override { return true; }
+
         LoadWorkspace(const std::string& filename_, const std::string& workspace_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, FitManager* fitmanager_) : Module(), filename(filename_), workspace_name(workspace_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), fitmanager(fitmanager_) {}
         ~LoadWorkspace() {}
 

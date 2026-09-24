@@ -11,6 +11,7 @@
 #include <optional>
 #include <set>
 #include <algorithm>
+#include <stdexcept>
 
 #include "TH1.h"
 #include "TH2.h"
@@ -128,6 +129,10 @@ public:
 class Loader {
 private:
 
+    std::size_t events_per_batch = 10000;
+    std::vector<std::string> batch_event_variables = {
+        "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__"};
+
     // to load ROOT files
     std::string filepath;
     std::string including_string;
@@ -169,6 +174,14 @@ private:
 
 public:
     Loader(const char* TTree_name_, const std::string& workspace_name_ = "workspace");
+    // Zero restores whole-file loading. The limit counts events before cuts.
+    void SetEventBatchSize(std::size_t events_per_batch_, const std::vector<std::string>& event_variables_ = {
+        "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__"}) {
+        if (events_per_batch_ != 0 && event_variables_.empty()) throw std::invalid_argument("[Loader] event variables cannot be empty");
+        events_per_batch = events_per_batch_;
+        batch_event_variables = event_variables_;
+    }
+
     void SetName(const char* loader_name_);
 
     /*
@@ -706,6 +719,35 @@ void Loader::InsertCustomizedModule(Module::Module* module_) {
 }
 
 void Loader::end() {
+    std::vector<std::vector<std::string>> event_groups = {batch_event_variables};
+    std::set<std::string> removed_variables;
+    std::size_t event_limit = events_per_batch;
+    for (std::size_t stage = 0; stage < Modules.size(); stage++) {
+        bool processing_started = false;
+        for (Module::Module* module : Modules.at(stage)) {
+            // Interleaved sources can depend on an earlier module emptying data.
+            // Keep their original scheduling until that pipeline opts for a rewrite.
+            if (module->IsInputModule() && processing_started) event_limit = 0;
+            if (!module->IsInputModule()) processing_started = true;
+            if (!module->SupportsEventBatches()) event_limit = 0;
+            const auto group = module->EventGrouping();
+            if (!group.empty() && std::find(event_groups.begin(), event_groups.end(), group) == event_groups.end()) event_groups.push_back(group);
+            for (const std::string& name : module->RemovedVariables()) removed_variables.insert(name);
+        }
+    }
+    // A removed/redefined key cannot safely be inferred from the input tree.
+    for (const auto& group : event_groups) {
+        for (const std::string& name : group) {
+            if (removed_variables.count(name) != 0) event_limit = 0;
+        }
+    }
+    if (events_per_batch != 0 && event_limit == 0) {
+        printf("[Loader] whole-file input retained for a custom module, interleaved source, or modified event key\n");
+    }
+    for (std::size_t stage = 0; stage < Modules.size(); stage++) {
+        for (Module::Module* module : Modules.at(stage)) module->ConfigureEventBatches(event_limit, event_groups);
+    }
+
     // temporary data for BlocksDownstream
     MemoryDataStore input_store;
     MemoryDataStore output_store;
@@ -729,9 +771,19 @@ void Loader::end() {
             // fill data from upsteam
             if(stage != 0) AreAllFilesRead = !input_store.ReadFromBatch(&TotalData);
 
-            // run Process
+            // Finish a source's batch before allowing another source to run,
+            // including when a cut rejects every candidate in the batch.
+            bool input_read = !TotalData.empty();
             for (int i = 0; i < Modules_at.size(); i++) {
-                if (Modules_at.at(i)->Process(&TotalData) == 0) AreAllFilesRead = false;
+                Module::Module* module = Modules_at.at(i);
+                if (event_limit != 0 && module->IsInputModule() && input_read) {
+                    AreAllFilesRead = false;
+                    continue;
+                }
+                if (module->Process(&TotalData) == 0) {
+                    AreAllFilesRead = false;
+                    if (module->IsInputModule()) input_read = true;
+                }
             }
 
             // if it is not last stage, save data into DataStream
