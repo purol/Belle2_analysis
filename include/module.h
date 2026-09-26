@@ -29,6 +29,7 @@
 #include <TLine.h>
 #include <TPaveText.h>
 #include <TFile.h>
+#include <TDirectory.h>
 #include <RooDataSet.h>
 #include <RooRealVar.h>
 #include <RooArgSet.h>
@@ -97,7 +98,12 @@ struct CompareHistory {
 namespace Module {
 
     class Module {
+    private:
+        inline static std::size_t next_input_file_id = 0;
     public:
+        // identify each input-file occurrence, even when filenames are equal
+        static std::size_t GetNextInputFileID() { return ++next_input_file_id; }
+
         /*
         * design philosophy:
         * 1. data structure should be modified in constructor. Do not touch data structure in `start`, `process`, and `End` function.
@@ -110,7 +116,7 @@ namespace Module {
         */
         virtual void Start() = 0;
         /*
-        * `Process` function is called every time for each ROOT file.
+        * `Process` function is called for each batch, without splitting an event.
         * return: For `Load` module, if it cannot read ROOT file, because there is no more file to read, it is 1. Otherwise, it is 0.
         * For other all modules, it is always 1.
         */
@@ -136,6 +142,10 @@ namespace Module {
     };
 
     class Load : public Module {
+        /*
+        * candidates from the same event are consecutive and in the same ROOT file.
+        * batch_size is a target number of input entries; an event is never split.
+        */
     private:
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
@@ -145,6 +155,14 @@ namespace Module {
         int Nentry;
         int Currententry;
         std::string label;
+
+        std::vector<std::string> Event_variable_list;
+        std::vector<std::size_t> event_variable_index_list;
+        std::size_t batch_size;
+        Long64_t CurrentTreeEntry = 0;
+        std::size_t file_id = 0;
+        TFile* input_file = nullptr;
+        TTree* temp_tree = nullptr;
 
         // temporary variable to extract data from branch
         std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
@@ -157,7 +175,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){
+        Load(const char* dirname_, const char* including_string_, const char* label_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" }, std::size_t batch_size_ = 100000) : Module(), dirname(dirname_), label(label_), Event_variable_list(Event_variable_list_), batch_size(batch_size_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){
+            TDirectory::TContext directory_context;
+
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -209,6 +229,7 @@ namespace Module {
             VariableTypes = (*VariableTypes_);
         }
         ~Load() {
+            End();
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
@@ -219,6 +240,23 @@ namespace Module {
         }
 
         void Start() override {
+            if (Event_variable_list.empty() || batch_size == 0) {
+                printf("[Load] event variables and a positive batch size should exist\n");
+                exit(1);
+            }
+
+            // no schema is available when no files match
+            if (Nentry == 0) return;
+
+            for (const std::string& event_variable : Event_variable_list) {
+                auto iter = std::find(variable_names.begin(), variable_names.end(), event_variable);
+                if (iter == variable_names.end()) {
+                    printf("[Load] cannot find event variable: %s\n", event_variable.c_str());
+                    exit(1);
+                }
+                event_variable_index_list.push_back(static_cast<std::size_t>(std::distance(variable_names.begin(), iter)));
+            }
+
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
                 if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
@@ -244,41 +282,76 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
+            TDirectory::TContext directory_context;
             // read Currententry'th file. If there is no file to read, just return 1
             if (Currententry == Nentry) return 1;
 
             // if there is remaining data, do not extract additional one
             if (data->empty() == false) return 0;
 
-            // read file
-            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
-            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
+            // keep the input file open between batches
+            if (input_file == nullptr) {
+                // read file
+                input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
+                printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
 
-            // read tree
-            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
+                // read tree
+                temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
 
-            // set branch addresses
-            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                // set branch addresses
+                for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                    if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
+                    }
                 }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
-                }
+                CurrentTreeEntry = 0;
+                file_id = GetNextInputFileID();
             }
 
-            // fill Data vector
-            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
-                temp_tree->GetEntry(j);
+            // own string values so reading the next entry cannot change the previous key
+            std::vector<std::variant<int, unsigned int, float, double, std::string>> previous_event_variable;
+            std::vector<std::variant<int, unsigned int, float, double, std::string>> current_event_variable;
+            previous_event_variable.reserve(event_variable_index_list.size());
+            current_event_variable.reserve(event_variable_index_list.size());
+            std::size_t batch_entries = 0;
+
+            // fill one batch; inspect the next entry before deciding where to stop
+            while (CurrentTreeEntry < temp_tree->GetEntries()) {
+                temp_tree->GetEntry(CurrentTreeEntry);
+                current_event_variable.clear();
+                for (std::size_t index : event_variable_index_list) {
+                    if (VariableTypes.at(index) == "Double_t") current_event_variable.push_back(std::get<double>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "Int_t") current_event_variable.push_back(std::get<int>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "UInt_t") current_event_variable.push_back(std::get<unsigned int>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "Float_t") current_event_variable.push_back(std::get<float>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "string") {
+                        std::string* value = std::get<std::string*>(temp_variable.at(index));
+                        current_event_variable.push_back(value != nullptr ? *value : std::string(""));
+                    }
+                }
+
+                if (batch_entries >= batch_size && previous_event_variable != current_event_variable) {
+                    // leave this entry for the next call; do not skip or duplicate it
+                    if (!data->empty()) return 0;
+
+                    // skip empty batches without allowing another Load module to interrupt this file
+                    batch_entries = 0;
+                }
+                previous_event_variable.swap(current_event_variable);
+                CurrentTreeEntry++;
+                batch_entries++;
 
                 Data temp;
 
@@ -296,18 +369,27 @@ namespace Module {
                 }
                 temp.label = label;
                 temp.filename = filename.at(Currententry);
+                temp.file_id = file_id;
 
                 // use std::move to avoid copy
                 data->push_back(std::move(temp));
             }
 
-            input_file->Close();
-            delete input_file;
+            // file boundaries also end a batch
+            End();
             Currententry++;
             return 0;
         }
 
-        void End() override {}
+        void End() override {
+            TDirectory::TContext directory_context;
+            if (input_file != nullptr) {
+                input_file->Close();
+                delete input_file;
+                input_file = nullptr;
+                temp_tree = nullptr;
+            }
+        }
 
         std::optional<std::set<std::string>> RequiredVariables() const override {
             return std::set<std::string>{};
@@ -315,6 +397,10 @@ namespace Module {
     };
 
     class LoadWithCut : public Module {
+        /*
+        * candidates from the same event are consecutive and in the same ROOT file.
+        * batch_size is a target number of input entries; an event is never split.
+        */
     private:
         // maximum number of variables needed in the current stage
         std::size_t reserved_variable_num = 0;
@@ -324,6 +410,14 @@ namespace Module {
         int Nentry;
         int Currententry;
         std::string label;
+
+        std::vector<std::string> Event_variable_list;
+        std::vector<std::size_t> event_variable_index_list;
+        std::size_t batch_size;
+        Long64_t CurrentTreeEntry = 0;
+        std::size_t file_id = 0;
+        TFile* input_file = nullptr;
+        TTree* temp_tree = nullptr;
 
         // temporary variable to extract data from branch
         std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
@@ -340,7 +434,9 @@ namespace Module {
         std::map<std::string, double> internal_value;
         std::string TTree_name;
     public:
-        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), dirname(dirname_), label(label_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {
+        LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, bool* DataStructureDefined_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" }, std::size_t batch_size_ = 100000) : Module(), dirname(dirname_), label(label_), Event_variable_list(Event_variable_list_), batch_size(batch_size_), cut_string(cut_string_), DataStructureDefined(DataStructureDefined_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_) {
+            TDirectory::TContext directory_context;
+
             // load file list and initialize entry counter
             load_files(dirname.c_str(), &filename, including_string_);
             Nentry = filename.size();
@@ -394,6 +490,7 @@ namespace Module {
             variable_indices_list = (*variable_indices_list_);
         }
         ~LoadWithCut() {
+            End();
             for (std::size_t i = 0; i < temp_variable.size(); i++) {
                 if (VariableTypes.at(i) == "string") delete std::get<std::string*>(temp_variable.at(i));
             }
@@ -404,6 +501,23 @@ namespace Module {
         }
 
         void Start() override {
+            if (Event_variable_list.empty() || batch_size == 0) {
+                printf("[LoadWithCut] event variables and a positive batch size should exist\n");
+                exit(1);
+            }
+
+            // no schema is available when no files match
+            if (Nentry == 0) return;
+
+            for (const std::string& event_variable : Event_variable_list) {
+                auto iter = std::find(variable_names.begin(), variable_names.end(), event_variable);
+                if (iter == variable_names.end()) {
+                    printf("[LoadWithCut] cannot find event variable: %s\n", event_variable.c_str());
+                    exit(1);
+                }
+                event_variable_index_list.push_back(static_cast<std::size_t>(std::distance(variable_names.begin(), iter)));
+            }
+
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
                 if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
@@ -433,41 +547,76 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
+            TDirectory::TContext directory_context;
             // read Currententry'th file. If there is no file to read, just return 1
             if (Currententry == Nentry) return 1;
 
             // if there is remaining data, do not extract additional one
             if (data->empty() == false) return 0;
 
-            // read file
-            TFile* input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
-            printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
+            // keep the input file open between batches
+            if (input_file == nullptr) {
+                // read file
+                input_file = new TFile((dirname + std::string("/") + filename.at(Currententry)).c_str(), "read");
+                printf("%s (%d/%d)\n", ("Read " + filename.at(Currententry) + "... ").c_str(), Currententry, Nentry);
 
-            // read tree
-            TTree* temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
+                // read tree
+                temp_tree = (TTree*)input_file->Get(TTree_name.c_str());
 
-            // set branch addresses
-            for (int j = 0; j < temp_tree->GetNbranches(); j++) {
-                if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                // set branch addresses
+                for (int j = 0; j < temp_tree->GetNbranches(); j++) {
+                    if (strcmp(VariableTypes.at(j).c_str(), "Double_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<double>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
+                    }
+                    else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
+                        temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
+                    }
                 }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Int_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "UInt_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<unsigned int>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "Float_t") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<float>(temp_variable.at(j)));
-                }
-                else if (strcmp(VariableTypes.at(j).c_str(), "string") == 0) {
-                    temp_tree->SetBranchAddress(variable_names.at(j).c_str(), &std::get<std::string*>(temp_variable.at(j)));
-                }
+                CurrentTreeEntry = 0;
+                file_id = GetNextInputFileID();
             }
 
-            // fill Data vector
-            for (unsigned int j = 0; j < temp_tree->GetEntries(); j++) {
-                temp_tree->GetEntry(j);
+            // own string values so reading the next entry cannot change the previous key
+            std::vector<std::variant<int, unsigned int, float, double, std::string>> previous_event_variable;
+            std::vector<std::variant<int, unsigned int, float, double, std::string>> current_event_variable;
+            previous_event_variable.reserve(event_variable_index_list.size());
+            current_event_variable.reserve(event_variable_index_list.size());
+            std::size_t batch_entries = 0;
+
+            // fill one batch; inspect the next entry before deciding where to stop
+            while (CurrentTreeEntry < temp_tree->GetEntries()) {
+                temp_tree->GetEntry(CurrentTreeEntry);
+                current_event_variable.clear();
+                for (std::size_t index : event_variable_index_list) {
+                    if (VariableTypes.at(index) == "Double_t") current_event_variable.push_back(std::get<double>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "Int_t") current_event_variable.push_back(std::get<int>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "UInt_t") current_event_variable.push_back(std::get<unsigned int>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "Float_t") current_event_variable.push_back(std::get<float>(temp_variable.at(index)));
+                    else if (VariableTypes.at(index) == "string") {
+                        std::string* value = std::get<std::string*>(temp_variable.at(index));
+                        current_event_variable.push_back(value != nullptr ? *value : std::string(""));
+                    }
+                }
+
+                if (batch_entries >= batch_size && previous_event_variable != current_event_variable) {
+                    // leave this entry for the next call; do not skip or duplicate it
+                    if (!data->empty()) return 0;
+
+                    // skip empty batches without allowing another Load module to interrupt this file
+                    batch_entries = 0;
+                }
+                previous_event_variable.swap(current_event_variable);
+                CurrentTreeEntry++;
+                batch_entries++;
 
                 double result = EvaluatePostfixExpression(postfix_expr, temp_variable, &VariableTypes);
 
@@ -488,19 +637,28 @@ namespace Module {
                     }
                     temp.label = label;
                     temp.filename = filename.at(Currententry);
+                    temp.file_id = file_id;
 
                     // use std::move to avoid copy
                     data->push_back(std::move(temp));
                 }
             }
 
-            input_file->Close();
-            delete input_file;
+            // file boundaries also end a batch
+            End();
             Currententry++;
             return 0;
         }
 
-        void End() override {}
+        void End() override {
+            TDirectory::TContext directory_context;
+            if (input_file != nullptr) {
+                input_file->Close();
+                delete input_file;
+                input_file = nullptr;
+                temp_tree = nullptr;
+            }
+        }
 
         std::optional<std::set<std::string>> RequiredVariables() const override {
             return std::set<std::string>{};
@@ -744,6 +902,7 @@ namespace Module {
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
                 std::string hist_name = generateRandomString(12);
                 hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+                hist->SetDirectory(nullptr);
             }
         }
 
@@ -776,6 +935,7 @@ namespace Module {
                     
                     std::string hist_name = generateRandomString(12);
                     hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+                    hist->SetDirectory(nullptr);
 
                     // fill histogram
                     for (int i = 0; i < weight.size(); i++) {
@@ -808,6 +968,7 @@ namespace Module {
             if (hist == nullptr) {
                 std::string hist_name = generateRandomString(12);
                 hist = new TH1D(hist_name.c_str(), hist_title.c_str(), nbins, x_low, x_high);
+                hist->SetDirectory(nullptr);
             }
 
             // fill histogram
@@ -899,6 +1060,7 @@ namespace Module {
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max()) && (y_low != std::numeric_limits<double>::max()) && (y_high != std::numeric_limits<double>::max())) {
                 std::string hist_name = generateRandomString(12);
                 hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+                hist->SetDirectory(nullptr);
             }
         }
 
@@ -937,6 +1099,7 @@ namespace Module {
 
                     std::string hist_name = generateRandomString(12);
                     hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+                    hist->SetDirectory(nullptr);
 
                     // fill histogram
                     for (int i = 0; i < weight.size(); i++) {
@@ -975,6 +1138,7 @@ namespace Module {
             if (hist == nullptr) {
                 std::string hist_name = generateRandomString(12);
                 hist = new TH2D(hist_name.c_str(), hist_title.c_str(), x_nbins, x_low, x_high, y_nbins, y_low, y_high);
+                hist->SetDirectory(nullptr);
             }
 
             // fill histogram
@@ -1019,6 +1183,10 @@ namespace Module {
         std::string path;
         std::string prefix;
         std::string suffix;
+        std::string filename;
+        std::size_t file_id = 0;
+        TFile* temp_file = nullptr;
+        TTree* temp_tree = nullptr;
 
         // temporary variable to save data into branch
         std::vector<std::variant<int, unsigned int, float, double, std::string*>> temp_variable;
@@ -1032,9 +1200,10 @@ namespace Module {
     public:
         PrintSeparateRootFile(const char* path_, const char* prefix_, const char* suffix_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_, const char* TTree_name_) : Module(), path(path_), prefix(prefix_), suffix(suffix_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_), TTree_name(TTree_name_){}
 
-        ~PrintSeparateRootFile() {}
+        ~PrintSeparateRootFile() { End(); }
 
         void Start() override {
+            TDirectory::TContext directory_context;
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
                 if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
@@ -1060,27 +1229,21 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
+            TDirectory::TContext directory_context;
 
-            std::string filename;
             std::string basename;
             std::string extension;
-            TFile* temp_file = nullptr;
-            TTree* temp_tree = nullptr;
             for (int i = 0; i < data->size(); i++) {
 
                 // if filename changes
                 // 1. set basename and extension again
                 // 2. make ROOT file and TTree
-                if (filename != data->at(i).filename) {
+                if (filename != data->at(i).filename || file_id != data->at(i).file_id) {
                     // save the previous file
-                    if (temp_file != nullptr) {
-                        temp_file->cd();
-                        temp_tree->Write();
-                        temp_file->Close();
-                        delete temp_file;
-                    }
+                    End();
 
                     filename = data->at(i).filename;
+                    file_id = data->at(i).file_id;
 
                     // separate basenamd and extension
                     size_t dotPos = filename.find_last_of('.');
@@ -1133,18 +1296,22 @@ namespace Module {
                 temp_tree->Fill();
             }
 
-            // save branches and file
+            return 1;
+        }
+
+        void End() override {
+            TDirectory::TContext directory_context;
+            // append all batches from this input file before writing and closing it
             if (temp_file != nullptr) {
                 temp_file->cd();
                 temp_tree->Write();
                 temp_file->Close();
                 delete temp_file;
+                temp_file = nullptr;
+                temp_tree = nullptr;
             }
-
-            return 1;
+            filename.clear();
         }
-
-        void End() override {}
 
         std::optional<std::set<std::string>> RequiredVariables() const override {
             return std::nullopt;
@@ -1172,6 +1339,7 @@ namespace Module {
         ~PrintRootFile() {}
 
         void Start() override {
+            TDirectory::TContext directory_context;
             // fill `temp_variable` by dummy value. It is to set variable type beforehand.
             for (int i = 0; i < VariableTypes.size(); i++) {
                 if (strcmp(VariableTypes.at(i).c_str(), "Double_t") == 0) {
@@ -1220,6 +1388,7 @@ namespace Module {
         }
 
         int Process(std::deque<Data>* data) override {
+            TDirectory::TContext directory_context;
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
                 temp_file->cd();
                 if (temp_variable.size() != iter->variable.size()) {
@@ -1235,6 +1404,7 @@ namespace Module {
         }
 
         void End() override {
+            TDirectory::TContext directory_context;
             // save branches and file
             if (temp_file != nullptr) {
                 temp_file->cd();
@@ -1485,6 +1655,11 @@ namespace Module {
         * 2. candidates from the same event are in the same ROOT file
         */
     private:
+        // continue the same random sequence across batches of one input file
+        std::mt19937 rng;
+        std::string random_filename;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
@@ -1547,14 +1722,15 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
+            // an empty batch must not reset the generator or consume random numbers
+            if (data->empty()) return 1;
 
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (random_filename != data->front().filename || random_file_id != data->front().file_id) {
+                random_filename = data->front().filename;
+                random_file_id = data->front().file_id;
+                std::hash<std::string> hasher;
+                rng.seed(static_cast<unsigned int>(hasher(random_filename)));
+            }
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after BCS is done.
@@ -2557,6 +2733,7 @@ namespace Module {
             TCanvas* c_temp = new TCanvas("c", "", 800, 800); c_temp->cd();
 
             TH2D* th2 = new TH2D("th2", (";" + std::string(std::get<0>(scan_conditions.at(0))) + " cut;" + std::string(std::get<0>(scan_conditions.at(1))) + " cut;Punzi FOM").c_str(), NBin_x, MIN_x - (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), MAX_x + (0.5 * (MAX_x - MIN_x) / (NBin_x - 1)), NBin_y, MIN_y - (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)), MAX_y + (0.5 * (MAX_y - MIN_y) / (NBin_y - 1)));
+            th2->SetDirectory(nullptr);
             for (int i = 0; i < NBin_x; i++) {
                 for (int j = 0; j < NBin_y; j++) {
                     th2->SetBinContent(i + 1, j + 1, FOMs[i][j]);
@@ -2584,6 +2761,7 @@ namespace Module {
             free(FOMs);
 
             delete c_temp;
+            delete th2;
         }
 
         std::optional<std::set<std::string>> RequiredVariables() const override {
@@ -2862,6 +3040,7 @@ namespace Module {
             free(stack_hist);
             delete stack_error;
             delete hist;
+            delete RatioorPull;
         }
 
         void Start() override {
@@ -2917,19 +3096,23 @@ namespace Module {
             if ((x_low != std::numeric_limits<double>::max()) && (x_high != std::numeric_limits<double>::max())) {
                 std::string hist_name = generateRandomString(12);
                 hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                hist->SetDirectory(nullptr);
 
                 // create histogram for stack
                 stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     std::string hist_name = generateRandomString(12);
                     stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                    stack_hist[i]->SetDirectory(nullptr);
                 }
                 hist_name = generateRandomString(12);
                 stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                stack_error->SetDirectory(nullptr);
 
                 // create pull or ratio histogram
                 hist_name = generateRandomString(12);
                 RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                RatioorPull->SetDirectory(nullptr);
             }
         }
 
@@ -2972,19 +3155,23 @@ namespace Module {
                         // create histogram
                         std::string hist_name = generateRandomString(12);
                         hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                        hist->SetDirectory(nullptr);
 
                         // create histogram for stack
                         stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
                         for (int i = 0; i < stack_label_list.size(); i++) {
                             std::string hist_name = generateRandomString(12);
                             stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                            stack_hist[i]->SetDirectory(nullptr);
                         }
                         hist_name = generateRandomString(12);
                         stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                        stack_error->SetDirectory(nullptr);
 
                         // create pull or ratio histogram
                         hist_name = generateRandomString(12);
                         RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                        RatioorPull->SetDirectory(nullptr);
 
                         // fill histogram
                         for (int i = 0; i < weight.size(); i++) {
@@ -3036,19 +3223,23 @@ namespace Module {
                 // create histogram
                 std::string hist_name = generateRandomString(12);
                 hist = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                hist->SetDirectory(nullptr);
 
                 // create histogram for stack
                 stack_hist = (TH1D**)malloc(sizeof(TH1D*) * stack_label_list.size());
                 for (int i = 0; i < stack_label_list.size(); i++) {
                     std::string hist_name = generateRandomString(12);
                     stack_hist[i] = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                    stack_hist[i]->SetDirectory(nullptr);
                 }
                 hist_name = generateRandomString(12);
                 stack_error = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                stack_error->SetDirectory(nullptr);
 
                 // create pull or ratio histogram
                 hist_name = generateRandomString(12);
                 RatioorPull = new TH1D(hist_name.c_str(), stack_title.c_str(), nbins, x_low, x_high);
+                RatioorPull->SetDirectory(nullptr);
             }
 
             // fill histogram
@@ -3569,6 +3760,11 @@ namespace Module {
         * NOTE: It is NOT random BCS
         */
     private:
+        // continue the same random sequence across batches of one input file
+        std::mt19937 rng;
+        std::string random_filename;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> Event_variable_list;
 
         // temporary variable to extract event variable
@@ -3651,14 +3847,15 @@ namespace Module {
 
         int Process(std::deque<Data>* data) override {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
+            // an empty batch must not reset the generator or consume random numbers
+            if (data->empty()) return 1;
 
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (random_filename != data->front().filename || random_file_id != data->front().file_id) {
+                random_filename = data->front().filename;
+                random_file_id = data->front().file_id;
+                std::hash<std::string> hasher;
+                rng.seed(static_cast<unsigned int>(hasher(random_filename)));
+            }
             std::uniform_real_distribution<double> dist(0.0, 1.0);
 
             // It is temporary data to save Data before/after selection is done.
@@ -4339,6 +4536,11 @@ namespace Module {
 
     class GetRandom : public Module {
     private:
+        // continue the same random sequence across batches of one input file
+        std::mt19937 rng;
+        std::string random_filename;
+        std::size_t random_file_id = 0;
+
         std::vector<std::string> equations;
         std::vector<std::vector<Token>> postfix_exprs;
 
@@ -4380,14 +4582,15 @@ namespace Module {
 
         int Process(std::deque<Data>* data) {
 
-            // Convert the string to a size_t hash value
-            std::hash<std::string> hasher;
-            size_t hashValue;
-            if (data->size() > 0) hashValue = hasher(data->at(0).filename);
-            else hashValue = 42;
+            // an empty batch must not reset the generator or consume random numbers
+            if (data->empty()) return 1;
 
-            // Initialize the random number generator with the hash value
-            std::mt19937 rng(static_cast<unsigned int>(hashValue));
+            if (random_filename != data->front().filename || random_file_id != data->front().file_id) {
+                random_filename = data->front().filename;
+                random_file_id = data->front().file_id;
+                std::hash<std::string> hasher;
+                rng.seed(static_cast<unsigned int>(hasher(random_filename)));
+            }
             std::uniform_int_distribution<int> dist(0, postfix_exprs.size() - 1);
 
             for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
@@ -4961,10 +5164,12 @@ namespace Module {
             // create histogram
             std::string hist_name = generateRandomString(12);
             th1d_ABCD = new TH1D(hist_name.c_str(), "ABCD", 4, 0, 4);
+            th1d_ABCD->SetDirectory(nullptr);
 
             if (validation) {
                 hist_name = generateRandomString(12);
                 th1d_ABCD_validation = new TH1D(hist_name.c_str(), "ABCD", 4, 0, 4);
+                th1d_ABCD_validation->SetDirectory(nullptr);
             }
         }
 

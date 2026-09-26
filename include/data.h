@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <cstddef>
 
 typedef struct data {
     std::vector<std::variant<int, unsigned int, float, double, std::string*>> variable;
@@ -12,6 +13,9 @@ typedef struct data {
     std::string filename;
 
     std::vector<std::shared_ptr<std::string>> string_storage;
+
+    // input-file occurrence; separate loads may have the same filename
+    std::size_t file_id = 0;
 
     void PushString(const std::string& value) {
         // deep copy std::string
