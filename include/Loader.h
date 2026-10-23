@@ -188,8 +188,8 @@ public:
     /*
      * basic modules for analysis
      */
-    void Load(const char* dirname_, const char* including_string_, const char* label_);
-    void LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_);
+    void Load(const char* dirname_, const char* including_string_, const char* label_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" }, std::size_t batch_size_ = 100000);
+    void LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" }, std::size_t batch_size_ = 100000);
     void Cut(const char* cut_string_);
     std::shared_ptr<std::vector<double>> PrintInformation(const char* print_string_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void DrawTH1D(const char* expression_, const char* hist_title_, int nbins_, double x_low_, double x_high_, const char* png_name_);
@@ -320,13 +320,13 @@ void Loader::SetBackground(std::vector<std::string> labels_) {
     Background_label_list = labels_;
 }
 
-void Loader::Load(const char* dirname_, const char* including_string_, const char* label_) {
-    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value, TTree_name.c_str());
+void Loader::Load(const char* dirname_, const char* including_string_, const char* label_, const std::vector<std::string> Event_variable_list_, std::size_t batch_size_) {
+    Module::Module* temp_module = new Module::Load(dirname_, including_string_, label_, &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value, TTree_name.c_str(), Event_variable_list_, batch_size_);
     Modules.push_back(temp_module);
 }
 
-void Loader::LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_) {
-    Module::Module* temp_module = new Module::LoadWithCut(dirname_, including_string_, label_, cut_string_ , &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value, TTree_name.c_str());
+void Loader::LoadWithCut(const char* dirname_, const char* including_string_, const char* label_, const char* cut_string_, const std::vector<std::string> Event_variable_list_, std::size_t batch_size_) {
+    Module::Module* temp_module = new Module::LoadWithCut(dirname_, including_string_, label_, cut_string_ , &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value, TTree_name.c_str(), Event_variable_list_, batch_size_);
     Modules.push_back(temp_module);
 }
 

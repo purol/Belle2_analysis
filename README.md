@@ -29,6 +29,45 @@ Loader loader("TTree_name");
 loader.Load("./SIGNAL", ".root", "SIGNAL");
 ```
 
+`Load` and `LoadWithCut` read batches with a default target of 100,000 input
+entries. Candidates from the same event must be consecutive and belong to the
+same ROOT file. Once the target is reached, reading continues to the next event
+boundary, so an event is never split between batches. Each batch contains data
+from only one input file.
+
+The default event variables are `__experiment__`, `__run__`, `__event__`,
+`__production__`, and `__ncandidates__`. The list must be nonempty, and each
+variable must exist in the input tree and stay constant within an event. Use the
+same event definition for downstream modules such as `RandomBCS` and
+`PrintInformation`.
+
+```cpp
+std::vector<std::string> event_variables = {
+    "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__"
+};
+loader.Load("./SIGNAL", ".root", "SIGNAL", event_variables, 100000);
+// Alternative: select candidates while loading.
+// loader.LoadWithCut("./SIGNAL", ".root", "SIGNAL", "M > 1.4", event_variables, 100000);
+```
+
+For `LoadWithCut`, both the entry count and event boundaries are determined
+before applying the cut; only passing candidates are stored. Empty batches are
+skipped internally while the input cursor continues to advance. The target must
+be positive and is not a hard memory limit: a single large event can exceed it.
+`PrintSeparateRootFile` keeps its output tree open across batches and writes it
+when the input filename changes or processing ends. Modules that use
+`MemoryDataStore` at stage boundaries can still retain data from multiple batches.
+
+`RandomBCS`, `RandomEventSelection`, and `GetRandom` retain their random-generator
+state across batches of the same input file. They keep the original filename-based
+seed and ignore empty batches. An internal file-occurrence ID distinguishes
+separate loads with equal filenames and is preserved by `MemoryDataStore`; it is
+not an output branch or part of the random seed. File I/O restores the caller's
+ROOT directory, and module-owned histograms are detached from ROOT files.
+
+The ROOT integration checks and build instructions are in
+[`tests/README.md`](tests/README.md).
+
 **3. Define Signal and Background Samples**
 ```cpp
 // This classification is used to train BDT and optimize the Figure of Merit (FOM).
