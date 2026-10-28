@@ -2808,10 +2808,16 @@ namespace Module {
         double* NBKGs;
         double* NBKGs_cumulative;
 
+        double* NSIGs_sumw2;
+        double* NBKGs_sumw2;
+
+        double NSIGs_underflow_sumw2;
+        double NBKGs_underflow_sumw2;
+
         double NSIGs_total;
         double NBKGs_total;
 
-        std::shared_ptr<double> output_handle;
+        std::shared_ptr<std::vector<double>> output_handle;
 
         std::vector<std::string> variable_names;
         std::vector<std::string> VariableTypes;
@@ -2824,9 +2830,12 @@ namespace Module {
 
         double MyEPSILON;
     public:
-        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<double> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
+        CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_, std::vector<std::string> Signal_label_list_, std::vector<std::string> Background_label_list_, std::shared_ptr<std::vector<double>> output_handle_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), equation(equation_), MIN(MIN_), MAX(MAX_), output_name(output_name_), write_option(write_option_), Signal_label_list(Signal_label_list_), Background_label_list(Background_label_list_), output_handle(output_handle_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {
             // just 100
             NBin = 100;
+
+            NSIGs_underflow_sumw2 = 0.0;
+            NBKGs_underflow_sumw2 = 0.0;
 
             NSIGs_total = 0;
             NBKGs_total = 0;
@@ -2861,12 +2870,16 @@ namespace Module {
             NSIGs_cumulative = (double*)malloc(sizeof(double) * NBin);
             NBKGs = (double*)malloc(sizeof(double) * NBin);
             NBKGs_cumulative = (double*)malloc(sizeof(double) * NBin);
+            NSIGs_sumw2 = (double*)malloc(sizeof(double) * NBin);
+            NBKGs_sumw2 = (double*)malloc(sizeof(double) * NBin);
             for (int i = 0; i < NBin; i++) {
                 Cuts[i] = 0.0;
                 NSIGs[i] = 0.0;
                 NSIGs_cumulative[i] = 0.0;
                 NBKGs[i] = 0.0;
                 NBKGs_cumulative[i] = 0.0;
+                NSIGs_sumw2[i] = 0.0;
+                NBKGs_sumw2[i] = 0.0;
             }
 
             // initialize cuts
@@ -2901,8 +2914,18 @@ namespace Module {
                 else if (result >= MAX) first_bin = NBin - 1;
                 else first_bin = std::min(NBin - 1, int(std::floor((result - MIN) / ((MAX - MIN) / NBin))));
                 if (first_bin >= 0) {
-                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs[first_bin] = NSIGs[first_bin] + totalweight;
-                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs[first_bin] = NBKGs[first_bin] + totalweight;
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) {
+                        NSIGs[first_bin] = NSIGs[first_bin] + totalweight;
+                        NSIGs_sumw2[first_bin] = NSIGs_sumw2[first_bin] + totalweight * totalweight;
+                    }
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) {
+                        NBKGs[first_bin] = NBKGs[first_bin] + totalweight;
+                        NBKGs_sumw2[first_bin] = NBKGs_sumw2[first_bin] + totalweight * totalweight;
+                    }
+                }
+                else {
+                    if (Signal_label_set.find(iter->label) != Signal_label_set.end()) NSIGs_underflow_sumw2 = NSIGs_underflow_sumw2 + totalweight * totalweight;
+                    if (Background_label_set.find(iter->label) != Background_label_set.end()) NBKGs_underflow_sumw2 = NBKGs_underflow_sumw2 + totalweight * totalweight;
                 }
 
                 ++iter;
@@ -2954,18 +2977,43 @@ namespace Module {
                 }
             }
 
+            // get AUC error
+            double AUC_variance = 0.0;
+            for (int i = 0; i < NBin; i++) {
+                double signal_contribution = (NBKGs_cumulative[0] - NBKGs_cumulative[i] + NBKGs[i] / 2.0) / NBKGs_total;
+
+                double background_contribution = (NSIGs_cumulative[i] - NSIGs[i] / 2.0) / NSIGs_total;
+
+                double signal_difference = signal_contribution - AUC;
+                double background_difference = background_contribution - AUC;
+
+                AUC_variance = AUC_variance + NSIGs_sumw2[i] * signal_difference * signal_difference / (NSIGs_total * NSIGs_total);
+                AUC_variance = AUC_variance + NBKGs_sumw2[i] * background_difference * background_difference / (NBKGs_total * NBKGs_total);
+            }
+
+            // include underflow normalization error
+            AUC_variance = AUC_variance + NSIGs_underflow_sumw2 * AUC * AUC / (NSIGs_total * NSIGs_total);
+            AUC_variance = AUC_variance + NBKGs_underflow_sumw2 * AUC * AUC / (NBKGs_total * NBKGs_total);
+
+            double AUC_error = std::sqrt(AUC_variance);
+
             // print AUC
             FILE* fp = fopen(output_name.c_str(), write_option.c_str());
-            fprintf(fp, "%lf ", AUC);
+            fprintf(fp, "%lf %lf ", AUC, AUC_error);
             fclose(fp);
 
-            (*output_handle) = AUC;
+            output_handle->clear();
+
+            output_handle->push_back(AUC);
+            output_handle->push_back(AUC_error);
 
             free(Cuts);
             free(NSIGs);
             free(NSIGs_cumulative);
             free(NBKGs);
             free(NBKGs_cumulative);
+            free(NSIGs_sumw2);
+            free(NBKGs_sumw2);
         }
 
         std::optional<std::set<std::string>> RequiredVariables() const override {

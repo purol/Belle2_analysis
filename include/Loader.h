@@ -220,7 +220,7 @@ public:
     std::shared_ptr<std::vector<double>> DrawPunziFOM(const char* equation_, double MIN_, double MAX_, double NBin_, double NSIG_initial_, double alpha_, int rank_, const char* png_name_);
     std::shared_ptr<std::vector<double>> Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, double NSIG_initial_, double alpha_, const char* png_name_);
     std::shared_ptr<std::vector<double>> Draw2DPunziFOM(std::vector<std::tuple<const char*, double, double, int>> scan_conditions_, const char* preselection_x_, const char* preselection_y_, double NSIG_initial_, double alpha_, const char* png_name_);
-    std::shared_ptr<double> CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
+    std::shared_ptr<std::vector<double>> CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_);
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, const char* path_, const char* output_name_ = "");
     void FastBDTTrain(std::vector<std::string> input_variables_, const char* Signal_preselection_, const char* Background_preselection_, std::map<std::string, double> hyperparameters_, bool balanced_weight_, const char* path_, const char* output_name_ = "");
     void FastBDTApplication(std::vector<std::string> input_variables_, const char* classifier_path_, const char* branch_name_);
@@ -464,8 +464,8 @@ std::shared_ptr<std::vector<double>> Loader::Draw2DPunziFOM(std::vector<std::tup
     return temp_ptr;
 }
 
-std::shared_ptr<double> Loader::CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_) {
-    std::shared_ptr<double> temp_ptr = std::make_shared<double>();
+std::shared_ptr<std::vector<double>> Loader::CalculateAUC(const char* equation_, double MIN_, double MAX_, const char* output_name_, const char* write_option_) {
+    std::shared_ptr<std::vector<double>> temp_ptr = std::make_shared<std::vector<double>>();
     Module::Module* temp_module = new Module::CalculateAUC(equation_, MIN_, MAX_, output_name_, write_option_, Signal_label_list, Background_label_list, temp_ptr, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
     Modules.push_back(temp_module);
     return temp_ptr;
