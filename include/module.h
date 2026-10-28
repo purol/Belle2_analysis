@@ -5463,6 +5463,46 @@ namespace Module {
         }
     };
 
+    class RemoveWeight : public Module {
+    private:
+        std::string weight_name;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
+
+    public:
+        RemoveWeight(const char* weight_name_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), weight_name(weight_name_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), internal_value(*internal_value_) {
+            EventWeight* eventweight = EventWeights::GetWeight(weight_name);
+
+            auto iter = std::find(eventweights_->begin(), eventweights_->end(), eventweight);
+            if (iter != eventweights_->end()) {
+                int index = std::distance(eventweights_->begin(), iter);
+                eventweights_->erase(eventweights_->begin() + index);
+                variable_indices_list_->erase(variable_indices_list_->begin() + index);
+            }
+
+            // copy event weights
+            eventweights = (*eventweights_);
+            variable_indices_list = (*variable_indices_list_);
+        }
+        ~RemoveWeight() {}
+
+        void Start() {}
+
+        int Process(std::deque<Data>* data) override {
+            return 1;
+        }
+
+        void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            return std::set<std::string>{};
+        }
+    };
+
     class DefineObservable : public Module {
     private:
         FitManager* fitmanager;

@@ -210,6 +210,7 @@ public:
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void PrintEvent(std::vector<std::string> print_variables_);
     void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_ = {});
+    void RemoveWeight(const char* weight_name_);
 
     /*
      * for FBDT train/test/validation
@@ -577,6 +578,11 @@ std::shared_ptr<std::vector<double>> Loader::ABCDmethod(const char* region_A_, c
 
 void Loader::AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_) {
     Module::Module* temp_module = new Module::AddWeight(weight_name_, variable_name_map_, &DataStructureDefined, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
+    Modules.push_back(temp_module);
+}
+
+void Loader::RemoveWeight(const char* weight_name_) {
+    Module::Module* temp_module = new Module::RemoveWeight(weight_name_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
     Modules.push_back(temp_module);
 }
 
