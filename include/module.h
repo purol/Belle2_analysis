@@ -36,6 +36,7 @@
 #include <TProfile.h>
 #include <TH1.h>
 #include <TH2.h>
+#include <TH3.h>
 
 // to remove duplicate elements in std::vector
 void removeDuplicates(std::vector<std::string>& labels)
@@ -5064,6 +5065,82 @@ namespace Module {
             std::set<std::string> result;
 
             result.merge(GetVariablesFromExpressions(equations, variable_names));
+
+            for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
+                for (const std::size_t& variable_index : variable_indices) {
+                    result.merge(GetVariablesFromExpression(variable_names.at(variable_index), variable_names));
+                }
+            }
+
+            return result;
+        }
+    };
+
+    class FillTH3D : public Module {
+        /*
+        * This module is used to fill TH3D
+        */
+    private:
+
+        TH3D* th3d;
+
+        std::string x_expression;
+        std::string x_replaced_expr;
+        std::vector<Token> x_postfix_expr;
+        std::string y_expression;
+        std::string y_replaced_expr;
+        std::vector<Token> y_postfix_expr;
+        std::string z_expression;
+        std::string z_replaced_expr;
+        std::vector<Token> z_postfix_expr;
+
+        std::vector<std::string> variable_names;
+        std::vector<std::string> VariableTypes;
+        std::vector<EventWeight*> eventweights;
+        std::vector<std::vector<std::size_t>> variable_indices_list;
+        std::map<std::string, double> internal_value;
+
+    public:
+        FillTH3D(TH3D* th3d_, const char* x_expression_, const char* y_expression_, const char* z_expression_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), th3d(th3d_), x_expression(x_expression_), y_expression(y_expression_), z_expression(z_expression_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        ~FillTH3D() {}
+        void Start() {
+            x_replaced_expr = replaceInternalValues(x_expression, internal_value);
+            y_replaced_expr = replaceInternalValues(y_expression, internal_value);
+            z_replaced_expr = replaceInternalValues(z_expression, internal_value);
+            x_replaced_expr = replaceVariables(x_replaced_expr, &variable_names);
+            y_replaced_expr = replaceVariables(y_replaced_expr, &variable_names);
+            z_replaced_expr = replaceVariables(z_replaced_expr, &variable_names);
+            x_postfix_expr = PostfixExpression(x_replaced_expr, &VariableTypes);
+            y_postfix_expr = PostfixExpression(y_replaced_expr, &VariableTypes);
+            z_postfix_expr = PostfixExpression(z_replaced_expr, &VariableTypes);
+        }
+        int Process(std::deque<Data>* data) override {
+            for (std::deque<Data>::iterator iter = data->begin(); iter != data->end(); ) {
+                double totalweight = 1;
+                for (int weightIdx = 0; weightIdx < eventweights.size(); weightIdx++) {
+                    EventWeight* eventweight = eventweights.at(weightIdx);
+                    const std::vector<std::size_t>& variable_indices = variable_indices_list.at(weightIdx);
+                    totalweight = totalweight * eventweight->Evaluate(*iter, variable_indices);
+                }
+
+                double x_result = EvaluatePostfixExpression(x_postfix_expr, iter->variable, &VariableTypes);
+                double y_result = EvaluatePostfixExpression(y_postfix_expr, iter->variable, &VariableTypes);
+                double z_result = EvaluatePostfixExpression(z_postfix_expr, iter->variable, &VariableTypes);
+
+                th3d->Fill(x_result, y_result, z_result, totalweight);
+
+                ++iter;
+            }
+            return 1;
+        }
+        void End() override {}
+
+        std::optional<std::set<std::string>> RequiredVariables() const override {
+            std::set<std::string> result;
+
+            result.merge(GetVariablesFromExpression(x_expression, variable_names));
+            result.merge(GetVariablesFromExpression(y_expression, variable_names));
+            result.merge(GetVariablesFromExpression(z_expression, variable_names));
 
             for (const std::vector<std::size_t>& variable_indices : variable_indices_list) {
                 for (const std::size_t& variable_index : variable_indices) {

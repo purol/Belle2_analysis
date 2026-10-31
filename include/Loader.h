@@ -14,6 +14,7 @@
 
 #include "TH1.h"
 #include "TH2.h"
+#include "TH3.h"
 #include "TList.h"
 #include "TLeaf.h"
 #include "TMath.h"
@@ -247,6 +248,7 @@ public:
     void FillCustomizedTH1D(TH1D* th1d_, std::vector<std::string> equations_, double (*custom_function_)(std::vector<double>));
     void FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expression_);
     void FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>));
+    void FillTH3D(TH3D* th3d_, const char* x_expression_, const char* y_expression_, const char* z_expression_);
 
     /*
      * advanced module for analysis
@@ -554,6 +556,11 @@ void Loader::FillTH2D(TH2D* th2d_, const char* x_expression_, const char* y_expr
 
 void Loader::FillCustomizedTH2D(TH2D* th2d_, std::vector<std::string> equations_, double (*x_custom_function_)(std::vector<double>), double (*y_custom_function_)(std::vector<double>)) {
     Module::Module* temp_module = new Module::FillCustomizedTH2D(th2d_, equations_, x_custom_function_, y_custom_function_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
+    Modules.push_back(temp_module);
+}
+
+void Loader::FillTH3D(TH3D* th3d_, const char* x_expression_, const char* y_expression_, const char* z_expression_) {
+    Module::Module* temp_module = new Module::FillTH3D(th3d_, x_expression_, y_expression_, z_expression_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
     Modules.push_back(temp_module);
 }
 
