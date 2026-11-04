@@ -3830,10 +3830,10 @@ namespace Module {
 
         // the number of split and which one do you want to select?
         int split_num;
-        int selected_index;
+        std::vector<int> selected_index;
 
     public:
-        RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
+        RandomEventSelection(int split_num_, std::vector<int> selected_index_, const std::vector<std::string> Event_variable_list_, std::vector<std::string>* variable_names_, std::vector<std::string>* VariableTypes_, std::vector<EventWeight*>* eventweights_, std::vector<std::vector<std::size_t>>* variable_indices_list_, std::map<std::string, double>* internal_value_) : Module(), split_num(split_num_), selected_index(selected_index_), Event_variable_list(Event_variable_list_), variable_names(*variable_names_), VariableTypes(*VariableTypes_), eventweights(*eventweights_), variable_indices_list(*variable_indices_list_), internal_value(*internal_value_) {}
 
         ~RandomEventSelection() {}
 
@@ -3854,9 +3854,16 @@ namespace Module {
                 exit(1);
             }
 
-            if ((selected_index >= split_num) || (selected_index < 0)) {
-                printf("[RandomSplit] selected_index_ should be within [0, split_num_ - 1]\n");
+            if (selected_index.size() == 0) {
+                printf("[RandomSplit] selected_index_ should not be empty\n");
                 exit(1);
+            }
+
+            for (int i = 0; i < selected_index.size(); i++) {
+                if ((selected_index.at(i) >= split_num) || (selected_index.at(i) < 0)) {
+                    printf("[RandomSplit] selected_index_ should be within [0, split_num_ - 1]\n");
+                    exit(1);
+                }
             }
 
             // fill `temp_event_variable` by dummy value. It is to set variable type beforehand.
@@ -3947,15 +3954,23 @@ namespace Module {
 
                 // if event variable changes, do random selection
                 if (previous_event_variable != temp_event_variable) {
-                    double MIN_threshold = (1.0 / split_num) * selected_index;
-                    double MAX_threshold = (1.0 / split_num) * (selected_index + 1.0);
                     double random_number = dist(rng);
+                    bool IsSelected = false;
 
-                    if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+                    for (int i = 0; i < selected_index.size(); i++) {
+                        double MIN_threshold = (1.0 / split_num) * selected_index.at(i);
+                        double MAX_threshold = (1.0 / split_num) * (selected_index.at(i) + 1.0);
+
+                        if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+                            IsSelected = true;
+                            break;
+                        }
+                    }
+
+                    if (IsSelected) {
                         for (int i = 0; i < temp_data.size(); i++) {
                             temp_data_after_selection.push_back(std::move(temp_data.at(i)));
                         }
-
                     }
                     temp_data.clear();
                 }
@@ -3968,15 +3983,23 @@ namespace Module {
             }
 
             // do random selection for the final dataset
-            double MIN_threshold = (1.0 / split_num) * selected_index;
-            double MAX_threshold = (1.0 / split_num) * (selected_index + 1.0);
             double random_number = dist(rng);
+            bool IsSelected = false;
 
-            if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+            for (int i = 0; i < selected_index.size(); i++) {
+                double MIN_threshold = (1.0 / split_num) * selected_index.at(i);
+                double MAX_threshold = (1.0 / split_num) * (selected_index.at(i) + 1.0);
+
+                if ((random_number > MIN_threshold) && (random_number <= MAX_threshold)) {
+                    IsSelected = true;
+                    break;
+                }
+            }
+
+            if (IsSelected) {
                 for (int i = 0; i < temp_data.size(); i++) {
                     temp_data_after_selection.push_back(std::move(temp_data.at(i)));
                 }
-
             }
             temp_data.clear();
 

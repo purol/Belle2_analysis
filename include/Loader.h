@@ -209,6 +209,7 @@ public:
     void RandomBCS(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void IsBCSValid(const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
+    void RandomEventSelection(int split_num_, std::vector<int> selected_index_, const std::vector<std::string> Event_variable_list_ = { "__experiment__", "__run__", "__event__", "__production__", "__ncandidates__" });
     void PrintEvent(std::vector<std::string> print_variables_);
     void AddWeight(const char* weight_name_, const std::vector<std::pair<std::string, std::string>> variable_name_map_ = {});
     void RemoveWeight(const char* weight_name_);
@@ -421,6 +422,11 @@ void Loader::IsBCSValid(const std::vector<std::string> Event_variable_list_) {
 }
 
 void Loader::RandomEventSelection(int split_num_, int selected_index_, const std::vector<std::string> Event_variable_list_) {
+    Module::Module* temp_module = new Module::RandomEventSelection(split_num_, { selected_index_ }, Event_variable_list_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
+    Modules.push_back(temp_module);
+}
+
+void Loader::RandomEventSelection(int split_num_, std::vector<int> selected_index_, const std::vector<std::string> Event_variable_list_) {
     Module::Module* temp_module = new Module::RandomEventSelection(split_num_, selected_index_, Event_variable_list_, &variable_names, &VariableTypes, &eventweights, &variable_indices_list, &internal_value);
     Modules.push_back(temp_module);
 }
