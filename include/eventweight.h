@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <map>
 #include <cstdlib>
+#include <cmath>
 
 struct WeightAxis {
     std::string name;
@@ -342,7 +343,7 @@ inline double EventWeight::Evaluate(const Data& data_, const std::vector<std::si
                     exit(1);
                 }
 
-                if((value < value_min) || (value >= value_max)){
+                if(!std::isfinite(value) || (value < value_min) || (value >= value_max)){
                     IsThisBin = false;
                     break;
                 }
